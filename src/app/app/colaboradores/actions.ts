@@ -1,11 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env";
+import { appOrigin } from "@/lib/origin";
 import { fail, type ActionResult } from "@/lib/errors";
 
 const invite = z.object({ email: z.string().trim().toLowerCase().email("E-mail inválido."), roles: z.array(z.string().regex(/^[a-z0-9_]{2,40}$/)).min(1, "Escolha ao menos uma função.") });
@@ -19,8 +19,7 @@ export async function inviteMember(input: { email: string; roles: string[] }): P
   if (error) return fail(error);
   let message = "Convite registrado. A pessoa entra no workspace ao criar conta ou entrar com este e-mail.";
   if (serverEnv().serviceRoleKey) {
-    const h = await headers();
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? `https://${h.get("host")}`;
+    const origin = await appOrigin();
     const { error: mailErr } = await createAdminClient().auth.admin.inviteUserByEmail(parsed.data.email, {
       redirectTo: `${origin}/auth/callback?next=/app`, data: { invited_to: ctx.workspace.name },
     });

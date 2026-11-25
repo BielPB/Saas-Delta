@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getContext } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/drive/crypto";
+import { appOrigin } from "@/lib/origin";
 import { exchangeCode, userInfo, DRIVE_SCOPES } from "@/lib/drive/google";
 
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   if (!code) return back("erro=codigo");
 
   try {
-    const tokens = await exchangeCode(code, `${process.env.NEXT_PUBLIC_APP_URL ?? url.origin}/api/drive/callback`);
+    const tokens = await exchangeCode(code, `${await appOrigin()}/api/drive/callback`);
     if (!tokens.refresh_token) return back("erro=offline");
     const granted = tokens.scope.split(" ");
     if (!granted.includes("https://www.googleapis.com/auth/drive.readonly")) return back("erro=escopo");

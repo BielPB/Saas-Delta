@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fail, type ActionResult } from "@/lib/errors";
+import { appOrigin } from "@/lib/origin";
 import { fromLocalInput } from "@/lib/format";
 
 const batch = z.object({
@@ -29,7 +30,7 @@ export async function createBatch(input: z.input<typeof batch>): Promise<ActionR
   if (error) return fail(error);
   const r = data as { token: string; expires_at: string; batch_id: string };
   revalidatePath("/app/aprovacoes");
-  return { ok: true, data: { url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/aprovacao/${r.token}`, expires_at: r.expires_at } };
+  return { ok: true, data: { url: `${await appOrigin()}/aprovacao/${r.token}`, expires_at: r.expires_at } };
 }
 
 export async function rotateLink(batchId: string, expires: string | null, pin: string | null): Promise<ActionResult<{ url: string }>> {
@@ -40,7 +41,7 @@ export async function rotateLink(batchId: string, expires: string | null, pin: s
   });
   if (error) return fail(error);
   revalidatePath(`/app/aprovacoes/${batchId}`);
-  return { ok: true, data: { url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/aprovacao/${(data as { token: string }).token}` } };
+  return { ok: true, data: { url: `${await appOrigin()}/aprovacao/${(data as { token: string }).token}` } };
 }
 
 export async function revokeLink(linkId: string, batchId: string): Promise<ActionResult> {

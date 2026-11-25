@@ -1,8 +1,8 @@
 "use server";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { appOrigin } from "@/lib/origin";
 import { fail, type ActionResult } from "@/lib/errors";
 
 const email = z.string().trim().toLowerCase().email("Informe um e-mail válido.");
@@ -14,8 +14,7 @@ function safeNext(v: FormDataEntryValue | null) {
 }
 
 async function origin() {
-  const h = await headers();
-  return process.env.NEXT_PUBLIC_APP_URL ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+  return appOrigin();
 }
 
 export async function signIn(_: ActionResult | null, form: FormData): Promise<ActionResult> {
