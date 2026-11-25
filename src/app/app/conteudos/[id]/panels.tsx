@@ -72,15 +72,17 @@ export function ContentActions({ content, can, clientId }: {
 
 interface DeliverableItem { id: string; kind: DeliverableKind; title: string; approval: VersionStatus; required: boolean; clientFacing: boolean; versions: number; current: number; canUpload: boolean; lastText: string | null }
 
-export function DeliverablesManager({ contentId, workspaceId, clientId, serviceId, deliverables, canInvalidate }: {
+export function DeliverablesManager({ contentId, workspaceId, clientId, serviceId, deliverables, canInvalidate, bare }: {
   contentId: string; workspaceId: string; clientId: string; serviceId: string | null; deliverables: DeliverableItem[]; canInvalidate: boolean; me: string;
+  /** Rendered inside another section: no own frame or title. */
+  bare?: boolean;
 }) {
   const [open, setOpen] = useState<DeliverableItem | null>(null);
   const [inval, setInval] = useState<DeliverableItem | null>(null);
   const [reason, setReason] = useState("");
   const { pending, run } = useRun();
   return (
-    <Panel title="Entregáveis e versões" padded={false}>
+    <Panel title={bare ? undefined : "Entregáveis e versões"} padded={false} className={bare ? "rounded-none border-0 bg-transparent" : undefined}>
       <ul className="divide-y divide-border">
         {deliverables.map((d) => (
           <li key={d.id} id={`entrega-${d.kind}`} className="flex flex-wrap items-center gap-3 px-4 py-2.5">

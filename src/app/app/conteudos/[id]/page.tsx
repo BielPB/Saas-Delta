@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assetSelect, contentSelect, memberMap, signPaths, taskSelect, type ContentRow, type DeliverableRow, type TaskRow } from "@/lib/data";
-import { channels, priority as priorityLabel } from "@/lib/domain";
+import { channels, priority as priorityLabel, stageLabel } from "@/lib/domain";
 import { formatDateTime, relative } from "@/lib/format";
-import { isUuid } from "@/lib/utils";
+import { cn, isUuid } from "@/lib/utils";
 import { activityText } from "@/lib/activity";
-import { Avatar, EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
-import { ApprovalBadge, ProductionBadge, PublicationBadge, ServiceDot, StageBadge } from "@/components/content/badges";
+import { ChevronDown } from "lucide-react";
+import { Avatar, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { ServiceDot, StageBadge } from "@/components/content/badges";
 import { TaskList } from "@/components/tasks/task-list";
 import { ContentViewer, type ViewerDeliverable } from "./viewer";
 import { CommentBox, ContentActions, DeliverablesManager, EditDetails } from "./panels";
@@ -67,89 +68,132 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
   const scriptText = script?.deliverable_versions[0]?.text_content ?? content.script;
   const canManage = ctx.can("contents.manage");
   const openRevisions = (revisions ?? []).filter((r) => r.status === "open");
+  const openTasks = taskRows.filter((t) => !["done", "cancelled"].includes(t.status));
+  const doneTasks = taskRows.filter((t) => ["done", "cancelled"].includes(t.status));
+  const nextTask = openTasks.find((t) => t.status !== "blocked") ?? openTasks[0];
+  const who = (uid: string | null | undefined) => (uid ? members.get(uid)?.full_name?.split(" ")[0] ?? "sem responsável" : "sem responsável");
+
+  // One sentence that tells the team what happens next with this content.
+  const next: { tone: "warning" | "accent" | "info" | "neutral" | "success"; title: string; text?: string; quotes?: Array<{ label: string; text: string }> } =
+    content.stage === "adjustments" ? {
+      tone: "warning", title: "O cliente pediu ajustes",
+      text: "Envie uma nova versão do que foi reprovado e conclua as tarefas de ajuste. O item volta para o mesmo link de aprovação.",
+      quotes: openRevisions.map((r) => ({ label: deliverables.find((x) => x.id === r.deliverable_id)?.title ?? "Item", text: r.reason as string })),
+    } : content.stage === "client_approval" ? { tone: "info", title: "Aguardando o cliente", text: "O conteúdo está no link de aprovação. Você é avisado quando o cliente responder." }
+    : content.stage === "internal_review" ? { tone: "info", title: "Falta a revisão interna", text: "Tudo foi enviado. A revisão interna libera o conteúdo para o cliente aprovar." }
+    : content.stage === "ready" ? { tone: "accent", title: "Aprovado pelo cliente", text: "Registre a data de agendamento quando programar a publicação." }
+    : content.stage === "scheduled" ? { tone: "accent", title: `Agendado para ${formatDateTime(content.scheduled_at)}`, text: "Confirme a publicação quando o post for ao ar." }
+    : content.stage === "published" ? { tone: "success", title: `Publicado em ${formatDateTime(content.published_at)}` }
+    : content.stage === "cancelled" ? { tone: "neutral", title: "Conteúdo cancelado" }
+    : { tone: "neutral", title: `Em produção · ${stageLabel[content.stage]}`,
+        text: nextTask ? `Próxima tarefa: ${nextTask.title.split(" — ")[0]} (${who(nextTask.assignee_id)}). ${openTasks.length} tarefa(s) em aberto.` : undefined };
+
+  const facts: Array<[string, React.ReactNode]> = [
+    ["Subdivisão", content.client_services ? <ServiceDot color={content.client_services.color} name={content.client_services.name} /> : null],
+    ["Formato", content.content_formats?.name ?? null],
+    ["Canal", content.channel ? channels[content.channel] : null],
+    ["Prazo", content.due_at ? formatDateTime(content.due_at) : null],
+    ["Postagem prevista", content.planned_publish_at ? formatDateTime(content.planned_publish_at) : null],
+    ["Agendado para", content.scheduled_at ? formatDateTime(content.scheduled_at) : null],
+    ["Publicado em", content.published_at ? formatDateTime(content.published_at) : null],
+    ["Prioridade", ["high", "urgent"].includes(content.priority) ? priorityLabel[content.priority].label : null],
+    ["Link", content.published_url ? <a className="underline underline-offset-2" href={content.published_url} target="_blank" rel="noreferrer noopener">abrir post</a> : null],
+    ["Exceção", content.publish_override_reason ? <span className="text-[var(--tone-warning-fg)]">{content.publish_override_reason}</span> : null],
+  ];
+  const subtitle = [content.clients?.name, content.client_services?.name, content.content_formats?.name].filter(Boolean).join(" · ");
 
   return (
     <>
       <PageHeader
         eyebrow={<span className="flex items-center gap-1.5"><Link href="/app/conteudos" className="hover:text-fg">Conteúdos</Link><span>/</span>
           <Link href={`/app/clientes/${content.client_id}`} className="hover:text-fg">{content.clients?.name}</Link></span>}
-        title={<span><span className="font-mono text-base text-subtle">#{content.code}</span> {content.title}</span>}
+        title={<span className="flex flex-wrap items-center gap-2"><span><span className="font-mono text-base text-subtle">#{content.code}</span> {content.title}</span><StageBadge s={content.stage} /></span>}
+        description={subtitle}
         actions={<ContentActions content={{ id, code: content.code, title: content.title, publication: content.publication_status, approval: content.approval_status, planned: content.planned_publish_at, scheduled: content.scheduled_at, channel: content.channel }}
           can={{ manage: canManage, publish: ctx.can("publications.manage"), approvals: ctx.can("approvals.manage") }} clientId={content.client_id} />}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section aria-label="O que fazer agora" className={cn("mb-4 rounded-lg border px-4 py-3",
+        next.tone === "warning" ? "border-[var(--tone-warning-fg)]/40 bg-[var(--tone-warning-bg)]"
+          : next.tone === "accent" ? "border-accent-ink/40 bg-accent-soft/50"
+          : next.tone === "success" ? "border-[var(--tone-success-fg)]/30 bg-[var(--tone-success-bg)]"
+          : "border-border bg-surface")}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">O que fazer agora</p>
+        <p className="mt-0.5 text-[15px] font-semibold">{next.title}</p>
+        {next.text && <p className="mt-0.5 text-[13px] text-muted">{next.text}</p>}
+        {next.quotes && next.quotes.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {next.quotes.map((q, i) => <li key={i} className="text-[13px]"><span className="font-medium">{q.label}:</span> <span className="text-muted">“{q.text}”</span></li>)}
+          </ul>
+        )}
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <ContentViewer deliverables={viewer} aspect={content.content_formats?.aspect_ratio ?? "9:16"} />
 
-          {openRevisions.length > 0 && (
-            <Panel title="Ajustes em aberto" className="border-[var(--tone-warning-fg)]/30">
-              <ul className="space-y-2">
-                {openRevisions.map((r) => {
-                  const d = deliverables.find((x) => x.id === r.deliverable_id);
+          <section aria-labelledby="tarefas" className="rounded-lg border border-border bg-surface">
+            <header className="flex items-center justify-between gap-3 px-4 py-3">
+              <h2 id="tarefas" className="text-[13px] font-semibold">Tarefas em aberto <span className="tabular ml-1 font-normal text-muted">{openTasks.length}</span></h2>
+            </header>
+            <div className="border-t border-border">
+              <TaskList tasks={openTasks} members={members} currentUser={ctx.user.id} canManage={ctx.can("tasks.manage")} empty="Nenhuma tarefa em aberto." />
+            </div>
+            {doneTasks.length > 0 && (
+              <details className="group border-t border-border">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-muted hover:text-fg [&::-webkit-details-marker]:hidden">
+                  <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden /> Mostrar concluídas ({doneTasks.length})
+                </summary>
+                <div className="border-t border-border opacity-80">
+                  <TaskList tasks={doneTasks} members={members} currentUser={ctx.user.id} canManage={ctx.can("tasks.manage")} />
+                </div>
+              </details>
+            )}
+          </section>
+
+          <Collapsible title="Arquivos e versões" hint="Enviar nova versão, histórico de versões" defaultOpen={content.stage === "adjustments"}>
+            <DeliverablesManager bare contentId={id} workspaceId={ctx.workspace.id} clientId={content.client_id} serviceId={content.service_id}
+              canInvalidate={ctx.can("approvals.invalidate")} me={ctx.user.id}
+              deliverables={deliverables.map((d) => ({
+                id: d.id, kind: d.kind, title: d.title, approval: d.approval_status, required: d.required, clientFacing: d.client_facing,
+                versions: d.deliverable_versions.length, current: d.deliverable_versions[0]?.version_number ?? 0,
+                canUpload: canManage || d.assignee_id === ctx.user.id || taskRows.some((t) => t.deliverable_id === d.id && t.assignee_id === ctx.user.id && !["done", "cancelled"].includes(t.status)),
+                lastText: d.deliverable_versions[0]?.text_content ?? null,
+              }))} />
+          </Collapsible>
+
+          <Collapsible title="Comentários da equipe" count={(comments ?? []).length} hint="Só a equipe vê" defaultOpen={(comments ?? []).length > 0}>
+            <div className="p-4">
+              <ul className="mb-3 space-y-3">
+                {(comments ?? []).length === 0 && <li className="text-sm text-muted">Nenhum comentário ainda.</li>}
+                {(comments ?? []).map((cm) => {
+                  const m = members.get(cm.author_id as string);
                   return (
-                    <li key={r.id as string} className="text-[13px]">
-                      <span className="font-medium">{d?.title}</span> <span className="text-muted">· {r.source === "client" ? "pedido do cliente" : "invalidação interna"} · {relative(r.created_at as string)}</span>
-                      <p className="mt-0.5 rounded-sm bg-surface-2 px-2 py-1.5">“{r.reason as string}”</p>
+                    <li key={cm.id as string} className="flex gap-2.5">
+                      <Avatar name={m?.full_name} src={m?.avatar_url} size={26} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs"><span className="font-medium">{m?.full_name ?? "Ex-colaborador"}</span> <span className="text-subtle">{relative(cm.created_at as string)}</span></p>
+                        <p className="whitespace-pre-wrap text-[13px]">{cm.body as string}</p>
+                      </div>
                     </li>
                   );
                 })}
               </ul>
-            </Panel>
-          )}
-
-          <DeliverablesManager contentId={id} workspaceId={ctx.workspace.id} clientId={content.client_id} serviceId={content.service_id}
-            canInvalidate={ctx.can("approvals.invalidate")} me={ctx.user.id}
-            deliverables={deliverables.map((d) => ({
-              id: d.id, kind: d.kind, title: d.title, approval: d.approval_status, required: d.required, clientFacing: d.client_facing,
-              versions: d.deliverable_versions.length, current: d.deliverable_versions[0]?.version_number ?? 0,
-              canUpload: canManage || d.assignee_id === ctx.user.id || taskRows.some((t) => t.deliverable_id === d.id && t.assignee_id === ctx.user.id && !["done", "cancelled"].includes(t.status)),
-              lastText: d.deliverable_versions[0]?.text_content ?? null,
-            }))} />
-
-          <Panel title="Tarefas do conteúdo" padded={false}>
-            <TaskList tasks={taskRows} members={members} currentUser={ctx.user.id} canManage={ctx.can("tasks.manage")} empty="Este conteúdo não tem tarefas." />
-          </Panel>
-
-          <Panel title="Comentários internos">
-            <ul className="mb-3 space-y-3">
-              {(comments ?? []).length === 0 && <li className="text-sm text-muted">Nenhum comentário ainda.</li>}
-              {(comments ?? []).map((cm) => {
-                const m = members.get(cm.author_id as string);
-                return (
-                  <li key={cm.id as string} className="flex gap-2.5">
-                    <Avatar name={m?.full_name} src={m?.avatar_url} size={26} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs"><span className="font-medium">{m?.full_name ?? "Ex-colaborador"}</span> <span className="text-subtle">{relative(cm.created_at as string)}</span></p>
-                      <p className="whitespace-pre-wrap text-[13px]">{cm.body as string}</p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <CommentBox contentId={id} />
-          </Panel>
+              <CommentBox contentId={id} />
+            </div>
+          </Collapsible>
         </div>
 
         <aside className="space-y-4">
-          <Panel title="Status">
-            <dl className="grid grid-cols-[110px_1fr] gap-y-2 text-[13px]">
-              <dt className="text-muted">Etapa</dt><dd><StageBadge s={content.stage} /></dd>
-              <dt className="text-muted">Produção</dt><dd><ProductionBadge s={content.production_status} /></dd>
-              <dt className="text-muted">Aprovação</dt><dd><ApprovalBadge s={content.approval_status} /></dd>
-              <dt className="text-muted">Publicação</dt><dd><PublicationBadge c={content} /></dd>
-              <dt className="text-muted">Subdivisão</dt><dd><ServiceDot color={content.client_services?.color} name={content.client_services?.name} /></dd>
-              <dt className="text-muted">Formato</dt><dd>{content.content_formats?.name} <span className="text-subtle">{content.content_formats?.aspect_ratio}</span></dd>
-              <dt className="text-muted">Canal</dt><dd>{content.channel ? channels[content.channel] : "—"}</dd>
-              <dt className="text-muted">Prioridade</dt><dd>{priorityLabel[content.priority].label}</dd>
-              <dt className="text-muted">Prazo</dt><dd>{formatDateTime(content.due_at)}</dd>
-              <dt className="text-muted">Postagem prevista</dt><dd>{formatDateTime(content.planned_publish_at)}</dd>
-              {content.scheduled_at && <><dt className="text-muted">Agendado para</dt><dd>{formatDateTime(content.scheduled_at)}</dd></>}
-              {content.published_at && <><dt className="text-muted">Publicado em</dt><dd>{formatDateTime(content.published_at)}</dd></>}
-              {content.published_url && <><dt className="text-muted">Link</dt><dd className="truncate"><a className="underline underline-offset-2" href={content.published_url} target="_blank" rel="noreferrer noopener">{content.published_url}</a></dd></>}
-              {content.publish_override_reason && <><dt className="text-muted">Exceção</dt><dd className="text-[var(--tone-warning-fg)]">{content.publish_override_reason}</dd></>}
+          <section aria-label="Informações" className="rounded-lg border border-border bg-surface p-4">
+            <dl className="space-y-2.5 text-[13px]">
+              {facts.filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => (
+                <div key={k} className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 truncate text-right">{v}</dd>
+                </div>
+              ))}
             </dl>
-          </Panel>
+          </section>
 
           <EditDetails canEdit={canManage} content={{
             id, lock: content.lock_version, title: content.title, objective: content.objective, briefing: content.briefing,
@@ -160,10 +204,12 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
             assignees={(assignees ?? []).map((a) => a.user_id as string)} />
 
           {scriptText && (
-            <Panel title="Roteiro"><p className="max-h-72 overflow-y-auto whitespace-pre-wrap text-[13px] leading-relaxed">{scriptText}</p></Panel>
+            <Collapsible title="Roteiro">
+              <p className="max-h-72 overflow-y-auto whitespace-pre-wrap p-4 text-[13px] leading-relaxed">{scriptText}</p>
+            </Collapsible>
           )}
 
-          <Panel title="Histórico" padded={false}>
+          <Collapsible title="Histórico" count={(activity ?? []).length}>
             {(activity ?? []).length === 0 ? <EmptyState compact title="Sem registros" /> : (
               <ol className="max-h-96 divide-y divide-border overflow-y-auto">
                 {(activity ?? []).map((ev) => (
@@ -175,9 +221,25 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
                 ))}
               </ol>
             )}
-          </Panel>
+          </Collapsible>
         </aside>
       </div>
     </>
+  );
+}
+
+/** Native <details>: collapsed sections keep the page short and work without JS. */
+function Collapsible({ title, count, hint, defaultOpen, children }: { title: string; count?: number; hint?: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={defaultOpen} className="group rounded-lg border border-border bg-surface">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="text-[13px] font-semibold">
+          {title}{count !== undefined && <span className="tabular ml-1.5 font-normal text-muted">{count}</span>}
+          {hint && <span className="ml-2 text-xs font-normal text-subtle">{hint}</span>}
+        </span>
+        <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="border-t border-border">{children}</div>
+    </details>
   );
 }
