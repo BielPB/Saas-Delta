@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { CalendarCheck, CheckCheck, Copy, Link2, MoreHorizontal, Pencil, ShieldOff, Stamp, Upload, XCircle } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/form";
@@ -82,6 +82,19 @@ export function DeliverablesManager({ contentId, workspaceId, clientId, serviceI
   const [inval, setInval] = useState<DeliverableItem | null>(null);
   const [reason, setReason] = useState("");
   const { pending, run } = useRun();
+  // Arriving from a task's "Enviar entrega" (#entrega-video…): unfold this section, scroll to the item and open its upload dialog.
+  useEffect(() => {
+    const kind = decodeURIComponent(window.location.hash).match(/^#entrega-(.+)$/)?.[1];
+    const target = kind ? deliverables.find((d) => d.kind === kind) : undefined;
+    if (!target) return;
+    const el = document.getElementById(`entrega-${target.kind}`);
+    const details = el?.closest("details");
+    if (details) details.open = true;
+    el?.scrollIntoView({ block: "center" });
+    if (!target.canUpload) return;
+    const raf = requestAnimationFrame(() => setOpen(target)); // after the section unfolds
+    return () => cancelAnimationFrame(raf);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on arrival
   return (
     <Panel title={bare ? undefined : "Entregáveis e versões"} padded={false} className={bare ? "rounded-none border-0 bg-transparent" : undefined}>
       <ul className="divide-y divide-border">
