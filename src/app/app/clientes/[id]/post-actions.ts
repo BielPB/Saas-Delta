@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fail, type ActionResult } from "@/lib/errors";
 import { fromLocalInput } from "@/lib/format";
 import { isUuid } from "@/lib/utils";
+import { createBatch } from "@/app/app/aprovacoes/actions";
 
 const refresh = (clientId?: string, contentId?: string) => {
   if (clientId) revalidatePath(`/app/clientes/${clientId}`);
@@ -60,4 +61,51 @@ export async function setEditor(contentId: string, clientId: string, userId: str
   if (error) return fail(error);
   refresh(clientId, contentId);
   return { ok: true, message: "Editor atualizado." };
+}
+
+/**
+ * "Enviar para aprovação" of the month's feed: releases every post whose files are all in
+ * (same rule as the side panel), then creates one approval link with the posts ready for the client.
+ */
+export async function sendFeedForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string; sent: number; skipped: number }>> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
+  const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
+  if (!ids.length) return fail("Nenhum post neste mês.");
+  const sb = await createClient();
+
+  const readiness = async () => {
+    const { data } = await sb.from("deliverables")
+      .select("content_id, required, client_facing, current_version_id, deliverable_versions!deliverables_current_version_fk(released_at)")
+      .in("content_id", ids);
+    const by = new Map<string, { missing: boolean; unreleased: boolean }>();
+    for (const d of (data ?? []) as unknown as Array<{ content_id: string; required: boolean; client_facing: boolean; current_version_id: string | null; deliverable_versions: { released_at: string | null } | null }>) {
+      const e = by.get(d.content_id) ?? { missing: false, unreleased: false };
+      if (d.required && !d.current_version_id) e.missing = true;
+      if (d.required && d.client_facing && d.current_version_id && !d.deliverable_versions?.released_at) e.unreleased = true;
+      by.set(d.content_id, e);
+    }
+    return by;
+  };
+
+  const before = await readiness();
+  for (const id of ids) {
+    const r = before.get(id);
+    if (r && !r.missing && r.unreleased) await sb.rpc("submit_for_approval", { p_content: id }); // failures leave it out of the link
+  }
+  const after = await readiness();
+  const { data: states } = await sb.from("content_items").select("id, approval_status, publication_status").in("id", ids);
+  const ready = ids.filter((id) => {
+    const r = after.get(id);
+    const st = (states ?? []).find((s) => s.id === id) as { approval_status: string; publication_status: string } | undefined;
+    return r && !r.missing && !r.unreleased && st && st.approval_status !== "approved" && !["published", "cancelled"].includes(st.publication_status);
+  });
+  if (!ready.length) return fail("Nenhum post está pronto para o cliente: envie a mídia e a legenda dos posts deste mês.");
+
+  const { data: client } = await sb.from("clients").select("name").eq("id", clientId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  const label = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(new Date(`${ym}-15T12:00:00`)).replace(".", "").replace(" de ", "/");
+  const r = await createBatch({ client_id: clientId, name: `Preview — ${client?.name ?? "Cliente"} · ${label}`, content_ids: ready });
+  if (!r.ok) return r;
+  refresh(clientId);
+  return { ok: true, data: { url: r.data!.url, sent: ready.length, skipped: ids.length - ready.length } };
 }

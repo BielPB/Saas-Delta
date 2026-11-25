@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { ArrowRight, Check, CheckCheck, ChevronLeft, ChevronRight, Copy, Loader2, X } from "lucide-react";
+import { ArrowRight, Check, CheckCheck, ChevronLeft, ChevronRight, Copy, ImageIcon, Loader2, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, Input } from "@/components/ui/form";
 import { Dialog, useToast } from "@/components/ui/overlay";
@@ -37,6 +37,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   const askName = stored === null && !dismissed;
   const setAskName = (v: boolean) => { if (!v) setDismissed(true); };
   const [idx, setIdx] = useState(0);
+  const [feed, setFeed] = useState(data.items.length > 1);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [summary, setSummary] = useState<Summary | null>(null);
   const [pending, start] = useTransition();
@@ -100,6 +101,16 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
     window.scrollTo({ top: 0 });
   });
 
+  /** Back to the grid; keeps the decision taken on this post. */
+  const backToFeed = () => start(async () => {
+    const hadDraft = Boolean(drafts[item.content_id]?.choice);
+    if (!(await save())) return;
+    if (hadDraft) { setDrafts((p) => { const n = { ...p }; delete n[item.content_id]; return n; }); router.refresh(); }
+    setFeed(true);
+    window.scrollTo({ top: 0 });
+  });
+  const openItem = (n: number) => { setIdx(n); setFeed(false); window.scrollTo({ top: 0 }); };
+
   const finalize = () => start(async () => {
     if (!(await save())) return;
     setDrafts((p) => { const n = { ...p }; delete n[item.content_id]; return n; });
@@ -138,6 +149,81 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
 
   if (!item) return <main className="mx-auto min-h-dvh max-w-xl px-5 py-10"><Brand data={data} media={media} /><p className="mt-8 text-sm text-muted">Nenhum conteúdo neste lote.</p></main>;
 
+  if (feed) {
+    const tiles = data.items.map((it, n) => ({ it, n }))
+      .sort((a, b) => (b.it.planned_publish_at ?? "9999") > (a.it.planned_publish_at ?? "9999") ? 1 : -1);
+    const approvedN = data.items.filter((i) => stateOf(i) === "approved").length;
+    const rejectedN = data.items.filter((i) => stateOf(i) === "rejected").length;
+    const clientLogo = data.client.logo_path ? media[data.client.logo_path] : null;
+    return (
+      <div className="min-h-dvh bg-bg pb-28">
+        <header className="border-b border-border">
+          <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4">
+            <Brand data={data} media={media} />
+            {data.batch.due_at && <p className="text-sm text-muted">Responda até <strong className="text-accent-ink">{dueLabel(data.batch.due_at)}</strong></p>}
+          </div>
+        </header>
+        <main className="mx-auto max-w-2xl px-4 py-6">
+          <div className="mb-5 flex items-center gap-4">
+            <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-surface-2 text-xl font-bold">
+              {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+              {clientLogo ? <img src={clientLogo} alt="" className="size-full object-cover" /> : data.client.name.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold">{data.client.name}</h1>
+              <p className="text-sm text-muted">{data.batch.name}</p>
+              <p className="tabular mt-1 text-xs text-muted"><strong className="text-fg">{total}</strong> publicações · <strong className="text-fg">{answered}</strong> respondidas{approvedN ? ` · ${approvedN} aprovadas` : ""}{rejectedN ? ` · ${rejectedN} com ajuste` : ""}</p>
+            </div>
+          </div>
+          <p className="mb-3 text-sm text-muted">Toque em cada publicação para ver em detalhe e aprovar ou pedir ajuste.</p>
+          <ul className="grid grid-cols-3 gap-0.5 overflow-hidden rounded-xl border border-border bg-border">
+            {tiles.map(({ it, n }) => {
+              const st = stateOf(it);
+              const vis = [...it.deliverables].filter((d) => d.version && ["cover", "image", "carousel", "video"].includes(d.kind))
+                .sort((a, b) => ({ cover: 0, image: 1, carousel: 2, video: 3 } as Record<string, number>)[a.kind] - ({ cover: 0, image: 1, carousel: 2, video: 3 } as Record<string, number>)[b.kind])[0];
+              const a0 = vis?.version?.assets?.[0];
+              const thumb = a0 && a0.provider === "supabase" ? media[(a0.mime_type?.startsWith("image/") ? a0.thumbnail_path ?? a0.preview_path ?? a0.path : a0.thumbnail_path) ?? ""] : undefined;
+              const isVideo = it.deliverables.some((d) => d.kind === "video");
+              return (
+                <li key={it.content_id} className="relative aspect-[4/5] bg-surface-2">
+                  <button type="button" onClick={() => openItem(n)} className="block size-full text-left" aria-label={`${it.title}${st === "approved" ? " (aprovado)" : st === "rejected" ? " (ajuste pedido)" : ""}`}>
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed private URL
+                      <img src={thumb} alt="" className="size-full object-cover" loading="lazy" />
+                    ) : (
+                      <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-subtle">
+                        {isVideo ? <Play className="size-6" aria-hidden /> : <ImageIcon className="size-6" aria-hidden />}
+                        <span className="line-clamp-3 text-[11px]">{it.title}</span>
+                      </span>
+                    )}
+                    {isVideo && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-hidden />}
+                    {st === "approved" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-accent text-accent-fg shadow"><Check className="size-3.5" strokeWidth={3} aria-hidden /></span>}
+                    {st === "rejected" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--tone-danger-fg)] text-white shadow"><X className="size-3.5" strokeWidth={3} aria-hidden /></span>}
+                    {st === "pending" && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[10.5px] font-semibold text-white">Aguardando você</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </main>
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="mx-auto flex max-w-2xl gap-2 px-4 py-3">
+            <Button className="h-11 flex-1 rounded-full" onClick={() => openItem(Math.max(0, data.items.findIndex((i) => stateOf(i) === "pending")))}>Avaliar uma a uma</Button>
+            <Button variant="primary" className="h-11 flex-1 rounded-full font-bold" disabled={pending} onClick={finalize}>
+              {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar avaliação
+            </Button>
+          </div>
+        </div>
+        <Dialog open={askName} onClose={() => setAskName(false)} size="sm" title="Como podemos te identificar?" description="Seu nome aparece junto das avaliações para a agência.">
+          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); try { localStorage.setItem(nameKey, reviewer); } catch {} setAskName(false); }}>
+            <Input autoFocus value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="Seu nome" aria-label="Seu nome" autoComplete="name" />
+            <div className="flex justify-end gap-2"><Button onClick={() => setAskName(false)}>Pular</Button><Button type="submit" variant="primary">Continuar</Button></div>
+          </form>
+        </Dialog>
+      </div>
+    );
+  }
+
   const ds = [...item.deliverables].sort((a, b) => order(a.kind) - order(b.kind));
   const main = ds.find((d) => !["cover", "caption"].includes(d.kind));
   const cover = ds.find((d) => d.kind === "cover");
@@ -166,6 +252,12 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
+        {total > 1 && (
+          <button type="button" onClick={backToFeed} disabled={pending}
+            className="-ml-1 mb-3 inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] font-medium text-muted hover:bg-surface-2 hover:text-fg">
+            <ChevronLeft className="size-4" aria-hidden /> Ver o feed
+          </button>
+        )}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Conteúdo {idx + 1} de {total}{item.service ? ` · ${item.service}` : ""}</p>

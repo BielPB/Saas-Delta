@@ -20,6 +20,7 @@ import { ClientStatusActions, ClientTeam, ServicesManager, TargetsManager } from
 import { ClientAvatar } from "@/components/shell/client-nav";
 import { PostGrid, type GridPost } from "./post-grid";
 import { PostDrawer } from "./post-drawer";
+import { FeedApproval, type FeedTile } from "./feed-approval";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -62,7 +63,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   };
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: "posts", label: "Posts" }, { key: "reels", label: "Reels" }, { key: "stories", label: "Stories" },
-    { key: "visao", label: "Visão geral" }, { key: "aprovacoes", label: "Aprovações" }, { key: "servicos", label: "Subdivisões" },
+    { key: "aprovacoes", label: "Aprovação" }, { key: "visao", label: "Visão geral" }, { key: "servicos", label: "Subdivisões" },
     { key: "tarefas", label: "Tarefas" }, { key: "arquivos", label: "Arquivos" }, { key: "historico", label: "Histórico" }, { key: "configuracoes", label: "Configurações" },
   ];
 
@@ -81,7 +82,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {(isGrid || tab === "visao") && (
+          {(isGrid || tab === "visao" || tab === "aprovacoes") && (
             <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
               <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronLeft className="size-4" /></Link>
               <span className="min-w-32 text-center text-[13px] font-semibold">{monthLabel(ym)}</span>
@@ -117,7 +118,17 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         </div>
       )}
       {tab === "tarefas" && <ClientTasks ws={ctx.workspace.id} client={id} me={ctx.user.id} canManage={ctx.can("tasks.manage")} />}
-      {tab === "aprovacoes" && <ClientApprovals client={id} />}
+      {tab === "aprovacoes" && (
+        <div className="space-y-6">
+          <FeedTab ws={ctx.workspace.id} clientId={id} clientName={client.name as string} ym={ym} formats={formats} canSend={ctx.can("approvals.manage")} />
+          <details className="group rounded-lg border border-border bg-surface">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[13px] font-semibold [&::-webkit-details-marker]:hidden">
+              Links enviados <ChevronRight className="size-4 text-muted transition-transform group-open:rotate-90" aria-hidden />
+            </summary>
+            <div className="border-t border-border"><ClientApprovals client={id} /></div>
+          </details>
+        </div>
+      )}
       {tab === "arquivos" && <ClientFiles client={id} />}
       {tab === "historico" && <ClientHistory ws={ctx.workspace.id} client={id} />}
       {tab === "configuracoes" && (
@@ -131,6 +142,37 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       )}
     </>
   );
+}
+
+/** "Aprovação": the month's feed (posts + reels, newest first) and the button that sends it to the client. */
+async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
+  ws: string; clientId: string; clientName: string; ym: string; canSend: boolean;
+  formats: Array<{ id: string; key: string; name: string; active: boolean }>;
+}) {
+  const sb = await createClient();
+  const feedGroups = formatGroups.filter((g) => g.key !== "stories");
+  const fmt = formats.filter((f) => feedGroups.some((g) => g.formats.includes(f.key)));
+  const m0 = `${ym}-01T00:00:00Z`; const m1 = `${shiftMonth(ym, 1)}-01T00:00:00Z`;
+  const { data } = fmt.length ? await sb.from("content_items").select("id, title, format_id, stage, approval_status, publication_status, work_status, planned_publish_at, created_at")
+    .eq("workspace_id", ws).eq("client_id", clientId).is("archived_at", null).neq("publication_status", "cancelled").in("format_id", fmt.map((f) => f.id))
+    .or(`and(planned_publish_at.gte.${m0},planned_publish_at.lt.${m1}),and(planned_publish_at.is.null,created_at.gte.${m0},created_at.lt.${m1})`)
+    .order("planned_publish_at", { ascending: false, nullsFirst: true }).limit(200) : { data: [] };
+  const rows = (data ?? []) as Array<{ id: string; title: string; format_id: string; stage: ContentRow["stage"]; approval_status: ContentRow["approval_status"]; publication_status: ContentRow["publication_status"]; work_status: string; planned_publish_at: string | null; created_at: string }>;
+  const ids = rows.map((r) => r.id);
+  const [thumbs, { data: dels }] = await Promise.all([
+    postThumbs(ids),
+    ids.length ? sb.from("deliverables").select("content_id, required, current_version_id").in("content_id", ids) : Promise.resolve({ data: [] as unknown[] }),
+  ]);
+  const missing = new Set(((dels ?? []) as Array<{ content_id: string; required: boolean; current_version_id: string | null }>).filter((d) => d.required && !d.current_version_id).map((d) => d.content_id));
+  const keyOf = new Map(formats.map((f) => [f.id, f.key]));
+  const tiles: FeedTile[] = rows.map((r) => {
+    const k = keyOf.get(r.format_id) ?? "";
+    const g = formatGroups.find((x) => x.formats.includes(k))?.key ?? "posts";
+    const t = thumbs.get(r.id);
+    return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, video: g === "reels", status: postStatus(r), ready: !missing.has(r.id), missing: missing.has(r.id),
+      href: `/app/clientes/${clientId}?aba=${g}&mes=${ym}&post=${r.id}` };
+  });
+  return <FeedApproval tiles={tiles} clientId={clientId} clientName={clientName} ym={ym} monthLabel={monthLabel(ym)} canSend={canSend} />;
 }
 
 /** Posts / Reels / Stories of the month as a grid; ?post=<id> opens the side panel. */
