@@ -5,7 +5,7 @@ import { MoreHorizontal, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { inviteMember, setRoles, setStatus } from "./actions";
+import { inviteMember, setMemberTarget, setRoles, setStatus } from "./actions";
 
 type Role = { key: string; name: string; description: string };
 
@@ -75,5 +75,27 @@ export function MemberRowActions({ member, roles, canGrantOwner }: { member: { i
         <RolePicker roles={roles} value={sel} onChange={setSel} canGrantOwner={canGrantOwner} />
       </Dialog>
     </>
+  );
+}
+
+/** Monthly goal (approved posts) for the team ranking; saves on blur. */
+export function MemberTargetInput({ userId, value }: { userId: string; value: number | null }) {
+  const [v, setV] = useState(value === null ? "" : String(value));
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const router = useRouter();
+  const save = () => {
+    const next = v.trim() === "" ? null : Number(v);
+    if (next === value) return;
+    start(async () => {
+      const r = await setMemberTarget(userId, next);
+      if (r.ok) { toast.success(r.message ?? "Salvo."); router.refresh(); } else { toast.error(r.error); setV(value === null ? "" : String(value)); }
+    });
+  };
+  return (
+    <input type="number" min={0} max={1000} inputMode="numeric" value={v} disabled={pending} onChange={(e) => setV(e.target.value)} onBlur={save}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      placeholder="—" aria-label="Meta mensal de posts aprovados"
+      className="tabular h-8 w-20 rounded-md border border-border bg-surface px-2 text-right text-[13px]" />
   );
 }

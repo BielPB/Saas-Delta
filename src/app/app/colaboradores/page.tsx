@@ -4,7 +4,7 @@ import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listMembers } from "@/lib/data";
 import { Avatar, Badge, PageHeader, Panel, Table } from "@/components/ui/primitives";
-import { InviteButton, MemberRowActions } from "./member-actions";
+import { InviteButton, MemberRowActions, MemberTargetInput } from "./member-actions";
 
 export const metadata: Metadata = { title: "Colaboradores" };
 
@@ -27,7 +27,7 @@ export default async function MembersPage() {
         actions={canManage && <InviteButton roles={roleList} canGrantOwner={ctx.roles.includes("owner")} />} />
       <Panel padded={false}>
         <Table>
-          <thead><tr><th>Pessoa</th><th>Funções</th><th className="hidden md:table-cell">Carga</th><th>Status</th>{canManage && <th className="w-10"><span className="sr-only">Ações</span></th>}</tr></thead>
+          <thead><tr><th>Pessoa</th><th>Funções</th><th className="hidden md:table-cell">Carga</th><th className="text-right"><span title="Posts aprovados por mês: usado no ranking do painel">Meta/mês</span></th><th>Status</th>{canManage && <th className="w-10"><span className="sr-only">Ações</span></th>}</tr></thead>
           <tbody>
             {members.map((m) => {
               const w = workload.get(m.user_id);
@@ -47,6 +47,7 @@ export default async function MembersPage() {
                     {w ? <Link href={`/app/tarefas?responsavel=${m.user_id}`} className="tabular text-[13px] hover:underline">{w.open_tasks} abertas{w.overdue ? ` · ${w.overdue} atrasadas` : ""}</Link> : "—"}
                     {w?.overloaded && <Badge tone="warning" className="ml-1.5">Sobrecarregado</Badge>}
                   </td>
+                  <td className="text-right">{canManage && m.status === "active" && m.user_id ? <MemberTargetInput userId={m.user_id} value={m.monthly_target} /> : <span className="tabular text-muted">{m.monthly_target ?? "—"}</span>}</td>
                   <td>{m.status === "active" ? <Badge tone="success">Ativo</Badge> : m.status === "invited" ? <Badge tone="info">Convidado</Badge> : <Badge>Desativado</Badge>}</td>
                   {canManage && <td>{m.user_id !== ctx.user.id && <MemberRowActions member={{ id: m.member_id, name: m.full_name, roles: m.roles, status: m.status }} roles={roleList} canGrantOwner={ctx.roles.includes("owner")} />}</td>}
                 </tr>

@@ -79,9 +79,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   for (const x of (ass ?? []) as Array<{ content_id: string; user_id: string }>) give(x.user_id, x.content_id);
   for (const x of (eds ?? []) as Array<{ id: string; editor_id: string | null }>) give(x.editor_id, x.id);
   const names = new Map(members.map((m) => [m.user_id, m]));
-  const ranking = [...credit.entries()].map(([u, set]) => ({ u, n: set.size, name: names.get(u)?.full_name ?? "Ex-colaborador", avatar: names.get(u)?.avatar_url ?? null }))
-    .sort((x, y) => y.n - x.n).slice(0, 6);
-  const top = ranking[0]?.n ?? 0;
+  const byGoal = raw.ranking !== "geral";
+  const active = members.filter((m) => m.status === "active" && m.user_id);
+  const withGoal = active.filter((m) => (m.monthly_target ?? 0) > 0);
+  const ranking = byGoal
+    ? withGoal.map((m) => { const n = credit.get(m.user_id)?.size ?? 0; return { u: m.user_id, n, pct: Math.round((n / m.monthly_target!) * 100), name: m.full_name, avatar: m.avatar_url }; })
+        .sort((x, y) => y.pct - x.pct).slice(0, 6)
+    : [...credit.entries()].map(([u, set]) => ({ u, n: set.size, pct: 0, name: names.get(u)?.full_name ?? "Ex-colaborador", avatar: names.get(u)?.avatar_url ?? null }))
+        .sort((x, y) => y.n - x.n).slice(0, 6);
+  const top = byGoal ? Math.max(100, ...ranking.map((r) => r.pct)) : ranking[0]?.n ?? 0;
+  const noGoal = active.length - withGoal.length;
 
   const attentionItems = att ? [
     { key: "rejected", label: "Em ajuste (pedido do cliente)", items: att.rejected_contents.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}` })) },
@@ -165,21 +172,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <ColumnChart label="Posts aprovados por dia" height={160}
             data={perDay.map((v, i) => ({ label: String(i + 1), value: v, detail: `${i + 1} de ${monthName}: ${v} aprovado(s)` }))} />
         </Panel>
-        <Panel title="Top membros" actions={<span className="text-xs text-muted">posts aprovados</span>}>
-          {ranking.length === 0 ? <p className="text-[13px] text-muted">Aparece quando os posts com responsável ou editor forem aprovados.</p> : (
+        <Panel title="Top membros" actions={
+          <nav aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
+            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", byGoal && "bg-accent text-accent-fg")}>Meta</Link>
+            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", !byGoal && "bg-accent text-accent-fg")}>Geral</Link>
+          </nav>}>
+          {ranking.length === 0 ? (
+            <p className="text-[13px] text-muted">{byGoal ? <>Defina a meta mensal de cada pessoa em <Link href="/app/colaboradores" className="underline">Equipe</Link> para ver o ranking por meta.</> : "Aparece quando os posts com responsável ou editor forem aprovados."}</p>
+          ) : (
             <ol className="space-y-3">
               {ranking.map((r, i) => (
                 <li key={r.u} className="flex items-center gap-3">
                   <span className="tabular w-4 text-xs text-subtle">{i + 1}</span>
                   <Avatar name={r.name} src={r.avatar} size={28} />
                   <div className="min-w-0 flex-1">
-                    <p className="flex justify-between text-[13px]"><span className="truncate font-medium">{r.name}</span><span className="tabular text-muted">{r.n}</span></p>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-accent" style={{ width: `${top ? (r.n / top) * 100 : 0}%` }} /></div>
+                    <p className="flex justify-between text-[13px]"><span className="truncate font-medium">{r.name}</span><span className="tabular text-muted">{byGoal ? `${r.pct}%` : r.n}</span></p>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-accent" style={{ width: `${top ? ((byGoal ? r.pct : r.n) / top) * 100 : 0}%` }} /></div>
                   </div>
                 </li>
               ))}
             </ol>
           )}
+          {byGoal && ranking.length > 0 && noGoal > 0 && <p className="mt-3 text-xs text-muted">{noGoal} pessoa(s) sem meta definida não entram neste ranking.</p>}
         </Panel>
       </div>
 

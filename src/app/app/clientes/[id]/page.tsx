@@ -21,10 +21,12 @@ import { ClientAvatar } from "@/components/shell/client-nav";
 import { PostGrid, type GridPost } from "./post-grid";
 import { PostDrawer } from "./post-drawer";
 import { FeedApproval, type FeedTile } from "./feed-approval";
+import { DuplicateMonth, OnboardingBar, ProfileForm } from "./client-sheet";
+import { onboardingOf } from "@/lib/client-sheet";
 
 export const metadata: Metadata = { title: "Cliente" };
 
-const TABS = ["posts", "reels", "stories", "visao", "aprovacoes", "servicos", "tarefas", "arquivos", "historico", "configuracoes"] as const;
+const TABS = ["posts", "reels", "stories", "aprovacoes", "ficha", "visao", "servicos", "tarefas", "arquivos", "historico", "configuracoes"] as const;
 type Tab = (typeof TABS)[number];
 
 interface Progress {
@@ -63,7 +65,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   };
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: "posts", label: "Posts" }, { key: "reels", label: "Reels" }, { key: "stories", label: "Stories" },
-    { key: "aprovacoes", label: "Aprovação" }, { key: "visao", label: "Visão geral" }, { key: "servicos", label: "Subdivisões" },
+    { key: "aprovacoes", label: "Aprovação" }, { key: "ficha", label: "Ficha do cliente" }, { key: "visao", label: "Visão geral" }, { key: "servicos", label: "Subdivisões" },
     { key: "tarefas", label: "Tarefas" }, { key: "arquivos", label: "Arquivos" }, { key: "historico", label: "Histórico" }, { key: "configuracoes", label: "Configurações" },
   ];
 
@@ -89,9 +91,11 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
             </nav>
           )}
-          {ctx.can("approvals.manage") && <ButtonLink href={`/app/aprovacoes/novo?cliente=${id}`}><Stamp /> Link de aprovação</ButtonLink>}
+          {isGrid && ctx.can("contents.manage") && <DuplicateMonth clientId={id} ym={ym} monthLabel={monthLabel(ym)} nextLabel={monthLabel(shiftMonth(ym, 1))} />}
         </div>
       </header>
+
+      {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
 
       <nav aria-label="Seções do cliente" className="-mx-1 mb-5 flex gap-1 overflow-x-auto border-b border-border px-1">
         {tabs.map((t, i) => (
@@ -111,6 +115,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         <Overview ws={ctx.workspace.id} client={id} month={month} servicesCount={(services ?? []).length}
           can={{ clients: canManage, contents: ctx.can("contents.manage"), approvals: ctx.can("approvals.manage") }} />
       )}
+      {tab === "ficha" && <ProfileForm clientId={id} canEdit={canManage} initial={(client.profile ?? {}) as Record<string, string>} />}
       {tab === "servicos" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <ServicesManager clientId={id} services={(services ?? []) as never} canManage={canManage} created={sp.novo === "1"} />

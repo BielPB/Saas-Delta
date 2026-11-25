@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env";
 import { appOrigin } from "@/lib/origin";
 import { fail, type ActionResult } from "@/lib/errors";
+import { isUuid } from "@/lib/utils";
 
 const invite = z.object({ email: z.string().trim().toLowerCase().email("E-mail inválido."), roles: z.array(z.string().regex(/^[a-z0-9_]{2,40}$/)).min(1, "Escolha ao menos uma função.") });
 
@@ -46,4 +47,16 @@ export async function setStatus(memberId: string, active: boolean): Promise<Acti
   if (error) return fail(error);
   revalidatePath("/app/colaboradores");
   return { ok: true, message: active ? "Colaborador reativado." : "Colaborador desativado. O acesso foi bloqueado." };
+}
+
+export async function setMemberTarget(userId: string, target: number | null): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(userId)) return fail("Pessoa inválida.");
+  if (target !== null && (!Number.isInteger(target) || target < 0 || target > 1000)) return fail("Use um número entre 0 e 1000.");
+  const sb = await createClient();
+  const { error } = await sb.rpc("set_member_target", { p_ws: ctx.workspace.id, p_user: userId, p_target: target });
+  if (error) return fail(error);
+  revalidatePath("/app/colaboradores");
+  revalidatePath("/app");
+  return { ok: true, message: "Meta atualizada." };
 }

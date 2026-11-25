@@ -39,7 +39,7 @@ export const taskSelect =
   "id, title, description, status, kind, priority, due_at, assignee_id, client_id, content_id, deliverable_id, step_key, required_role_key, " +
   "completed_at, created_at, reopen_count, checklist, clients(name), content_items(code, title), deliverables(kind, title, current_version_id)";
 
-export interface MemberRow { user_id: string; full_name: string; email: string | null; avatar_url: string | null; roles: string[]; status: string; member_id: string; invited_email: string | null }
+export interface MemberRow { user_id: string; full_name: string; email: string | null; avatar_url: string | null; roles: string[]; status: string; member_id: string; invited_email: string | null; monthly_target: number | null }
 
 export interface AssetRow {
   id: string; name: string; mime_type: string | null; provider: "supabase" | "drive" | "external_link";
@@ -143,9 +143,9 @@ export async function thumbnails(rows: ContentRow[]) {
 export async function listMembers(ws: string): Promise<MemberRow[]> {
   const sb = await createClient();
   const { data } = await sb.from("workspace_members")
-    .select("id, user_id, status, invited_email, member_roles(roles(key, name))")
+    .select("id, user_id, status, invited_email, monthly_target, member_roles(roles(key, name))")
     .eq("workspace_id", ws).in("status", ["active", "invited", "disabled"]).order("created_at");
-  const rows = (data ?? []) as unknown as Array<{ id: string; user_id: string | null; status: string; invited_email: string | null; member_roles: Array<{ roles: { key: string } | null }> }>;
+  const rows = (data ?? []) as unknown as Array<{ id: string; user_id: string | null; status: string; invited_email: string | null; monthly_target: number | null; member_roles: Array<{ roles: { key: string } | null }> }>;
   const ids = rows.map((r) => r.user_id).filter((x): x is string => Boolean(x));
   const { data: profiles } = ids.length ? await sb.from("profiles").select("id, full_name, email, avatar_url").in("id", ids) : { data: [] };
   const pm = new Map((profiles ?? []).map((p) => [p.id as string, p]));
@@ -156,6 +156,7 @@ export async function listMembers(ws: string): Promise<MemberRow[]> {
       full_name: (p?.full_name as string) || (p?.email as string) || r.invited_email || "Convidado",
       email: (p?.email as string) ?? r.invited_email, avatar_url: (p?.avatar_url as string) ?? null,
       roles: r.member_roles.map((m) => m.roles?.key ?? "").filter(Boolean),
+      monthly_target: r.monthly_target,
     };
   });
 }
