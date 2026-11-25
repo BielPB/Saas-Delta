@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { sendFeedForApproval } from "./post-actions";
 import { StatusPill } from "./post-grid";
 
-export interface FeedTile { id: string; title: string; thumb: string | null; link: boolean; video: boolean; status: PostStatusKey; ready: boolean; missing: boolean; href: string }
+export interface FeedTile { id: string; title: string; thumb: string | null; link: boolean; video: boolean; status: PostStatusKey; ready: boolean; missing: boolean; blocked: string | null; href: string }
 
 /** Instagram-like 3-column preview of the month (newest first), with one button to send it to the client. */
 export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canSend, activeLink }: {
@@ -57,9 +57,9 @@ export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canS
       {tiles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-4 py-14 text-center text-sm text-muted">Nenhum post ou reels neste mês.</div>
       ) : (
-        <ul className="mx-auto grid max-w-2xl grid-cols-3 gap-0.5 overflow-hidden rounded-xl border border-border bg-border">
+        <ul className="mx-auto grid max-w-2xl grid-cols-3 gap-0.5">
           {tiles.map((t) => (
-            <li key={t.id} className="relative aspect-[4/5] bg-surface-2">
+            <li key={t.id} className="relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl">
               <Link href={t.href} scroll={false} className="group block size-full" title={t.title}>
                 {t.thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element -- signed private URL
@@ -73,7 +73,7 @@ export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canS
                 {t.video && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-label="Vídeo" />}
                 <span className="absolute inset-x-1.5 bottom-1.5 flex justify-start opacity-90 transition-opacity group-hover:opacity-100">
                   {t.missing && !["ready", "scheduled", "published"].includes(t.status)
-                    ? <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10.5px] font-semibold text-white">Faltam arquivos</span>
+                    ? <span className="line-clamp-2 rounded-lg bg-black/75 px-2 py-0.5 text-[10.5px] font-semibold text-white">{t.blocked ?? "Faltam arquivos"}</span>
                     : <StatusPill s={t.status} className="shadow" />}
                 </span>
               </Link>
@@ -87,7 +87,10 @@ export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canS
           <Button variant="primary" disabled={pending || willGo === 0} onClick={send}>{pending ? <Loader2 className="animate-spin" /> : <Send />} Gerar link</Button></>}>
         <ul className="space-y-2 text-sm">
           <li className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-[var(--tone-success-fg)]" aria-hidden /><span><strong>{willGo}</strong> post(s) vão para o cliente aprovar no link.</span></li>
-          {notReady > 0 && <li className="flex gap-2"><X className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><span className="text-muted"><strong>{notReady}</strong> ainda sem mídia ou legenda ficam de fora. Envie depois, no mesmo fluxo.</span></li>}
+          {notReady > 0 && (
+            <li className="flex gap-2"><X className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><span className="text-muted"><strong>{notReady}</strong> ficam de fora por enquanto:
+              <ul className="mt-1 space-y-0.5 text-xs">{open.filter((t) => t.missing).slice(0, 5).map((t) => <li key={t.id}>• {t.title}: {t.blocked}</li>)}</ul></span></li>
+          )}
           <li className="text-xs text-muted">{activeLink ? "Eles entram no link de " + monthLabel + " que o cliente já tem: não precisa mandar outro." : "Será criado o link do mês: os próximos envios entram nele."} Posts já aprovados não entram de novo.</li>
         </ul>
       </Dialog>

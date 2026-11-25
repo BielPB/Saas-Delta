@@ -273,3 +273,28 @@ export async function postThumbs(contentIds: string[]) {
   }
   return out;
 }
+
+/**
+ * Why a post cannot go to the client yet (same rules as submit_for_approval):
+ * required files missing, or an adjustment the client asked for without a newer version.
+ */
+export async function postBlockers(contentIds: string[]) {
+  const out = new Map<string, { missing: string[]; adjust: string[] }>();
+  if (!contentIds.length) return out;
+  const sb = await createClient();
+  const [{ data: dels }, { data: revs }] = await Promise.all([
+    sb.from("deliverables").select("id, content_id, title, required, current_version_id, deliverable_versions!deliverables_current_version_fk(version_number)").in("content_id", contentIds),
+    sb.from("revision_requests").select("content_id, deliverable_id, version_id").in("content_id", contentIds).eq("status", "open"),
+  ]);
+  const revList = (revs ?? []) as Array<{ content_id: string; deliverable_id: string; version_id: string }>;
+  const { data: rv } = revList.length ? await sb.from("deliverable_versions").select("id, version_number").in("id", revList.map((r) => r.version_id)) : { data: [] };
+  const rejectedNumber = new Map(((rv ?? []) as Array<{ id: string; version_number: number }>).map((v) => [v.id, v.version_number]));
+  const ds = (dels ?? []) as unknown as Array<{ id: string; content_id: string; title: string; required: boolean; current_version_id: string | null; deliverable_versions: { version_number: number } | null }>;
+  const get = (id: string) => out.get(id) ?? out.set(id, { missing: [], adjust: [] }).get(id)!;
+  for (const d of ds) if (d.required && !d.current_version_id) get(d.content_id).missing.push(d.title);
+  for (const r of revList) {
+    const d = ds.find((x) => x.id === r.deliverable_id);
+    if (d && (d.deliverable_versions?.version_number ?? 0) <= (rejectedNumber.get(r.version_id) ?? 0)) get(r.content_id).adjust.push(d.title);
+  }
+  return out;
+}

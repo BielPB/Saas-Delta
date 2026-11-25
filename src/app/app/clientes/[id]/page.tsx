@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Stamp } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { contentSelect, listFormats, listMembers, memberMap, postThumbs, signPaths, taskSelect, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
+import { contentSelect, listFormats, listMembers, memberMap, postBlockers, postThumbs, signPaths, taskSelect, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatDateTime, monthStart, relative, bytes, toLocalInput } from "@/lib/format";
 import { formatGroups, postStatus, type WorkStatus } from "@/lib/post-status";
 import { loadPostDetail } from "@/lib/post-detail";
@@ -167,17 +167,20 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
     .order("planned_publish_at", { ascending: false, nullsFirst: true }).limit(200) : { data: [] };
   const rows = (data ?? []) as Array<{ id: string; title: string; format_id: string; stage: ContentRow["stage"]; approval_status: ContentRow["approval_status"]; publication_status: ContentRow["publication_status"]; work_status: string; planned_publish_at: string | null; created_at: string }>;
   const ids = rows.map((r) => r.id);
-  const [thumbs, { data: dels }] = await Promise.all([
-    postThumbs(ids),
-    ids.length ? sb.from("deliverables").select("content_id, required, current_version_id").in("content_id", ids) : Promise.resolve({ data: [] as unknown[] }),
-  ]);
-  const missing = new Set(((dels ?? []) as Array<{ content_id: string; required: boolean; current_version_id: string | null }>).filter((d) => d.required && !d.current_version_id).map((d) => d.content_id));
+  const [thumbs, blockers] = await Promise.all([postThumbs(ids), postBlockers(ids)]);
+  const blockedReason = (id: string) => {
+    const b = blockers.get(id);
+    if (!b) return null;
+    if (b.adjust.length) return `Falta ajuste: ${b.adjust.join(", ")}`;
+    if (b.missing.length) return `Falta: ${b.missing.join(", ")}`;
+    return null;
+  };
   const keyOf = new Map(formats.map((f) => [f.id, f.key]));
   const tiles: FeedTile[] = rows.map((r) => {
     const k = keyOf.get(r.format_id) ?? "";
     const g = formatGroups.find((x) => x.formats.includes(k))?.key ?? "posts";
     const t = thumbs.get(r.id);
-    return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, video: g === "reels", status: postStatus(r), ready: !missing.has(r.id), missing: missing.has(r.id),
+    return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, video: g === "reels", status: postStatus(r), ready: !blockedReason(r.id), missing: Boolean(blockedReason(r.id)), blocked: blockedReason(r.id),
       href: `/app/clientes/${clientId}?aba=${g}&mes=${ym}&post=${r.id}` };
   });
   const { data: batches } = await sb.from("approval_batches").select("id, status, approval_links(expires_at, revoked_at, last_accessed_at), approval_batch_items(content_id)")
@@ -248,7 +251,7 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
             format: c.content_formats?.name ?? "", aspect: c.content_formats?.aspect_ratio ?? "4:5", planned: toLocalInput(c.planned_publish_at),
             serviceId: c.service_id, briefing: c.briefing ?? "", editorId: c.editor_id, assignees: d.assigneeIds,
           }}
-          viewer={d.viewer} managerItems={d.managerItems} missing={d.missing} comments={d.comments} members={activeMembers} services={services}
+          viewer={d.viewer} managerItems={d.managerItems} missing={d.missing} adjust={d.adjust} comments={d.comments} members={activeMembers} services={services}
           canEdit={d.canEdit} canSubmit={d.canSubmit} />
       );
     }

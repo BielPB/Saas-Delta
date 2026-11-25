@@ -6,6 +6,7 @@ import { fail, type ActionResult } from "@/lib/errors";
 import { fromLocalInput } from "@/lib/format";
 import { isUuid } from "@/lib/utils";
 import { appOrigin } from "@/lib/origin";
+import { postBlockers } from "@/lib/data";
 
 const refresh = (clientId?: string, contentId?: string) => {
   if (clientId) revalidatePath(`/app/clientes/${clientId}`);
@@ -100,7 +101,18 @@ export async function sendFeedForApproval(clientId: string, ym: string, contentI
     const st = (states ?? []).find((s) => s.id === id) as { approval_status: string; publication_status: string } | undefined;
     return r && !r.missing && !r.unreleased && st && st.approval_status !== "approved" && !["published", "cancelled"].includes(st.publication_status);
   });
-  if (!ready.length) return fail("Nenhum post está pronto para o cliente. Envie a mídia e a legenda dos posts deste mês.");
+  if (!ready.length) {
+    const blockers = await postBlockers(ids);
+    const { data: titles } = await sb.from("content_items").select("id, code, title").in("id", ids);
+    const reasons = ids.flatMap((id) => {
+      const b = blockers.get(id);
+      const t = (titles ?? []).find((x) => x.id === id) as { code: number; title: string } | undefined;
+      if (!b || !t) return [];
+      const parts = [b.adjust.length ? `falta a nova versão de ${b.adjust.join(" e ")} (ajuste pedido pelo cliente)` : "", b.missing.length ? `falta enviar ${b.missing.join(" e ")}` : ""].filter(Boolean);
+      return parts.length ? [`#${t.code} ${t.title.replace(/[_:]/g, " ")} — ${parts.join("; ").replace(/[_:]/g, " ")}`] : [];
+    });
+    return fail(reasons.length ? `Nada foi enviado. ${reasons.slice(0, 3).join(". ")}.` : "Nenhum post está pronto para o cliente.");
+  }
 
   const { data: res, error: e } = await sb.rpc("send_month_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`, p_content_ids: ready });
   if (e) return fail(e);

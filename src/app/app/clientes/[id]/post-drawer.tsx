@@ -21,10 +21,10 @@ export interface DrawerPost {
   format: string; aspect: string; planned: string; serviceId: string | null; briefing: string; editorId: string | null; assignees: string[];
 }
 
-export function PostDrawer({ post, viewer, managerItems, missing, comments, members, services, canEdit, canSubmit, workspaceId, closeHref, prevHref, nextHref }: {
+export function PostDrawer({ post, viewer, managerItems, missing, adjust, comments, members, services, canEdit, canSubmit, workspaceId, closeHref, prevHref, nextHref }: {
   post: DrawerPost; viewer: ViewerDeliverable[];
   managerItems: DeliverableItem[];
-  missing: string[]; comments: Array<{ id: string; body: string; at: string; author: string; avatar: string | null }>;
+  missing: string[]; adjust: string[]; comments: Array<{ id: string; body: string; at: string; author: string; avatar: string | null }>;
   members: Array<{ id: string; name: string; avatar: string | null }>; services: Array<{ id: string; name: string }>;
   canEdit: boolean; canSubmit: boolean; workspaceId: string; closeHref: string; prevHref: string | null; nextHref: string | null;
 }) {
@@ -131,9 +131,10 @@ export function PostDrawer({ post, viewer, managerItems, missing, comments, memb
               <div className="rounded-lg border border-border bg-surface p-3">
                 <p className="text-[13px] font-medium">{post.status === "adjust" ? "Ajuste pronto?" : "Pronto para o cliente?"}</p>
                 <p className="mt-0.5 text-xs text-muted">
-                  {missing.length ? `Falta enviar: ${missing.join(", ")}.` : "Libera a versão atual para o link de aprovação do cliente."}
+                  {adjust.length ? `Envie a nova versão de ${adjust.join(" e ")} (o cliente pediu ajuste). Use “Enviar ou substituir arquivos”.`
+                    : missing.length ? `Falta enviar: ${missing.join(", ")}.` : "Libera a versão atual para o link de aprovação do cliente."}
                 </p>
-                <Button size="sm" variant="primary" className="mt-2 w-full" disabled={pending || missing.length > 0} onClick={() => run(() => submitPost(post.id, post.clientId))}>
+                <Button size="sm" variant="primary" className="mt-2 w-full" disabled={pending || missing.length > 0 || adjust.length > 0} onClick={() => run(() => submitPost(post.id, post.clientId))}>
                   {pending ? <Loader2 className="animate-spin" /> : <Send />} Liberar para aprovação
                 </Button>
               </div>

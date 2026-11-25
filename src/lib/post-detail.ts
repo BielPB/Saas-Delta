@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { assetSelect, contentSelect, signPaths, type ContentRow, type DeliverableRow, type MemberRow } from "@/lib/data";
+import { assetSelect, contentSelect, postBlockers, signPaths, type ContentRow, type DeliverableRow, type MemberRow } from "@/lib/data";
 import type { ViewerDeliverable } from "@/app/app/conteudos/[id]/viewer";
 
 export type PostDetail = Awaited<ReturnType<typeof loadPostDetail>>;
@@ -54,9 +54,10 @@ export async function loadPostDetail(ws: string, id: string, members: Map<string
     lastText: d.deliverable_versions[0]?.text_content ?? null,
   }));
   const missing = deliverables.filter((d) => d.required && !d.current_version_id).map((d) => d.title);
+  const adjust = (await postBlockers([id])).get(id)?.adjust ?? [];
 
   return {
-    content, viewer, managerItems, missing, assigneeIds,
+    content, viewer, managerItems, missing, adjust, assigneeIds,
     canEdit: can.manage || isPerson, canSubmit: can.submit,
     comments: (comments ?? []).map((cm) => {
       const m = members.get(cm.author_id as string);
