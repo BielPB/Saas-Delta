@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { contentSelect, listFormats, memberMap, taskSelect, type ContentRow, type TaskRow } from "@/lib/data";
+import { contentSelect, listClientsLite, listFormats, memberMap, taskSelect, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatGroups, postStatus, postStatusMeta, type PostStatusKey } from "@/lib/post-status";
 import { cn, isUuid } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/primitives";
@@ -11,6 +11,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { clientHue } from "@/components/shell/client-nav";
 import { StatusPill } from "@/app/app/clientes/[id]/post-grid";
 import { ViewAs } from "./view-as";
+import { NewTaskButton } from "@/app/app/tarefas/new-task";
 
 export const metadata: Metadata = { title: "Minhas demandas" };
 
@@ -102,10 +103,16 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Minhas demandas</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
         </div>
-        {canViewOthers && (
-          <ViewAs value={uid} me={ctx.user.id}
-            members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {canViewOthers && (
+            <ViewAs value={uid} me={ctx.user.id}
+              members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
+          )}
+          {ctx.can("tasks.manage") && (
+            <NewTaskButton clients={await listClientsLite(ws)}
+              members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
+          )}
+        </div>
       </header>
 
       <nav aria-label="Filtro por prazo" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -138,7 +145,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
 
       {rows.length === 0 ? (
         <section className="rounded-xl border border-border bg-surface">
-          <EmptyState compact title={all.length ? "Nada neste filtro" : "Nenhuma demanda aberta"}
+          <EmptyState compact title={all.length ? "Nada neste filtro" : tasks.length ? "Nenhum post com você" : "Nenhuma demanda aberta"}
             description={all.length ? "Troque o filtro acima para ver as outras demandas." : "Quando você for marcado como responsável ou editor de um post, ele aparece aqui."} />
         </section>
       ) : (
@@ -176,10 +183,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       )}
 
       {tasks.length > 0 && (
-        <details className="group mt-6 rounded-lg border border-border bg-surface">
+        <details className="group mt-6 rounded-lg border border-border bg-surface" open={tasks.some((t) => !t.content_id)}>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-            <span className="text-[13px] font-semibold">Tarefas de etapas <span className="tabular ml-1 font-normal text-muted">{tasks.length}</span>
-              <span className="ml-2 text-xs font-normal text-subtle">conteúdos antigos com etapas encadeadas e ajustes</span></span>
+            <span className="text-[13px] font-semibold">Tarefas <span className="tabular ml-1 font-normal text-muted">{tasks.length}</span>
+              <span className="ml-2 text-xs font-normal text-subtle">avulsas e etapas de conteúdos antigos</span></span>
             <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
           </summary>
           <div className="border-t border-border">

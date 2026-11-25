@@ -55,7 +55,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Central de tarefas"
+      <PageHeader title="Tarefas da equipe" description="Tarefas avulsas (reunião, gravação, captação…) e etapas de produção. Use “Nova tarefa” para atribuir algo a alguém."
         actions={ctx.can("tasks.manage") && <NewTaskButton clients={clients} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Situação" className="flex rounded-lg border border-border bg-surface p-0.5">

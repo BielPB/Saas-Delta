@@ -10,12 +10,12 @@ const nav: Array<{ title: string; items: Array<{ href: string; label: string; ic
   { title: "Principal", items: [
     { href: "/app", label: "Visão geral", icon: "layout" },
     { href: "/app/minhas-tarefas", label: "Minhas demandas", icon: "check" },
+    { href: "/app/tarefas", label: "Tarefas da equipe", icon: "list", perm: ["tasks.view_all", "tasks.manage"] },
     { href: "/app/pipeline", label: "Pipeline", icon: "kanban" },
     { href: "/app/calendario", label: "Calendário", icon: "calendar" },
     { href: "/app/aprovacoes", label: "Aprovações", icon: "stamp", perm: "approvals.manage" },
   ] },
   { title: "Mais", items: [
-    { href: "/app/tarefas", label: "Central de tarefas", icon: "list", perm: ["tasks.view_all", "tasks.manage"] },
     { href: "/app/conteudos", label: "Todos os conteúdos", icon: "film" },
     { href: "/app/arquivos", label: "Arquivos", icon: "folder" },
     { href: "/app/colaboradores", label: "Equipe", icon: "users", perm: ["members.manage", "tasks.view_all"] },
