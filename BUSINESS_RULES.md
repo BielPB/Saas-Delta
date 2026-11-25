@@ -4,6 +4,7 @@ Fonte da verdade: `supabase/migrations/20261124000005_workflow.sql` (`private.re
 Nenhuma coluna de status é gravada diretamente: o gatilho `guard_*` rejeita UPDATE fora das RPCs.
 
 ## Entidades
+- **Subdivisão** é uma categoria de conteúdo de um cliente (ex.: “Fotona Laser”, “Institucional”). Organiza pipeline, filtros, metas e o menu Projetos. Não tem status próprio: o andamento do trabalho está nas tarefas. No banco e no código é `client_services` / `service_id` (o filtro na URL é `?servico=`); só o nome exibido mudou.
 - **Conteúdo** é a entidade central. Tem **entregáveis** (roteiro, material bruto, vídeo, capa, legenda, arte, carrossel).
 - Cada entregável tem **versões imutáveis** (V1, V2…). Uma versão nunca é sobrescrita nem apagada.
 - **Tarefas** produzem entregáveis e podem depender de outras tarefas (DAG, ciclos rejeitados).
@@ -71,7 +72,7 @@ Nenhuma coluna de status é gravada diretamente: o gatilho `guard_*` rejeita UPD
 - Indicadores contam **conteúdos**. Vídeo + capa + legenda de um Reels = 1 conteúdo.
 - Data de referência de um conteúdo para filtros de período: `coalesce(planned_publish_at, due_at, created_at)`.
 - "Vídeos/capas/legendas prontos" = conteúdos cujo entregável daquele tipo tem versão enviada.
-- Meta do mês: `monthly_targets` (cliente/serviço/formato/mês) ou, na ausência, a meta do cadastro.
+- Meta do mês: `monthly_targets` (cliente/subdivisão/formato/mês) ou, na ausência, a meta do cadastro.
 - "Abaixo da meta": aprovados no mês < meta × (dia do mês / dias do mês).
 - Aprovação na 1ª versão: conteúdos aprovados sem nenhuma reprovação / conteúdos aprovados.
 - Tempo médio de aprovação: última aprovação − primeiro envio em lote.

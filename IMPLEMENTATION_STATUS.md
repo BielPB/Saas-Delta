@@ -16,10 +16,11 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | Item | Status |
 |---|---|
 | Clientes (CRUD, status, arquivar, sensível, equipe alocada) | 🟢 |
-| Serviços com cor/meta/pasta; metas por cliente/serviço/formato/mês | 🟢 |
-| Página do cliente com 9 abas e tabela operacional por serviço | 🟢 |
+| Subdivisões com cor/meta/pasta; metas por cliente/subdivisão/formato/mês | 🟢 |
+| Página do cliente com 9 abas; visão geral com primeiros passos, resumo do mês explicado, “Equipe agora” (tarefas por pessoa) e produção por subdivisão | 🟢 |
 | Conteúdos: criação por template, 5 visualizações, filtros persistentes, ações em massa, duplicar, arquivar, cancelar | 🟢 |
 | Pipeline com dependências, liberação automática e notificações | ✅ |
+| Quadro do pipeline em 5 colunas (Roteiro, Gravação, Edição, Finalização, Pronto) agrupando as 12 etapas; cards com entregáveis e responsável; menu Projetos (cliente → subdivisões) | 🟢 |
 | Tarefas: minhas, central, detalhe, checklist, comentários, reabrir/cancelar | ✅ banco · 🟢 UI |
 | Dashboard executivo, atenção prioritária, filtros, indicadores clicáveis | ✅ banco · 🟢 UI |
 | Onboarding (workspace + checklist de 10 passos que pode ser pulado) | 🟢 |
@@ -29,7 +30,7 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 |---|---|
 | Upload TUS direto (retomar, pausar, cancelar, progresso, duplicidade, validação) | 🟢 (Storage real necessário para testar retomada) |
 | Biblioteca e central de não vinculados com sugestões (nunca automáticas) | ✅ sugestão no banco · 🟢 UI |
-| Google Drive: OAuth, pastas → cliente/serviço, sincronização, novos/indisponíveis, sem duplicar | 🟢 🔑 |
+| Google Drive: OAuth, pastas → cliente/subdivisão, sincronização, novos/indisponíveis, sem duplicar | 🟢 🔑 |
 | Preview audiovisual (proporção preservada, carrossel, tela cheia, versões) | 🟢 |
 | Worker de preview (Drive/Storage → H.264 720p + poster) | ✅ transcodificação · 🟢 fila · 🔑 |
 | Versionamento imutável | ✅ |
@@ -37,10 +38,10 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 ## Fase 4 — Aprovação
 | Item | Status |
 |---|---|
-| Lotes (único, vários, por serviço, semanal, mensal), link seguro, PIN, expiração, revogação, rotação | ✅ |
-| Portal mobile: item a item, observação obrigatória na reprovação, em lote, resumo final | ✅ banco · 🟢 UI (verificado visualmente com dados fictícios) |
+| Lotes (único, vários, por subdivisão, semanal, mensal), link seguro, PIN, expiração, revogação, rotação | ✅ |
+| Portal: um conteúdo por vez com seletor numerado; “Aprovado / Não aprovado” por conteúdo, marcando quais itens precisam de ajuste (os não marcados são aprovados); observação obrigatória na reprovação; respostas salvas ao avançar; resumo final | ✅ banco · 🟢 UI (ainda não testada com dados reais) |
 | Ajuste automático só para o entregável reprovado; invalidação explícita | ✅ |
-| "Todos os conteúdos de uma campanha" | ⏳ não há entidade Campanha na v1; use serviço/período |
+| "Todos os conteúdos de uma campanha" | ⏳ não há entidade Campanha na v1; use subdivisão/período |
 
 ## Fase 5 — Controle editorial
 | Item | Status |

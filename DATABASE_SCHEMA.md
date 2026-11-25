@@ -5,7 +5,7 @@ Migrations versionadas em `supabase/migrations` (aplicar em ordem). Todas as tab
 | Migration | Conteúdo |
 |---|---|
 | 0001_foundation | enums, workspaces, settings, profiles (gatilho de auth.users), membros, permissões, funções |
-| 0002_domain | clientes, alocação, serviços, formatos, templates, metas, conteúdos, responsáveis, arquivos, entregáveis, versões, tarefas, dependências, comentários |
+| 0002_domain | clientes, alocação, subdivisões (`client_services`), formatos, templates, metas, conteúdos, responsáveis, arquivos, entregáveis, versões, tarefas, dependências, comentários |
 | 0003_approvals_ops | lotes, itens, links, sessões do portal, respostas, solicitações de ajuste, notificações, preferências, push, fila de jobs, logs, Drive |
 | 0004_security | helpers de autorização, gatilhos de guarda, RLS, grants |
 | 0005_workflow | RPCs de negócio (ver BUSINESS_RULES.md) |
@@ -15,6 +15,7 @@ Migrations versionadas em `supabase/migrations` (aplicar em ordem). Todas as tab
 | 0009_drive_mapping_ref | origem de cada referência do Drive |
 | 0010_settings_roles | colunas editáveis do workspace, funções personalizadas |
 | 0011_job_queue | claim/finish com SKIP LOCKED e backoff |
+| 0012_table_grants | GRANT explícito das tabelas a `authenticated`/`service_role` (projetos Supabase novos não concedem por padrão) e reaplicação das restrições de coluna de 0004/0010 |
 
 ## Ajustes em relação à proposta do briefing
 | Proposta | Decisão | Motivo |
