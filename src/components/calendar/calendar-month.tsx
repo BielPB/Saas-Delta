@@ -17,6 +17,8 @@ export interface CalItem {
   id: string; code: number; title: string; client: string; at: string | null; color: string | null; thumb: string | null;
   publication_status: PublicationStatus; approval_status: ApprovalStatus; planned_publish_at: string | null; scheduled_at: string | null;
   channel: string | null; format: string; caption?: string | null;
+  /** Where a click goes (post side panel on the client page). */
+  href?: string;
 }
 
 type Mode = "mes" | "semana" | "dia" | "lista";
@@ -93,12 +95,21 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
     return (
       <div draggable={canEdit && !["published", "cancelled"].includes(i.publication_status)} onDragStart={() => setDrag(i.id)}
         className={cn("group rounded-sm border border-border bg-surface text-left", dense ? "px-1.5 py-1" : "p-2", conflicts.has(i.id) && "border-[var(--tone-warning-fg)]/60")}>
-        <Link href={`/app/conteudos/${i.id}`} className="flex items-start gap-1.5" draggable={false}>
-          <span className="mt-1 size-1.5 shrink-0 rounded-full" style={{ background: i.color ?? "var(--fg-subtle)" }} aria-hidden />
-          {!dense && <Thumb url={i.thumb} className="w-7" />}
+        <Link href={i.href ?? `/app/conteudos/${i.id}`} className="flex items-center gap-1.5" draggable={false}>
+          {dense ? (
+            i.thumb
+              // eslint-disable-next-line @next/next/no-img-element -- signed private URL
+              ? <img src={i.thumb} alt="" className="size-6 shrink-0 rounded-sm object-cover" loading="lazy" />
+              : <span className="size-6 shrink-0 rounded-sm" style={{ background: i.color ?? "var(--surface-3)", opacity: 0.5 }} aria-hidden />
+          ) : (
+            <>
+              <span className="mt-1 size-1.5 shrink-0 self-start rounded-full" style={{ background: i.color ?? "var(--fg-subtle)" }} aria-hidden />
+              <Thumb url={i.thumb} className="w-7" />
+            </>
+          )}
           <span className="min-w-0 flex-1">
-            <span className={cn("block truncate font-medium", dense ? "text-[11.5px]" : "text-[13px]")}>
-              {i.at && <span className="tabular mr-1 text-subtle">{formatTime(i.at)}</span>}{i.title}
+            <span className={cn("block truncate font-medium", dense ? "text-[11.5px] leading-tight" : "text-[13px]")}>
+              {i.at && <span className="tabular mr-1 text-subtle">{formatTime(i.at)}</span>}{dense ? <><span className="text-muted">{i.client} | </span>{i.title}</> : i.title}
             </span>
             {!dense && <span className="block truncate text-xs text-muted">{i.client} · {i.format}{i.channel ? ` · ${channels[i.channel]}` : ""}</span>}
           </span>

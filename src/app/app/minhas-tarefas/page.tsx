@@ -1,95 +1,192 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { memberMap, taskSelect, type TaskRow } from "@/lib/data";
-import { isTaskOverdue } from "@/lib/domain";
-import { toLocalInput } from "@/lib/format";
-import { ChevronDown } from "lucide-react";
-import { EmptyState, PageHeader } from "@/components/ui/primitives";
-import { cn } from "@/lib/utils";
+import { contentSelect, listFormats, memberMap, taskSelect, type ContentRow, type TaskRow } from "@/lib/data";
+import { formatGroups, postStatus, postStatusMeta, type PostStatusKey } from "@/lib/post-status";
+import { cn, isUuid } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/primitives";
 import { TaskList } from "@/components/tasks/task-list";
+import { clientHue } from "@/components/shell/client-nav";
+import { StatusPill } from "@/app/app/clientes/[id]/post-grid";
+import { ViewAs } from "./view-as";
 
-export const metadata: Metadata = { title: "Minhas tarefas" };
+export const metadata: Metadata = { title: "Minhas demandas" };
 
-export default async function MyTasksPage() {
+type Row = ContentRow & { work_status: string; editor_id: string | null };
+const ORDER: PostStatusKey[] = ["adjust", "production", "planning", "review", "client", "ready", "scheduled"];
+const DAY = 864e5;
+
+export default async function MyWorkPage({ searchParams }: { searchParams: Promise<{ f?: string; cliente?: string; ordem?: string; pessoa?: string }> }) {
   const ctx = await getContext();
+  const sp = await searchParams;
   const sb = await createClient();
-  const [{ data: open }, { data: done }, members] = await Promise.all([
-    sb.from("tasks").select(taskSelect).eq("workspace_id", ctx.workspace.id).eq("assignee_id", ctx.user.id)
-      .not("status", "in", "(done,cancelled)").order("due_at", { ascending: true, nullsFirst: false }).limit(300),
-    sb.from("tasks").select(taskSelect).eq("workspace_id", ctx.workspace.id).eq("assignee_id", ctx.user.id)
-      .eq("status", "done").order("completed_at", { ascending: false }).limit(20),
-    memberMap(ctx.workspace.id),
-  ]);
-  const list = (open ?? []) as unknown as TaskRow[];
-  const today = toLocalInput(new Date().toISOString()).slice(0, 10);
-  const isToday = (t: TaskRow) => t.due_at && toLocalInput(t.due_at).slice(0, 10) === today;
+  const canViewOthers = ctx.can("tasks.view_all");
+  const uid = canViewOthers && isUuid(sp.pessoa) ? sp.pessoa! : ctx.user.id;
+  const ws = ctx.workspace.id;
 
-  const groups: Array<{ key: string; title: string; hint?: string; tasks: TaskRow[] }> = [
-    { key: "late", title: "Atrasadas", tasks: list.filter((t) => isTaskOverdue(t)) },
-    { key: "adjust", title: "Ajustes pedidos", hint: "o cliente ou a revisão pediu mudanças", tasks: list.filter((t) => t.kind === "adjustment" && !isTaskOverdue(t)) },
-    { key: "today", title: "Para hoje", tasks: list.filter((t) => isToday(t) && !isTaskOverdue(t) && t.kind !== "adjustment" && t.status !== "blocked") },
-    { key: "doing", title: "Em andamento", tasks: list.filter((t) => t.status === "in_progress" && !isToday(t) && !isTaskOverdue(t) && t.kind !== "adjustment") },
-    { key: "review", title: "Aguardando revisão", tasks: list.filter((t) => t.status === "in_review" && !isTaskOverdue(t) && t.kind !== "adjustment") },
-    { key: "next", title: "Próximas", tasks: list.filter((t) => ["pending", "reopened"].includes(t.status) && !isToday(t) && !isTaskOverdue(t) && t.kind !== "adjustment") },
-  ].filter((g) => g.tasks.length > 0);
-  const blocked = list.filter((t) => t.status === "blocked" && !isTaskOverdue(t));
-  const doneList = (done ?? []) as unknown as TaskRow[];
-  const canManage = ctx.can("tasks.manage");
-  const actionable = list.length - blocked.length;
+  const [{ data: mine }, members, formats, { data: taskData }] = await Promise.all([
+    sb.from("content_assignees").select("content_id").eq("workspace_id", ws).eq("user_id", uid),
+    memberMap(ws),
+    listFormats(ws),
+    sb.from("tasks").select(taskSelect).eq("workspace_id", ws).eq("assignee_id", uid).not("status", "in", "(done,cancelled)")
+      .order("due_at", { ascending: true, nullsFirst: false }).limit(200),
+  ]);
+  const ids = (mine ?? []).map((m) => m.content_id as string);
+  let q = sb.from("content_items").select(`${contentSelect}, work_status, editor_id`).eq("workspace_id", ws).is("archived_at", null)
+    .not("stage", "in", "(published,cancelled)").limit(500);
+  q = ids.length ? q.or(`editor_id.eq.${uid},id.in.(${ids.join(",")})`) : q.eq("editor_id", uid);
+  const { data } = await q;
+  const all = (data ?? []) as unknown as Row[];
+  // Legacy task chains: only tasks of posts not already listed above.
+  const tasks = ((taskData ?? []) as unknown as TaskRow[]).filter((t) => !t.content_id || !all.some((p) => p.id === t.content_id));
+
+  const now = new Date().getTime();
+  const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+  const due = (r: Row) => r.due_at ?? r.planned_publish_at;
+  const isOpenWork = (r: Row) => !["ready", "scheduled"].includes(postStatus(r));
+  const isLate = (r: Row) => { const d = due(r); return Boolean(d && new Date(d).getTime() < now && isOpenWork(r)); };
+  const isToday = (r: Row) => { const d = due(r); if (!d) return false; const t = new Date(d).getTime(); return t >= startToday.getTime() && t < startToday.getTime() + DAY && !isLate(r); };
+  const inWeek = (r: Row) => { const d = due(r); if (!d) return false; const t = new Date(d).getTime(); return t >= now && t < now + 7 * DAY; };
+
+  const counters = [
+    { key: "atrasadas", label: "Atrasadas", n: all.filter(isLate).length, danger: true },
+    { key: "hoje", label: "Para hoje", n: all.filter(isToday).length },
+    { key: "semana", label: "Próximos 7 dias", n: all.filter(inWeek).length },
+    { key: "todas", label: "Todas abertas", n: all.length },
+  ];
+  const f = counters.some((c) => c.key === sp.f) ? sp.f! : "todas";
+  const byFilter = all.filter((r) => (f === "atrasadas" ? isLate(r) : f === "hoje" ? isToday(r) : f === "semana" ? inWeek(r) : true));
+  const clientCounts = new Map<string, { name: string; n: number }>();
+  for (const r of byFilter) clientCounts.set(r.client_id, { name: r.clients?.name ?? "", n: (clientCounts.get(r.client_id)?.n ?? 0) + 1 });
+  const rows = sp.cliente && clientCounts.has(sp.cliente) ? byFilter.filter((r) => r.client_id === sp.cliente) : byFilter;
+  const byDeadline = sp.ordem === "prazo";
+
+  const fmtKey = new Map(formats.map((x) => [x.id, x.key]));
+  const hrefOf = (r: Row) => {
+    const g = formatGroups.find((x) => x.formats.includes(fmtKey.get(r.format_id) ?? ""))?.key ?? "posts";
+    return `/app/clientes/${r.client_id}?aba=${g}&mes=${(r.planned_publish_at ?? r.created_at).slice(0, 7)}&post=${r.id}`;
+  };
+  const link = (patch: Record<string, string | undefined>) => {
+    const p = new URLSearchParams(Object.entries({ f: sp.f, cliente: sp.cliente, ordem: sp.ordem, pessoa: sp.pessoa, ...patch }).filter(([, v]) => v) as Array<[string, string]>);
+    return `/app/minhas-tarefas${p.size ? `?${p}` : ""}`;
+  };
+  const dueLabel = (r: Row) => {
+    const d = due(r);
+    if (!d) return null;
+    const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - startToday.getTime()) / DAY);
+    if (isLate(r)) return { text: days === 0 ? "Atrasado hoje" : `Atrasado ${-days} dia${days === -1 ? "" : "s"}`, late: true };
+    return { text: days === 0 ? "Hoje" : days === 1 ? "Amanhã" : `Em ${days} dias`, late: false };
+  };
+
+  const groups: Array<{ key: string; title: string; rows: Row[] }> = byDeadline
+    ? [
+        { key: "late", title: "Atrasadas", rows: rows.filter(isLate) },
+        { key: "week", title: "Esta semana", rows: rows.filter((r) => !isLate(r) && inWeek(r)) },
+        { key: "later", title: "Mais adiante", rows: rows.filter((r) => !isLate(r) && !inWeek(r) && due(r)) },
+        { key: "none", title: "Sem data", rows: rows.filter((r) => !due(r)) },
+      ]
+    : ORDER.map((k) => ({ key: k, title: postStatusMeta[k].label, rows: rows.filter((r) => postStatus(r) === k) }));
+  const sortByDue = (a: Row, b: Row) => ((due(a) ?? "9") < (due(b) ?? "9") ? -1 : 1);
+
+  const person = members.get(uid);
+  const first = (person?.full_name || ctx.profile.full_name || "").split(" ")[0];
+  const hour = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: ctx.workspace.timezone }).format(new Date()));
+  const hello = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   return (
-    <div className="max-w-4xl">
-      <PageHeader title="Minhas tarefas"
-        description={actionable === 0 ? "Tudo em dia." : `${actionable} para fazer. Use Iniciar e Concluir: ao concluir, a próxima etapa é liberada para a equipe.`} />
+    <div className="max-w-5xl">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Minhas demandas</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
+        </div>
+        {canViewOthers && (
+          <ViewAs value={uid} me={ctx.user.id}
+            members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
+        )}
+      </header>
 
-      {groups.length === 0 ? (
-        <section className="rounded-lg border border-border bg-surface">
-          <EmptyState compact title="Nenhuma tarefa para fazer agora" description={blocked.length ? "Suas próximas tarefas estão esperando etapas anteriores." : "Quando alguém te atribuir uma tarefa, ela aparece aqui."} />
+      <nav aria-label="Filtro por prazo" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {counters.map((c) => (
+          <Link key={c.key} href={link({ f: c.key === "todas" ? undefined : c.key, cliente: undefined })} aria-current={f === c.key ? "true" : undefined}
+            className={cn("rounded-xl border bg-surface px-4 py-3 transition-colors hover:border-border-strong",
+              f === c.key ? "border-accent-ink/70 ring-1 ring-accent-ink/30" : "border-border")}>
+            <p className={cn("tabular text-2xl font-bold", c.danger && c.n > 0 && "text-[var(--tone-danger-fg)]")}>{c.n}</p>
+            <p className="text-xs text-muted">{c.label}</p>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <Link href={link({ cliente: undefined })} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !sp.cliente ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
+            Todos os clientes <span className="tabular opacity-70">{byFilter.length}</span>
+          </Link>
+          {[...clientCounts.entries()].sort((a, b) => b[1].n - a[1].n).map(([id, c]) => (
+            <Link key={id} href={link({ cliente: id })} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", sp.cliente === id ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
+              <span className="size-2 rounded-full" style={{ background: `hsl(${clientHue(c.name)} 60% 55%)` }} aria-hidden />{c.name} <span className="tabular opacity-70">{c.n}</span>
+            </Link>
+          ))}
+        </div>
+        <nav aria-label="Agrupar" className="flex rounded-lg border border-border bg-surface p-0.5 text-xs">
+          <Link href={link({ ordem: undefined })} aria-current={!byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted", !byDeadline && "bg-surface-3 font-medium text-fg")}>Por etapa</Link>
+          <Link href={link({ ordem: "prazo" })} aria-current={byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted", byDeadline && "bg-surface-3 font-medium text-fg")}>Por prazo</Link>
+        </nav>
+      </div>
+
+      {rows.length === 0 ? (
+        <section className="rounded-xl border border-border bg-surface">
+          <EmptyState compact title={all.length ? "Nada neste filtro" : "Nenhuma demanda aberta"}
+            description={all.length ? "Troque o filtro acima para ver as outras demandas." : "Quando você for marcado como responsável ou editor de um post, ele aparece aqui."} />
         </section>
       ) : (
         <div className="space-y-5">
-          {groups.map((g) => (
+          {groups.filter((g) => g.rows.length > 0).map((g) => (
             <section key={g.key} aria-labelledby={`g-${g.key}`}>
-              <h2 id={`g-${g.key}`} className={cn("mb-1.5 flex items-baseline gap-2 px-1 text-[13px] font-semibold", g.key === "late" && "text-[var(--tone-danger-fg)]")}>
-                {g.title} <span className="tabular text-xs font-normal text-muted">{g.tasks.length}</span>
-                {g.hint && <span className="text-xs font-normal text-subtle">{g.hint}</span>}
+              <h2 id={`g-${g.key}`} className="mb-1.5 flex items-baseline gap-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                {g.title} <span className="tabular font-normal">{g.rows.length}</span>
               </h2>
-              <div className={cn("rounded-lg border bg-surface", g.key === "late" ? "border-[var(--tone-danger-fg)]/30" : "border-border")}>
-                <TaskList tasks={g.tasks} members={members} showAssignee={false} currentUser={ctx.user.id} canManage={canManage} />
-              </div>
+              <ul className="space-y-1.5">
+                {[...g.rows].sort(sortByDue).map((r) => {
+                  const d = dueLabel(r);
+                  const hue = clientHue(r.clients?.name ?? "");
+                  return (
+                    <li key={r.id}>
+                      <Link href={hrefOf(r)} className="flex items-center gap-3 rounded-lg border border-border bg-surface py-2.5 pr-3 transition-colors hover:border-border-strong">
+                        <span className="h-9 w-1 shrink-0 rounded-r-full" style={{ background: `hsl(${hue} 60% 55%)` }} aria-hidden />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[14px] font-semibold">{r.title}</span>
+                          <span className="flex items-center gap-2 text-xs text-muted">
+                            <span style={{ color: `hsl(${hue} 60% 62%)` }}>{r.clients?.name}</span>
+                            <span className="rounded border border-border px-1.5 text-[10.5px] uppercase tracking-wide">{r.content_formats?.name}</span>
+                            {byDeadline && <StatusPill s={postStatus(r)} />}
+                          </span>
+                        </span>
+                        {d && <span className={cn("shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold", d.late ? "bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]" : "bg-surface-2 text-muted")}>{d.text}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </section>
           ))}
         </div>
       )}
 
-      <div className="mt-6 space-y-3">
-        {blocked.length > 0 && (
-          <Folded title="Esperando etapa anterior" count={blocked.length} hint="liberam sozinhas quando a etapa anterior for concluída">
-            <TaskList tasks={blocked} members={members} showAssignee={false} currentUser={ctx.user.id} canManage={canManage} />
-          </Folded>
-        )}
-        {doneList.length > 0 && (
-          <Folded title="Concluídas recentemente" count={doneList.length}>
-            <TaskList tasks={doneList} members={members} showAssignee={false} currentUser={ctx.user.id} canManage={canManage} />
-          </Folded>
-        )}
-      </div>
+      {tasks.length > 0 && (
+        <details className="group mt-6 rounded-lg border border-border bg-surface">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <span className="text-[13px] font-semibold">Tarefas de etapas <span className="tabular ml-1 font-normal text-muted">{tasks.length}</span>
+              <span className="ml-2 text-xs font-normal text-subtle">conteúdos antigos com etapas encadeadas e ajustes</span></span>
+            <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="border-t border-border">
+            <TaskList tasks={tasks} members={members} showAssignee={false} currentUser={ctx.user.id} canManage={ctx.can("tasks.manage")} />
+          </div>
+        </details>
+      )}
     </div>
-  );
-}
-
-function Folded({ title, count, hint, children }: { title: string; count: number; hint?: string; children: React.ReactNode }) {
-  return (
-    <details className="group rounded-lg border border-border bg-surface">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-        <span className="text-[13px] font-semibold text-muted group-open:text-fg">
-          {title} <span className="tabular ml-1 font-normal">{count}</span>
-          {hint && <span className="ml-2 text-xs font-normal text-subtle">{hint}</span>}
-        </span>
-        <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
-      </summary>
-      <div className="border-t border-border">{children}</div>
-    </details>
   );
 }

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { contentFilters, contentSelect, listClientsLite, listFormats, listMembers, listServicesLite, parseFilters, thumbnails, type ContentRow } from "@/lib/data";
+import { contentFilters, contentSelect, listClientsLite, listFormats, listMembers, listServicesLite, parseFilters, postThumbs, thumbnails, type ContentRow } from "@/lib/data";
+import { formatGroups } from "@/lib/post-status";
 import { PageHeader } from "@/components/ui/primitives";
 import { FilterBar } from "@/components/content/filter-bar";
 import { CalendarMonth } from "@/components/calendar/calendar-month";
@@ -30,7 +31,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   const [{ data }, clients, services, formats, members] = await Promise.all([q, listClientsLite(ws), listServicesLite(ws), listFormats(ws), listMembers(ws)]);
   const rows = (data ?? []) as unknown as ContentRow[];
-  const thumb = await thumbnails(rows);
+  const [thumb, art] = await Promise.all([thumbnails(rows), postThumbs(rows.map((r) => r.id))]);
+  const fmtKey = new Map(formats.map((x) => [x.id, x.key]));
+  const hrefOf = (r: ContentRow) => {
+    const g = formatGroups.find((x) => x.formats.includes(fmtKey.get(r.format_id) ?? ""))?.key ?? "posts";
+    const at = r.planned_publish_at ?? r.created_at;
+    return `/app/clientes/${r.client_id}?aba=${g}&mes=${at.slice(0, 7)}&post=${r.id}`;
+  };
 
   // Captions (current version) for one-click copy.
   const ids = rows.map((r) => r.id);
@@ -41,8 +48,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="Calendário editorial"
-        description="Planejado é intenção; agendado exige registro do social media; publicado exige confirmação. Datas vencidas sem confirmação aparecem como atrasadas." />
+      <PageHeader title="Calendário" />
       <FilterBar clients={clients} services={services} formats={formats}
         members={members.filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))}
         show={["cliente", "servico", "formato", "aprovacao", "publicacao"]} />
@@ -51,7 +57,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           .map((r) => ({
             id: r.id, code: r.code, title: r.title, client: r.clients?.name ?? "", at: r.scheduled_at ?? r.planned_publish_at,
             publication_status: r.publication_status, approval_status: r.approval_status, planned_publish_at: r.planned_publish_at,
-            scheduled_at: r.scheduled_at, color: r.client_services?.color ?? null, thumb: thumb(r), channel: r.channel,
+            scheduled_at: r.scheduled_at, color: r.client_services?.color ?? null, thumb: thumb(r) ?? art.get(r.id)?.url ?? null, channel: r.channel, href: hrefOf(r),
             format: r.content_formats?.name ?? "", caption: caption.get(r.id) ?? null,
           }))} />
     </>

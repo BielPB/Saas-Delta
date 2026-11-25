@@ -1,50 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, ArrowUpRight, CalendarClock, CheckCircle2, Circle, FileWarning, Hourglass, Target, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Circle } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { listClientsLite, listFormats, listMembers, listServicesLite, parseFilters, qs } from "@/lib/data";
-import { stages, stageLabel, type ApprovalStatus, type PublicationStatus } from "@/lib/domain";
+import { listMembers } from "@/lib/data";
 import { formatDate, formatDateTime, relative } from "@/lib/format";
-import { z } from "zod";
-import { EmptyState, PageHeader, Panel, Stat } from "@/components/ui/primitives";
-import { BarList, ColumnChart } from "@/components/charts";
-import { ApprovalBadge, PublicationBadge } from "@/components/content/badges";
-import { DashboardFilters } from "./dashboard-filters";
-import { activityText } from "@/lib/activity";
+import { Avatar, Panel } from "@/components/ui/primitives";
+import { cn } from "@/lib/utils";
+import { ColumnChart } from "@/components/charts";
 
 export const metadata: Metadata = { title: "Visão geral" };
 
-const filters = z.object({
-  periodo: z.enum(["mes", "mes_anterior", "30d", "90d", "trimestre"]).optional().catch(undefined),
-  cliente: z.string().uuid().optional().catch(undefined),
-  servico: z.string().uuid().optional().catch(undefined),
-  formato: z.string().uuid().optional().catch(undefined),
-  colaborador: z.string().uuid().optional().catch(undefined),
-});
-
-function period(p?: string) {
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  switch (p) {
-    case "mes_anterior": return { from: new Date(y, m - 1, 1), to: new Date(y, m, 1), label: "Mês anterior" };
-    case "30d": return { from: new Date(now.getTime() - 30 * 864e5), to: new Date(now.getTime() + 864e5), label: "Últimos 30 dias" };
-    case "90d": return { from: new Date(now.getTime() - 90 * 864e5), to: new Date(now.getTime() + 864e5), label: "Últimos 90 dias" };
-    case "trimestre": { const q = Math.floor(m / 3) * 3; return { from: new Date(y, q, 1), to: new Date(y, q + 3, 1), label: "Trimestre" }; }
-    default: return { from: new Date(y, m, 1), to: new Date(y, m + 1, 1), label: "Este mês" };
-  }
-}
-
-interface Summary {
-  active_clients: number; planned: number; in_production: number; awaiting_edit: number; internal_review: number;
-  awaiting_approval: number; approved: number; scheduled: number; published: number; rejected: number;
-  tasks_overdue: number; tasks_done: number; by_stage: Record<string, number>;
-  by_member: Array<{ user_id: string; name: string; open: number; overdue: number }>;
-  first_pass_rate: number | null; avg_approval_hours: number | null;
-  top_pending_clients: Array<{ client_id: string; name: string; pending: number }>;
-  monthly: Array<{ month: string; planned: number; approved: number; published: number }>;
-  upcoming: Array<{ id: string; code: number; title: string; client: string; at: string; publication_status: PublicationStatus; approval_status: ApprovalStatus }>;
-}
 interface Attention {
   overdue_tasks: Array<{ id: string; title: string; due_at: string }>;
   rejected_contents: Array<{ id: string; code: number; title: string }>;
@@ -56,48 +22,90 @@ interface Attention {
   clients_below_target: Array<{ client_id: string; name: string; target: number; produced: number; expected: number }>;
 }
 
+const shiftMonth = (ym: string, d: number) => { const x = new Date(`${ym}-15T12:00:00`); x.setMonth(x.getMonth() + d); return x.toISOString().slice(0, 7); };
+
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const ctx = await getContext();
-  const f = parseFilters(filters, await searchParams);
-  const pr = period(f.periodo);
+  const raw = await searchParams;
   const sb = await createClient();
   const ws = ctx.workspace.id;
+  const ym = /^\d{4}-\d{2}$/.test(raw.mes ?? "") ? raw.mes : new Date().toISOString().slice(0, 7);
+  const m0 = `${ym}-01T00:00:00Z`; const m1 = `${shiftMonth(ym, 1)}-01T00:00:00Z`;
+  const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(`${ym}-15T12:00:00`));
+  const MonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-  const [{ data: s }, { data: a }, clients, services, formats, members, { data: activity }, onboarding] = await Promise.all([
-    sb.rpc("dashboard_summary", {
-      p_ws: ws, p_from: pr.from.toISOString(), p_to: pr.to.toISOString(),
-      p_client: f.cliente ?? null, p_service: f.servico ?? null, p_format: f.formato ?? null, p_member: f.colaborador ?? null,
-    }),
+  const [{ data: prog }, { data: a }, members, onboarding, { data: approvals }, { count: activeClients }] = await Promise.all([
+    sb.rpc("client_progress", { p_ws: ws, p_month: `${ym}-01`, p_client: null }),
     sb.rpc("dashboard_attention", { p_ws: ws }),
-    listClientsLite(ws), listServicesLite(ws), listFormats(ws), listMembers(ws),
-    sb.from("activity_logs").select("id, action, actor_type, actor_label, actor_id, data, created_at, content_id, entity_type")
-      .eq("workspace_id", ws).order("created_at", { ascending: false }).limit(10),
+    listMembers(ws),
     onboardingState(ws),
+    sb.from("approval_responses").select("content_id, created_at").eq("workspace_id", ws).eq("decision", "approved").gte("created_at", m0).lt("created_at", m1).limit(5000),
+    sb.from("clients").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("status", "active"),
   ]);
-  const sum = s as Summary | null;
   const att = a as Attention | null;
-  const names = new Map(members.map((m) => [m.user_id, m.full_name]));
-  const base = { cliente: f.cliente, servico: f.servico, formato: f.formato, responsavel: f.colaborador };
-  const link = (patch: Record<string, string>) => `/app/conteudos${qs(base, patch)}`;
+
+  // Goal: approved posts (incl. scheduled/published) per client vs. the month's target.
+  const perClient = new Map<string, { name: string; target: number; approved: number }>();
+  for (const r of (prog ?? []) as Array<{ client_id: string; client_name: string; client_target: number; approved: number }>) {
+    const e = perClient.get(r.client_id) ?? { name: r.client_name, target: Number(r.client_target) || 0, approved: 0 };
+    e.approved += Number(r.approved);
+    perClient.set(r.client_id, e);
+  }
+  const target = [...perClient.values()].reduce((n, c) => n + c.target, 0);
+  const delivered = [...perClient.values()].reduce((n, c) => n + Math.min(c.approved, c.target || c.approved), 0);
+  const pct = target ? Math.round((delivered / target) * 100) : 0;
+  const missing = [...perClient.entries()].filter(([, c]) => c.target > c.approved).map(([id, c]) => ({ id, ...c, left: c.target - c.approved }))
+    .sort((x, y) => y.left - x.left);
+  const stuck = att ? att.rejected_contents.length + att.stale_approvals.length + att.late_publications.length : 0;
+
+  // Team rhythm: first client approval per post, by day of month.
+  const firstApproval = new Map<string, string>();
+  for (const r of (approvals ?? []) as Array<{ content_id: string; created_at: string }>) {
+    const cur = firstApproval.get(r.content_id);
+    if (!cur || r.created_at < cur) firstApproval.set(r.content_id, r.created_at);
+  }
+  const daysInMonth = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate();
+  const perDay = Array.from({ length: daysInMonth }, () => 0);
+  for (const at of firstApproval.values()) perDay[Number(new Intl.DateTimeFormat("en-CA", { day: "numeric", timeZone: ctx.workspace.timezone }).format(new Date(at))) - 1]++;
+
+  // Top members: approved posts this month where the person is responsible or editor.
+  const approvedIds = [...firstApproval.keys()];
+  const [{ data: ass }, { data: eds }] = approvedIds.length ? await Promise.all([
+    sb.from("content_assignees").select("content_id, user_id").in("content_id", approvedIds),
+    sb.from("content_items").select("id, editor_id").in("id", approvedIds),
+  ]) : [{ data: [] }, { data: [] }];
+  const credit = new Map<string, Set<string>>();
+  const give = (u: string | null, c: string) => { if (!u) return; credit.set(u, (credit.get(u) ?? new Set()).add(c)); };
+  for (const x of (ass ?? []) as Array<{ content_id: string; user_id: string }>) give(x.user_id, x.content_id);
+  for (const x of (eds ?? []) as Array<{ id: string; editor_id: string | null }>) give(x.editor_id, x.id);
+  const names = new Map(members.map((m) => [m.user_id, m]));
+  const ranking = [...credit.entries()].map(([u, set]) => ({ u, n: set.size, name: names.get(u)?.full_name ?? "Ex-colaborador", avatar: names.get(u)?.avatar_url ?? null }))
+    .sort((x, y) => y.n - x.n).slice(0, 6);
+  const top = ranking[0]?.n ?? 0;
 
   const attentionItems = att ? [
-    { key: "overdue", icon: <Hourglass />, label: "Tarefas vencidas", items: att.overdue_tasks.map((t) => ({ href: `/app/tarefas/${t.id}`, text: t.title, meta: relative(t.due_at) })), more: "/app/tarefas?situacao=atrasadas" },
-    { key: "rejected", icon: <XCircle />, label: "Conteúdos reprovados", items: att.rejected_contents.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}` })), more: link({ aprovacao: "rejected" }) },
-    { key: "stale", icon: <CalendarClock />, label: "Aprovações paradas", items: att.stale_approvals.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: `enviado ${relative(c.sent_at)}` })), more: link({ aprovacao: "awaiting" }) },
-    { key: "soon", icon: <AlertTriangle />, label: "Publicação próxima sem aprovação", items: att.unapproved_soon.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDateTime(c.at) })), more: "/app/calendario" },
-    { key: "unconfirmed", icon: <Circle />, label: "Agendados sem confirmação", items: att.unconfirmed_published.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDateTime(c.at) })), more: link({ publicacao: "scheduled" }) },
-    { key: "late", icon: <CalendarClock />, label: "Publicações atrasadas", items: att.late_publications.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDate(c.at) })), more: link({ publicacao: "late" }) },
-    { key: "files", icon: <FileWarning />, label: "Arquivos não encontrados", items: att.missing_files.map((x) => ({ href: `/app/arquivos?arquivo=${x.id}`, text: x.name })), more: "/app/arquivos?status=missing" },
-    { key: "target", icon: <Target />, label: "Clientes abaixo da meta", items: att.clients_below_target.map((c) => ({ href: `/app/clientes/${c.client_id}`, text: c.name, meta: `${c.produced} de ${c.expected} esperados` })), more: "/app/clientes" },
+    { key: "rejected", label: "Em ajuste (pedido do cliente)", items: att.rejected_contents.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}` })) },
+    { key: "stale", label: "Aprovações paradas", items: att.stale_approvals.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: `enviado ${relative(c.sent_at)}` })) },
+    { key: "soon", label: "Publicação próxima sem aprovação", items: att.unapproved_soon.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDateTime(c.at) })) },
+    { key: "late", label: "Publicações atrasadas", items: att.late_publications.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDate(c.at) })) },
+    { key: "unconfirmed", label: "Agendados sem confirmação", items: att.unconfirmed_published.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDateTime(c.at) })) },
   ].filter((x) => x.items.length > 0) : [];
 
-  const monthLabel = (m: string) => new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(`${m}-15`)).replace(".", "");
+  const hour = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: ctx.workspace.timezone }).format(new Date()));
+  const hello = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const first = (ctx.profile.full_name || "").split(" ")[0];
+  const cheer = !target ? "Defina as metas dos clientes para acompanhar o mês." : pct >= 100 ? "Meta batida. Equipe incrível!" : pct >= 80 ? "Reta final, falta pouco." : pct >= 40 ? "Bom ritmo, vamos fechar o mês com tudo." : "Começo de mês: hora de acelerar a produção.";
+  const R = 52; const C = 2 * Math.PI * R;
 
   return (
     <>
-      <PageHeader title="Visão geral" description={`${ctx.workspace.name} · ${pr.label}`}
-        actions={<DashboardFilters clients={clients} services={services} formats={formats}
-          members={members.filter((m) => m.status === "active").map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
+          <Link href={`/app?mes=${shiftMonth(ym, -1)}`} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronLeft className="size-4" /></Link>
+          <span className="min-w-28 text-center text-[13px] font-semibold">{MonthName} {ym.slice(0, 4)}</span>
+          <Link href={`/app?mes=${shiftMonth(ym, 1)}`} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
+        </nav>
+      </div>
 
       {onboarding.pending.length > 0 && ctx.can("workspace.manage") && (
         <Panel className="mb-5" title={`Primeiros passos · ${onboarding.done} de ${onboarding.total}`}>
@@ -114,118 +122,100 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Panel>
       )}
 
-      {!sum ? (
-        <EmptyState title="Não foi possível carregar os indicadores" description="Recarregue a página." />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <Stat label="Clientes ativos" value={sum.active_clients} href="/app/clientes" />
-            <Stat label="Planejados" value={sum.planned} href={link({})} />
-            <Stat label="Em produção" value={sum.in_production} href={link({ producao: "in_production" })} tone="progress" />
-            <Stat label="Aguardando edição" value={sum.awaiting_edit} href={link({ etapa: "editing" })} />
-            <Stat label="Aguardando aprovação" value={sum.awaiting_approval} href={link({ aprovacao: "awaiting" })} tone="info" />
-            <Stat label="Reprovados / ajustes" value={sum.rejected} href={link({ aprovacao: "rejected" })} tone="danger" />
-            <Stat label="Aprovados" value={sum.approved} href={link({ aprovacao: "approved" })} tone="success" />
-            <Stat label="Agendados" value={sum.scheduled} href={link({ publicacao: "scheduled" })} />
-            <Stat label="Publicados" value={sum.published} href={link({ publicacao: "published" })} tone="success" />
-            <Stat label="Tarefas atrasadas" value={sum.tasks_overdue} href="/app/tarefas?situacao=atrasadas" tone={sum.tasks_overdue ? "danger" : undefined} />
-            <Stat label="Tarefas concluídas" value={sum.tasks_done} hint="no período" href="/app/tarefas?status=done" />
-            <Stat label="Aprovação na 1ª versão" value={sum.first_pass_rate == null ? "—" : `${sum.first_pass_rate}%`}
-              hint={sum.avg_approval_hours == null ? "tempo médio —" : `tempo médio ${sum.avg_approval_hours}h`} />
-          </div>
+      <section aria-label="Meta do mês" className="mb-4 flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-border bg-surface p-6">
+        <div className="min-w-0 flex-1 basis-72">
+          <p className="text-sm text-muted">{hello}{first ? `, ${first}` : ""}</p>
+          <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+            {target ? <>{MonthName} está em <span className="text-accent-ink">{pct}% da meta</span>.</> : <>{MonthName} ainda sem meta definida.</>}
+          </h1>
+          <p className="mt-1 text-sm text-muted">{cheer}</p>
+          {missing.length > 0 && <a href="#falta" className="mt-4 inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-medium hover:bg-surface-2">Ver o que falta ({missing.reduce((n, m) => n + m.left, 0)})</a>}
+        </div>
+        <div className="relative size-36 shrink-0" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
+          <svg viewBox="0 0 120 120" className="size-full -rotate-90">
+            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="9" />
+            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--accent)" strokeWidth="9" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, target ? delivered / target : 0))} />
+          </svg>
+          <span className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="tabular text-3xl font-bold">{pct}%</span>
+            <span className="tabular text-xs text-muted">{delivered} de {target}</span>
+          </span>
+        </div>
+      </section>
 
-          {attentionItems.length > 0 && (
-            <section aria-labelledby="atencao" className="mt-5">
-              <h2 id="atencao" className="mb-2 flex items-center gap-2 text-[13px] font-semibold">
-                <span className="size-2 rounded-full bg-[var(--tone-danger-fg)]" aria-hidden /> Atenção prioritária
-              </h2>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {attentionItems.map((g) => (
-                  <div key={g.key} className="rounded-lg border border-border bg-surface">
-                    <div className="flex items-center justify-between border-b border-border px-3 py-2 text-[13px] font-medium [&_svg]:size-4 [&_svg]:text-muted">
-                      <span className="flex items-center gap-2">{g.icon}{g.label}</span>
-                      <Link href={g.more} className="tabular text-xs text-muted hover:text-fg">{g.items.length}{g.items.length >= 10 ? "+" : ""} <ArrowUpRight className="inline size-3" /></Link>
-                    </div>
-                    <ul className="divide-y divide-border">
-                      {g.items.slice(0, 4).map((it) => (
-                        <li key={it.href + it.text}>
-                          <Link href={it.href} className="flex items-center gap-2 px-3 py-1.5 text-[13px] hover:bg-surface-2">
-                            <span className="min-w-0 flex-1 truncate">{it.text}</span>
-                            {"meta" in it && it.meta ? <span className="shrink-0 text-xs text-muted">{String(it.meta)}</span> : null}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Clientes", value: activeClients ?? 0, sub: "ativos", href: "/app/clientes" },
+          { label: "Meta do mês", value: target, sub: target ? `faltam ${Math.max(0, target - delivered)}` : "não definida", href: "/app/clientes" },
+          { label: "Entregues", value: delivered, sub: target ? `${pct}% da meta` : "aprovados pelo cliente", accent: true, href: "/app/clientes" },
+          { label: "Travados", value: stuck, sub: stuck ? "ajustes, aprovações paradas e atrasos" : "tudo fluindo", danger: stuck > 0, href: "#atencao" },
+        ].map((k) => (
+          <Link key={k.label} href={k.href} className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+            <p className="text-xs text-muted">{k.label}</p>
+            <p className={cn("tabular mt-1 text-3xl font-bold", k.accent && "text-accent-ink", k.danger && "text-[var(--tone-danger-fg)]")}>{k.value}</p>
+            <p className="mt-0.5 text-xs text-muted">{k.sub}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <Panel title={<span>Ritmo da equipe <span className="ml-1 font-normal text-muted">posts aprovados por dia</span></span>}
+          actions={<span className="tabular text-xs text-muted">{firstApproval.size} no mês</span>}>
+          <ColumnChart label="Posts aprovados por dia" height={160}
+            data={perDay.map((v, i) => ({ label: String(i + 1), value: v, detail: `${i + 1} de ${monthName}: ${v} aprovado(s)` }))} />
+        </Panel>
+        <Panel title="Top membros" actions={<span className="text-xs text-muted">posts aprovados</span>}>
+          {ranking.length === 0 ? <p className="text-[13px] text-muted">Aparece quando os posts com responsável ou editor forem aprovados.</p> : (
+            <ol className="space-y-3">
+              {ranking.map((r, i) => (
+                <li key={r.u} className="flex items-center gap-3">
+                  <span className="tabular w-4 text-xs text-subtle">{i + 1}</span>
+                  <Avatar name={r.name} src={r.avatar} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex justify-between text-[13px]"><span className="truncate font-medium">{r.name}</span><span className="tabular text-muted">{r.n}</span></p>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-accent" style={{ width: `${top ? (r.n / top) * 100 : 0}%` }} /></div>
                   </div>
-                ))}
-              </div>
-            </section>
+                </li>
+              ))}
+            </ol>
           )}
+        </Panel>
+      </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            <Panel title="Produção mensal (conteúdos planejados)" className="lg:col-span-2">
-              <ColumnChart label="Conteúdos planejados por mês"
-                data={sum.monthly.map((m) => ({ label: monthLabel(m.month), value: m.planned, detail: `${m.approved} aprovados · ${m.published} publicados` }))} />
-            </Panel>
-            <Panel title="Distribuição por etapa">
-              <BarList label="Conteúdos por etapa"
-                data={stages.filter((st) => (sum.by_stage[st.key] ?? 0) > 0).map((st) => ({ key: st.key, label: stageLabel[st.key], value: sum.by_stage[st.key] ?? 0 }))}
-                hrefFor={(k) => link({ etapa: k })} />
-              {Object.keys(sum.by_stage).length === 0 && <EmptyState compact title="Sem conteúdos no período" />}
-            </Panel>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <Panel title="Próximas publicações" padded={false}>
-              {sum.upcoming.length === 0 ? <EmptyState compact title="Nada programado" description="Defina datas no calendário editorial." /> : (
-                <ul className="divide-y divide-border">
-                  {sum.upcoming.map((u) => (
-                    <li key={u.id}>
-                      <Link href={`/app/conteudos/${u.id}`} className="flex items-center gap-3 px-4 py-2 hover:bg-surface-2">
-                        <div className="w-14 shrink-0 text-xs text-muted">{formatDate(u.at)}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium">#{u.code} {u.title}</p>
-                          <p className="truncate text-xs text-muted">{u.client}</p>
-                        </div>
-                        {u.approval_status === "approved" ? <PublicationBadge c={{ publication_status: u.publication_status, planned_publish_at: u.at, scheduled_at: null }} /> : <ApprovalBadge s={u.approval_status} />}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-            <Panel title="Tarefas abertas por colaborador">
-              {sum.by_member.length === 0 ? <EmptyState compact title="Nenhuma tarefa atribuída" /> : (
-                <BarList label="Tarefas abertas por colaborador" data={sum.by_member.slice(0, 8).map((m) => ({ key: m.user_id, label: m.name, value: m.open }))}
-                  hrefFor={(k) => `/app/tarefas?responsavel=${k}`} />
-              )}
-            </Panel>
-            <Panel title="Clientes com mais pendências">
-              {sum.top_pending_clients.length === 0 ? <EmptyState compact title="Sem pendências" /> : (
-                <BarList label="Pendências por cliente" data={sum.top_pending_clients.map((c) => ({ key: c.client_id, label: c.name, value: c.pending }))}
-                  hrefFor={(k) => `/app/clientes/${k}`} />
-              )}
-            </Panel>
-          </div>
-
-          <Panel className="mt-4" title="Atividades recentes" actions={<Link href="/app/atividade" className="text-xs text-muted hover:text-fg">Ver tudo</Link>} padded={false}>
-            {(activity ?? []).length === 0 ? <EmptyState compact title="Nenhuma atividade ainda" /> : (
-              <ul className="divide-y divide-border">
-                {(activity ?? []).map((ev) => (
-                  <li key={ev.id} className="flex items-center gap-3 px-4 py-2 text-[13px]">
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="font-medium">{ev.actor_type === "client" ? String(ev.actor_label ?? "Cliente") : names.get(ev.actor_id as string) ?? "Sistema"}</span>{" "}
-                      <span className="text-muted">{activityText(ev.action as string, ev.data as Record<string, unknown>)}</span>
-                    </span>
-                    {ev.content_id ? <Link href={`/app/conteudos/${String(ev.content_id)}`} className="shrink-0 text-xs text-muted hover:text-fg">abrir</Link> : null}
-                    <time className="shrink-0 text-xs text-subtle" dateTime={ev.created_at as string}>{relative(ev.created_at as string)}</time>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </>
-      )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section id="falta" aria-labelledby="falta-t" className="rounded-xl border border-border bg-surface">
+          <h2 id="falta-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">O que falta para a meta</h2>
+          {missing.length === 0 ? <p className="px-4 py-4 text-[13px] text-muted">{target ? "Todos os clientes bateram a meta do mês." : "Nenhuma meta definida."}</p> : (
+            <ul className="divide-y divide-border">
+              {missing.map((m) => (
+                <li key={m.id}><Link href={`/app/clientes/${m.id}?aba=posts&mes=${ym}`} className="flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-surface-2">
+                  <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
+                  <span className="tabular text-xs text-muted">{m.approved} de {m.target}</span>
+                  <span className="tabular rounded-md bg-surface-2 px-2 py-0.5 text-xs font-semibold">faltam {m.left}</span>
+                </Link></li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section id="atencao" aria-labelledby="atencao-t" className="rounded-xl border border-border bg-surface">
+          <h2 id="atencao-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">Precisa de atenção</h2>
+          {attentionItems.length === 0 ? <p className="px-4 py-4 text-[13px] text-muted">Nada travado agora.</p> : (
+            <div className="divide-y divide-border">
+              {attentionItems.map((g) => (
+                <div key={g.key} className="px-4 py-3">
+                  <p className="mb-1 text-xs font-semibold text-muted">{g.label} <span className="tabular font-normal">{g.items.length}</span></p>
+                  <ul className="space-y-0.5">
+                    {g.items.slice(0, 4).map((it, i) => (
+                      <li key={i}><Link href={it.href} className="flex justify-between gap-2 text-[13px] hover:underline"><span className="truncate">{it.text}</span>{(it as { meta?: string }).meta && <span className="shrink-0 text-xs text-muted">{(it as { meta?: string }).meta}</span>}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </>
   );
 }
@@ -251,7 +241,7 @@ async function onboardingState(ws: string) {
     { label: "Cadastrar subdivisões", done: (services.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Configurar metas mensais", done: (targets.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Conectar Google Drive", done: (drive.count ?? 0) > 0, href: "/app/integracoes" },
-    { label: "Criar o primeiro conteúdo", done: (contents.count ?? 0) > 0, href: "/app/conteudos/novo" },
+    { label: "Criar o primeiro post", done: (contents.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Configurar pipeline e templates", done: (contents.count ?? 0) > 0, href: "/app/configuracoes?aba=templates" },
   ];
   const done = steps.filter((x) => x.done).length;

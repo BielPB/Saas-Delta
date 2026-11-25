@@ -9,7 +9,7 @@ import { Shell, type NavSection } from "@/components/shell/shell";
 const nav: Array<{ title: string; items: Array<{ href: string; label: string; icon: string; perm?: Permission | Permission[] }> }> = [
   { title: "Principal", items: [
     { href: "/app", label: "Visão geral", icon: "layout" },
-    { href: "/app/minhas-tarefas", label: "Minhas tarefas", icon: "check" },
+    { href: "/app/minhas-tarefas", label: "Minhas demandas", icon: "check" },
     { href: "/app/pipeline", label: "Pipeline", icon: "kanban" },
     { href: "/app/calendario", label: "Calendário", icon: "calendar" },
     { href: "/app/aprovacoes", label: "Aprovações", icon: "stamp", perm: "approvals.manage" },
