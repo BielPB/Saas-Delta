@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/form";
 import { useToast } from "@/components/ui/overlay";
 import { Avatar } from "@/components/ui/primitives";
-import { manualStatuses, postStatusMeta, type PostStatusKey, type WorkStatus } from "@/lib/post-status";
+import { isWorkStatus, manualStatuses, postStatusMeta, type PostStatusKey, type WorkStatus } from "@/lib/post-status";
 import { relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ContentViewer, type ViewerDeliverable } from "@/app/app/conteudos/[id]/viewer";
@@ -53,7 +53,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
     if (r.ok) { if (r.message) toast.success(r.message); router.refresh(); } else toast.error(r.error ?? "Não foi possível salvar.");
   });
   const save = (patch: Parameters<typeof updateContent>[2]) => run(() => updateContent(post.id, post.lock, patch));
-  const manual = ["planning", "production", "review"].includes(post.status);
+  const manual = isWorkStatus(post.status);
   const meta = postStatusMeta[post.status];
   const people = new Map(members.map((m) => [m.id, m]));
 

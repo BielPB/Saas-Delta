@@ -8,7 +8,8 @@ import {
 import { cn } from "@/lib/utils";
 import { FilterBar } from "@/components/content/filter-bar";
 import { PipelineBoard } from "@/components/content/pipeline-board";
-import { boardColumns } from "@/lib/board";
+import { columnOf } from "@/lib/board";
+import { formatGroups } from "@/lib/post-status";
 
 export const metadata: Metadata = { title: "Pipeline de produção" };
 
@@ -29,11 +30,17 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const visible = boardRows(rows);
   const [thumb, extras] = await Promise.all([thumbnails(visible), pipelineExtras(ws, visible.map((r) => r.id))]);
   const byUser = new Map(members.filter((m) => m.user_id).map((m) => [m.user_id, m]));
+  const fmtKey = new Map(formats.map((x) => [x.id, x.key]));
+  const hrefOf = (r: (typeof visible)[number]) => {
+    const g = formatGroups.find((x) => x.formats.includes(fmtKey.get(r.format_id) ?? ""))?.key ?? "posts";
+    return `/app/clientes/${r.client_id}?aba=${g}&mes=${(r.planned_publish_at ?? r.created_at).slice(0, 7)}&post=${r.id}`;
+  };
 
   const items = visible.map((r) => {
     const who = byUser.get(extras.assignees.get(r.id)?.[0] ?? "");
     return {
-      id: r.id, code: r.code, title: r.title, client: r.clients?.name ?? "", stage: r.stage, approval: r.approval_status,
+      id: r.id, code: r.code, title: r.title, client: r.clients?.name ?? "", clientId: r.client_id, stage: r.stage, approval: r.approval_status,
+      column: columnOf(r), movable: !r.template_id, href: hrefOf(r),
       thumb: thumb(r), aspect: r.content_formats?.aspect_ratio ?? null, planned: r.scheduled_at ?? r.planned_publish_at,
       service: r.client_services ? { name: r.client_services.name, color: r.client_services.color } : null,
       format: r.content_formats?.name ?? "Conteúdo",
@@ -46,8 +53,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const service = services.find((s) => s.id === f.servico);
   const title = service?.name ?? client?.name ?? "Todos os projetos";
   const total = items.length;
-  const readyStages = boardColumns.find((c) => c.ready)!.stages;
-  const ready = items.filter((i) => readyStages.includes(i.stage)).length;
+  const ready = items.filter((i) => i.column === "ready").length;
   const inApproval = items.filter((i) => i.stage === "client_approval").length;
   const kindStat = (k: string) => {
     const withKind = items.filter((i) => i.deliverables.some((d) => d.kind === k));
@@ -101,7 +107,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           show={["q", "formato", "aprovacao", "responsavel"]} />
       </div>
 
-      <PipelineBoard canPublish={ctx.can("publications.manage")} items={items} />
+      <PipelineBoard canPublish={ctx.can("publications.manage")} canSubmit={ctx.can("approvals.manage") || ctx.can("tasks.manage")} items={items} />
     </>
   );
 }

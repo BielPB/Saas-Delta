@@ -16,7 +16,7 @@ import { NewTaskButton } from "@/app/app/tarefas/new-task";
 export const metadata: Metadata = { title: "Minhas demandas" };
 
 type Row = ContentRow & { work_status: string; editor_id: string | null };
-const ORDER: PostStatusKey[] = ["adjust", "production", "planning", "review", "client", "ready", "scheduled"];
+const ORDER: PostStatusKey[] = ["adjust", "editing", "capture", "script", "finishing", "client", "ready", "scheduled"];
 const DAY = 864e5;
 
 export default async function MyWorkPage({ searchParams }: { searchParams: Promise<{ f?: string; cliente?: string; ordem?: string; pessoa?: string }> }) {

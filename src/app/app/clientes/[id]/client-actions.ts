@@ -30,7 +30,7 @@ export async function saveProfile(clientId: string, values: Record<string, strin
 
 /**
  * "Duplicar mês": copies the month's posts to the next month as fresh posts
- * (same title, format, subdivision and briefing; date +1 month; no files, status Planejamento).
+ * (same title, format, subdivision and briefing; date +1 month; no files, status Roteiro).
  */
 export async function duplicateMonth(clientId: string, ym: string): Promise<ActionResult<{ count: number; target: string }>> {
   const ctx = await getContext();

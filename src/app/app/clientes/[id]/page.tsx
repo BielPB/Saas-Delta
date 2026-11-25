@@ -6,7 +6,7 @@ import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { contentSelect, listFormats, listMembers, memberMap, postBlockers, postThumbs, signPaths, taskSelect, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatDateTime, monthStart, relative, bytes, toLocalInput } from "@/lib/format";
-import { formatGroups, postStatus, type WorkStatus } from "@/lib/post-status";
+import { formatGroups, isWorkStatus, postStatus } from "@/lib/post-status";
 import { loadPostDetail } from "@/lib/post-detail";
 import { cn, isUuid } from "@/lib/utils";
 import { subdivisionText } from "@/lib/labels";
@@ -247,7 +247,7 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
         <PostDrawer workspaceId={ws} closeHref={baseHref} prevHref={idx > 0 ? hrefFor[posts[idx - 1].id] : null} nextHref={idx >= 0 && idx < posts.length - 1 ? hrefFor[posts[idx + 1].id] : null}
           post={{
             id: c.id, code: c.code, number: idx >= 0 ? idx + 1 : 0, title: c.title, clientId, lock: c.lock_version, status: postStatus(c),
-            work: (["planning", "production", "review"].includes(c.work_status) ? c.work_status : "planning") as WorkStatus,
+            work: isWorkStatus(c.work_status) ? c.work_status : "script",
             format: c.content_formats?.name ?? "", aspect: c.content_formats?.aspect_ratio ?? "4:5", planned: toLocalInput(c.planned_publish_at),
             serviceId: c.service_id, briefing: c.briefing ?? "", editorId: c.editor_id, assignees: d.assigneeIds,
           }}

@@ -15,6 +15,7 @@ export interface ContentRow {
   published_at: string | null; published_url: string | null; channel: string | null;
   production_status: ProductionStatus; approval_status: ApprovalStatus; publication_status: PublicationStatus;
   stage: ContentStage; thumbnail_asset_id: string | null; created_at: string; updated_at: string; lock_version: number;
+  work_status?: string; template_id?: string | null;
   clients: { name: string } | null;
   client_services: { name: string; color: string } | null;
   content_formats: { name: string; key: string; aspect_ratio: string | null } | null;
@@ -23,7 +24,7 @@ export interface ContentRow {
 
 export const contentSelect =
   "id, code, title, client_id, service_id, format_id, priority, due_at, planned_publish_at, scheduled_at, published_at, published_url, channel, " +
-  "production_status, approval_status, publication_status, stage, thumbnail_asset_id, created_at, updated_at, lock_version, " +
+  "production_status, approval_status, publication_status, stage, thumbnail_asset_id, created_at, updated_at, lock_version, work_status, template_id, " +
   "clients(name), client_services(name, color), content_formats(name, key, aspect_ratio), thumbnail:file_assets!content_items_thumbnail_fk(storage_path, mime_type)";
 
 export interface TaskRow {

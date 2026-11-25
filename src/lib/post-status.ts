@@ -2,23 +2,28 @@ import type { ApprovalStatus, ContentStage, PublicationStatus } from "@/lib/doma
 
 /**
  * One status per post, as the team sees it.
- * planning / production / review are set by hand (work_status);
- * everything from "with the client" on is derived from approval and publication.
+ * The production columns of the board are set by hand (work_status):
+ * Roteiro → Gravação → Edição → Finalização. From "with the client" on it is
+ * derived from approval and publication.
  */
-export type WorkStatus = "planning" | "production" | "review";
+export type WorkStatus = "script" | "capture" | "editing" | "finishing";
+export const WORK_STATUSES: WorkStatus[] = ["script", "capture", "editing", "finishing"];
+export const isWorkStatus = (v: unknown): v is WorkStatus => typeof v === "string" && (WORK_STATUSES as string[]).includes(v);
 export type PostStatusKey = WorkStatus | "client" | "adjust" | "ready" | "scheduled" | "published" | "cancelled";
 export type Tone = "neutral" | "info" | "progress" | "warning" | "danger" | "success" | "accent";
 
 export const manualStatuses: Array<{ key: WorkStatus; label: string }> = [
-  { key: "planning", label: "Planejamento" },
-  { key: "production", label: "Em produção" },
-  { key: "review", label: "Revisão" },
+  { key: "script", label: "Roteiro" },
+  { key: "capture", label: "Gravação" },
+  { key: "editing", label: "Edição" },
+  { key: "finishing", label: "Finalização" },
 ];
 
 export const postStatusMeta: Record<PostStatusKey, { label: string; tone: Tone; hint: string }> = {
-  planning: { label: "Planejamento", tone: "neutral", hint: "Ideia, briefing e roteiro." },
-  production: { label: "Em produção", tone: "progress", hint: "Gravação, edição, arte e legenda." },
-  review: { label: "Revisão", tone: "info", hint: "Conferência interna antes de enviar ao cliente." },
+  script: { label: "Roteiro", tone: "neutral", hint: "Ideia, briefing e roteiro." },
+  capture: { label: "Gravação", tone: "progress", hint: "Captação de vídeo ou fotos." },
+  editing: { label: "Edição", tone: "progress", hint: "Edição do vídeo ou da arte." },
+  finishing: { label: "Finalização", tone: "info", hint: "Capa, legenda e revisão interna antes do cliente." },
   client: { label: "Com o cliente", tone: "info", hint: "Aguardando a aprovação no link." },
   adjust: { label: "Em ajuste", tone: "warning", hint: "O cliente pediu mudanças." },
   ready: { label: "Pronto para publicar", tone: "accent", hint: "Aprovado pelo cliente." },
@@ -34,8 +39,7 @@ export function postStatus(c: { work_status?: string | null; stage: ContentStage
   if (c.stage === "ready" || c.publication_status === "ready") return "ready";
   if (c.stage === "adjustments") return "adjust";
   if (["awaiting", "partially_approved", "rejected"].includes(c.approval_status)) return "client";
-  const w = c.work_status as WorkStatus | undefined;
-  return w === "production" || w === "review" ? w : "planning";
+  return isWorkStatus(c.work_status) ? c.work_status : "script";
 }
 
 /** Formats grouped the way the agency thinks about them (tabs on the client page). */

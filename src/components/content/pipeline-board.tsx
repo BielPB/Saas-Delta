@@ -1,9 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import type { ApprovalStatus, ContentStage, DeliverableKind } from "@/lib/domain";
-import { boardColumns } from "@/lib/board";
+import { boardColumns, columnToWork } from "@/lib/board";
+import { useToast } from "@/components/ui/overlay";
+import { setPostStatus, submitPost } from "@/app/app/clientes/[id]/post-actions";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/primitives";
@@ -14,6 +17,8 @@ export interface BoardItem {
   id: string; code: number; title: string; client: string; stage: ContentStage; approval: ApprovalStatus;
   thumb: string | null; aspect: string | null; planned: string | null; service: { name: string; color: string } | null;
   format?: string; deliverables?: Array<{ kind: DeliverableKind; done: boolean }>; assignee?: { name: string; avatar: string | null } | null;
+  /** Board column (see lib/board columnOf); falls back to the stage. */
+  column?: string; clientId?: string; movable?: boolean; href?: string;
 }
 
 
@@ -23,16 +28,40 @@ const readyNote = (i: BoardItem) =>
   i.stage === "client_approval" ? "Na aprovação" : i.stage === "adjustments" ? "Em ajustes" : i.stage === "ready" ? "Pronto para publicar"
     : i.stage === "scheduled" ? "Agendado" : i.stage === "published" ? "Publicado" : "";
 
-export function PipelineBoard({ items, canPublish }: { items: BoardItem[]; canPublish: boolean }) {
+export function PipelineBoard({ items, canPublish, canSubmit = false }: { items: BoardItem[]; canPublish: boolean; canSubmit?: boolean }) {
   const [dialog, setDialog] = useState<{ mode: "schedule" | "confirm"; item: BoardItem } | null>(null);
+  const [drag, setDrag] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const router = useRouter();
+  const colOf = (i: BoardItem) => i.column ?? boardColumns.find((c) => c.stages.includes(i.stage))?.key ?? "script";
+
+  /** Drag to a production column = change the post status; drop on "Pronto" = release to the client. */
+  const onDrop = (to: string) => {
+    const item = items.find((x) => x.id === drag);
+    setDrag(null); setOver(null);
+    if (!item || colOf(item) === to) return;
+    if (!item.movable || !item.clientId) { toast.info("Este conteúdo segue as etapas de tarefas: ele avança quando as tarefas são concluídas."); return; }
+    if (colOf(item) === "ready") { toast.info("Este post já está com o cliente ou aprovado."); return; }
+    start(async () => {
+      const r = to === "ready"
+        ? (canSubmit ? await submitPost(item.id, item.clientId!) : { ok: false, error: "Você não tem permissão para liberar posts ao cliente." })
+        : await setPostStatus(item.id, item.clientId!, columnToWork[to]);
+      if (r.ok) { toast.success(to === "ready" ? "Liberado para aprovação." : "Status atualizado."); router.refresh(); }
+      else toast.error(r.error ?? "Não foi possível mover.");
+    });
+  };
 
   return (
     <>
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" aria-label="Pipeline de produção">
         {boardColumns.map((col) => {
-          const list = items.filter((i) => col.stages.includes(i.stage));
+          const list = items.filter((i) => colOf(i) === col.key);
           return (
-            <section key={col.key} aria-label={`${col.label}: ${list.length}`} className="flex w-[19rem] shrink-0 flex-col gap-3">
+            <section key={col.key} aria-label={`${col.label}: ${list.length}`} aria-busy={pending}
+              onDragOver={(e) => { if (drag) { e.preventDefault(); setOver(col.key); } }} onDragLeave={() => setOver(null)} onDrop={() => onDrop(col.key)}
+              className={cn("flex w-[19rem] shrink-0 flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
               <header className={cn(
                 "flex items-center justify-between rounded-xl border-2 px-4 py-2.5",
                 col.ready ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 text-fg",
@@ -47,14 +76,15 @@ export function PipelineBoard({ items, canPublish }: { items: BoardItem[]; canPu
 
               <ul className="flex min-h-24 flex-col gap-3">
                 {list.map((i) => (
-                  <li key={i.id} className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+                  <li key={i.id} draggable={Boolean(i.movable)} onDragStart={() => setDrag(i.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
+                    className={cn("rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong", i.movable && "cursor-grab active:cursor-grabbing", drag === i.id && "opacity-50")}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold">{i.format ?? "Conteúdo"}</span>
                       <span className="tabular text-xs text-muted">
                         {col.ready && readyNote(i) ? readyNote(i) : i.planned ? formatDate(i.planned) : ""}
                       </span>
                     </div>
-                    <Link href={`/app/conteudos/${i.id}`} className="mt-3 block text-[17px] font-bold leading-snug tracking-tight hover:underline">
+                    <Link href={i.href ?? `/app/conteudos/${i.id}`} draggable={false} className="mt-3 block text-[17px] font-bold leading-snug tracking-tight hover:underline">
                       {i.title}
                     </Link>
 

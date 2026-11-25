@@ -109,7 +109,7 @@ export function DuplicateMonth({ clientId, ym, monthLabel, nextLabel }: { client
         footer={<><Button onClick={() => setOpen(false)}>Cancelar</Button><Button variant="primary" disabled={pending} onClick={run}>{pending ? <Loader2 className="animate-spin" /> : <Copy />} Duplicar</Button></>}>
         <ul className="space-y-1.5 text-sm text-muted">
           <li>• Copia título, formato, subdivisão e briefing; a data vai para o mesmo dia do mês seguinte.</li>
-          <li>• Os posts novos começam em <strong className="text-fg">Planejamento</strong>, sem arquivos nem legenda.</li>
+          <li>• Os posts novos começam em <strong className="text-fg">Roteiro</strong>, sem arquivos nem legenda.</li>
           <li>• Os posts de {monthLabel} não mudam.</li>
         </ul>
       </Dialog>

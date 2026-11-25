@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fail, type ActionResult } from "@/lib/errors";
 import { fromLocalInput } from "@/lib/format";
 import { isUuid } from "@/lib/utils";
+import { isWorkStatus, type WorkStatus } from "@/lib/post-status";
 import { appOrigin } from "@/lib/origin";
 import { postBlockers } from "@/lib/data";
 
@@ -34,7 +35,8 @@ export async function createPost(input: { clientId: string; formatId: string; ti
   return { ok: true, data: { id: data as string }, message: "Post criado." };
 }
 
-export async function setPostStatus(contentId: string, clientId: string, status: "planning" | "production" | "review"): Promise<ActionResult> {
+export async function setPostStatus(contentId: string, clientId: string, status: WorkStatus): Promise<ActionResult> {
+  if (!isWorkStatus(status)) return fail("Status inválido.");
   await getContext();
   if (!isUuid(contentId)) return fail("Post inválido.");
   const sb = await createClient();

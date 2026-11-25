@@ -11,6 +11,7 @@ import { FilterBar } from "@/components/content/filter-bar";
 import { ContentTable, Thumb } from "@/components/content/content-table";
 import { ApprovalBadge, PublicationBadge, ServiceDot, StageBadge } from "@/components/content/badges";
 import { PipelineBoard } from "@/components/content/pipeline-board";
+import { columnOf } from "@/lib/board";
 import { CalendarMonth } from "@/components/calendar/calendar-month";
 import { bulkFromForm } from "./actions";
 
@@ -78,8 +79,9 @@ export default async function ContentsPage({ searchParams }: { searchParams: Pro
           <ContentTable rows={rows} thumb={thumb} selectable={ctx.can("contents.manage")} formId="bulk" />
         </Panel>
       ) : view === "kanban" ? (
-        <PipelineBoard items={rows.map((r) => ({
+        <PipelineBoard canSubmit={ctx.can("approvals.manage") || ctx.can("tasks.manage")} items={rows.map((r) => ({
           id: r.id, code: r.code, title: r.title, client: r.clients?.name ?? "", stage: r.stage, approval: r.approval_status,
+          column: columnOf(r), movable: !r.template_id, clientId: r.client_id,
           thumb: thumb(r), aspect: r.content_formats?.aspect_ratio ?? null, planned: r.scheduled_at ?? r.planned_publish_at,
           service: r.client_services ? { name: r.client_services.name, color: r.client_services.color } : null,
         }))} canPublish={ctx.can("publications.manage")} />
