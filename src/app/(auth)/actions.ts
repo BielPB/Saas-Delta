@@ -25,7 +25,11 @@ export async function signIn(_: ActionResult | null, form: FormData): Promise<Ac
   if (!parsed.success) return fail("Confira os campos.", Object.fromEntries(parsed.error.issues.map((i) => [i.path[0], i.message])));
   const sb = await createClient();
   const { error } = await sb.auth.signInWithPassword(parsed.data);
-  if (error) return fail("E-mail ou senha incorretos.");
+  if (error) {
+    if (error.code === "email_not_confirmed") return fail("Seu e-mail ainda não foi confirmado. Abra o link que enviamos ou peça à agência para liberar o acesso.");
+    if (error.status === 429 || error.code === "over_request_rate_limit") return fail("Muitas tentativas. Aguarde alguns minutos e tente de novo.");
+    return fail("E-mail ou senha incorretos.");
+  }
   await sb.rpc("accept_pending_invites");
   redirect(safeNext(form.get("next")));
 }
