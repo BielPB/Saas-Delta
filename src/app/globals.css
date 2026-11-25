@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* Class-based dark mode (html.dark), toggled by the theme switch. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
+   Delta Flow tokens. Semantic names only; components never use raw hex.
+   Brand: Carbon #171717 · Lime #C6FF34 · White · Black.
+   Lime is reserved for the primary action, focus and "ready" highlights.
+   ============================================================================= */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #ececee;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --fg: #171717;
+  --fg-muted: #5f5f66;      /* 6.1:1 on white */
+  --fg-subtle: #8a8a93;
+  --accent: #c6ff34;        /* lime */
+  --accent-fg: #171717;     /* carbon on lime: 16.8:1 */
+  --accent-soft: #f2ffd1;
+  --accent-ink: #3f5a00;    /* lime-family text readable on light surfaces */
+  --ring: #171717;
+  --overlay: rgb(10 10 10 / 0.45);
+
+  --tone-neutral-bg: #f4f4f5;  --tone-neutral-fg: #52525b;
+  --tone-info-bg: #eaf2ff;     --tone-info-fg: #1d4ed8;
+  --tone-progress-bg: #f1edff; --tone-progress-fg: #5b3fd1;
+  --tone-warning-bg: #fff4e0;  --tone-warning-fg: #9a5b00;
+  --tone-danger-bg: #ffecec;   --tone-danger-fg: #b42318;
+  --tone-success-bg: #e8f8ee;  --tone-success-fg: #13703a;
+  --tone-accent-bg: #f2ffd1;   --tone-accent-fg: #3f5a00;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-pop: 0 8px 24px -8px rgb(0 0 0 / 0.18), 0 0 0 1px rgb(0 0 0 / 0.04);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b0b0b;
+  --surface: #141414;
+  --surface-2: #1b1b1b;
+  --surface-3: #242424;
+  --border: #262626;
+  --border-strong: #343434;
+  --fg: #f5f5f5;
+  --fg-muted: #a8a8ad;
+  --fg-subtle: #75757c;
+  --accent: #c6ff34;
+  --accent-fg: #0b0b0b;
+  --accent-soft: #1f2a06;
+  --accent-ink: #c6ff34;
+  --ring: #c6ff34;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --tone-neutral-bg: #222224;  --tone-neutral-fg: #c4c4c9;
+  --tone-info-bg: #13233f;     --tone-info-fg: #8ab4ff;
+  --tone-progress-bg: #221b3f; --tone-progress-fg: #b7a6ff;
+  --tone-warning-bg: #33240a;  --tone-warning-fg: #ffc266;
+  --tone-danger-bg: #3a1513;   --tone-danger-fg: #ff9b92;
+  --tone-success-bg: #0f2c1b;  --tone-success-fg: #7fdca2;
+  --tone-accent-bg: #1f2a06;   --tone-accent-fg: #c6ff34;
+  --shadow-pop: 0 10px 30px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.06);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-ring: var(--ring);
+  --color-carbon: #171717;
+  --color-lime: #c6ff34;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --shadow-pop: var(--shadow-pop);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  ::selection { background: var(--accent); color: var(--accent-fg); }
+  input, textarea, select, button { font: inherit; }
+  [hidden] { display: none !important; }
+  dialog::backdrop { background: var(--overlay); }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@keyframes df-shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0, var(--surface-3) 40%, var(--surface-2) 80%);
+  background-size: 800px 100%;
+  animation: df-shimmer 1.4s linear infinite;
+}
+
+@keyframes df-progress { 0% { width: 0 } 40% { width: 65% } 100% { width: 92% } }
+.df-progress { animation: df-progress 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards; }

@@ -1,0 +1,20 @@
+# Supabase CLI config (local stack). Production settings are applied in the dashboard (see DEPLOYMENT.md).
+project_id = "delta-flow"
+
+[api]
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[storage]
+file_size_limit = "5GiB"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
