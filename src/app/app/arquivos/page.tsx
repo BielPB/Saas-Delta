@@ -5,9 +5,9 @@ import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assetSelect, listClientsLite, signPaths, type AssetRow } from "@/lib/data";
 import { bytes, relative } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { Badge, EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
-import { FileActions, LibraryUpload } from "./file-actions";
+import { EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
+import { LibraryUpload } from "./file-actions";
+import { FileList } from "./file-list";
 
 export const metadata: Metadata = { title: "Arquivos" };
 
@@ -63,31 +63,14 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
       {rows.length === 0 ? (
         <Panel><EmptyState icon={<FolderOpen />} title={unlinkedTab ? "Tudo vinculado" : "Nenhum arquivo"} description={unlinkedTab ? "Nenhum arquivo pendente de vínculo." : "Envie arquivos ou conecte o Google Drive em Integrações."} /></Panel>
       ) : (
-        <Panel padded={false}>
-          <ul className="divide-y divide-border">
-            {rows.map((f) => {
-              const u = urls.get(f.thumbnail_path ?? f.storage_path ?? "");
-              return (
-                <li key={f.id} className={cn("flex flex-wrap items-center gap-3 px-4 py-2.5", sp.arquivo === f.id && "bg-accent-soft")}>
-                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-surface-2 text-[10px] uppercase text-subtle">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
-                    {u ? <img src={u} alt="" className="size-full object-cover" loading="lazy" /> : (f.mime_type?.split("/")[1] ?? "doc").slice(0, 4)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium" title={f.name}>{f.name}</p>
-                    <p className="text-xs text-muted">{f.clients?.name ?? "Geral"} · {categories[f.category] ?? f.category} · {f.provider === "drive" ? "Google Drive" : bytes(f.size_bytes)} · {relative(f.created_at)}</p>
-                  </div>
-                  {f.status === "missing" && <Badge tone="danger">Não encontrado na origem</Badge>}
-                  {f.status === "processing" && <Badge tone="info">Gerando preview</Badge>}
-                  {f.deliverable_version_assets.length > 0 ? <Badge tone="success">Vinculado</Badge> : <Badge>Sem vínculo</Badge>}
-                  {f.drive_file_id && <a className="text-xs text-muted underline-offset-2 hover:underline" target="_blank" rel="noreferrer noopener" href={`https://drive.google.com/file/d/${encodeURIComponent(f.drive_file_id)}/view`}>Abrir no Drive</a>}
-                  <FileActions asset={{ id: f.id, name: f.name, provider: f.provider, linked: f.deliverable_version_assets.length > 0, clientId: f.client_id, mime: f.mime_type }}
-                    canManage={ctx.can("files.manage")} canCreateContent={ctx.can("contents.manage")} />
-                </li>
-              );
-            })}
-          </ul>
-        </Panel>
+        <FileList canManage={ctx.can("files.manage")} canCreateContent={ctx.can("contents.manage")}
+          rows={rows.map((f) => ({
+            id: f.id, name: f.name, thumb: urls.get(f.thumbnail_path ?? f.storage_path ?? "") ?? null,
+            ext: (f.mime_type?.split("/")[1] ?? "doc").slice(0, 4),
+            meta: [f.clients?.name ?? "Geral", categories[f.category] ?? f.category, f.provider === "drive" ? "Google Drive" : bytes(f.size_bytes), relative(f.created_at)].join(" · "),
+            status: f.status, linked: f.deliverable_version_assets.length > 0, provider: f.provider, clientId: f.client_id, mime: f.mime_type,
+            driveId: f.drive_file_id, highlight: sp.arquivo === f.id,
+          }))} />
       )}
     </>
   );

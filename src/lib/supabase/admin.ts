@@ -7,6 +7,7 @@ import { publicEnv, serverEnv } from "@/lib/env";
  *   1. Signing storage URLs for paths a validated RPC already returned.
  *   2. Reading/writing encrypted Drive credentials.
  *   3. Background jobs and cron.
+ *   4. Deleting unlinked library files, only ids already read through RLS by a member with files.manage.
  * Never pass user-supplied ids to it without an authorization check first.
  */
 export function createAdminClient() {

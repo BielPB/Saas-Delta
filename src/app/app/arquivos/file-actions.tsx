@@ -11,9 +11,11 @@ import { requestPreview } from "@/app/app/integracoes/actions";
 import { archiveAsset, linkAsset, suggestionsFor, type Suggestion } from "./actions";
 import { subdivisionText } from "@/lib/labels";
 
-export function FileActions({ asset, canManage, canCreateContent }: {
+export function FileActions({ asset, canManage, canCreateContent, onDelete }: {
   asset: { id: string; name: string; provider: string; linked: boolean; clientId: string | null; mime: string | null };
   canManage: boolean; canCreateContent: boolean;
+  /** Opens the shared delete confirmation (FileList). */
+  onDelete?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [sugs, setSugs] = useState<Suggestion[] | null>(null);
@@ -34,7 +36,8 @@ export function FileActions({ asset, canManage, canCreateContent }: {
             {asset.provider === "drive" && asset.mime?.startsWith("video/") && (
               <MenuItem onSelect={() => { close(); run(() => requestPreview(asset.id)); }}>Gerar preview para o portal</MenuItem>
             )}
-            {canManage && <MenuItem danger onSelect={() => { close(); run(() => archiveAsset(asset.id)); }}>Arquivar referência</MenuItem>}
+            {canManage && onDelete && <MenuItem danger onSelect={() => { close(); onDelete(); }}>Excluir</MenuItem>}
+            {canManage && !onDelete && <MenuItem danger onSelect={() => { close(); run(() => archiveAsset(asset.id)); }}>Arquivar referência</MenuItem>}
           </>
         )}
       </Menu>
