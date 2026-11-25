@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env";
 
 /**
- * Hourly cron (Vercel Cron → Authorization: Bearer CRON_SECRET).
+ * Daily cron at 08:00 America/Fortaleza (Vercel Hobby allows one run per day; Authorization: Bearer CRON_SECRET).
  * Emits deadline / late-publication notifications (deduped per day in SQL)
  * and runs housekeeping. Never marks anything as published.
  */

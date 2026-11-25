@@ -20,7 +20,7 @@ Tudo em contas da Delta (código no GitHub privado, Supabase, Vercel, Google Clo
 
 ## 3. Vercel
 1. Importe o repositório; defina as variáveis do `.env.example` (Production e Preview separados).
-2. `CRON_SECRET` com `openssl rand -hex 32`; o `vercel.json` agenda `/api/cron/deadlines` a cada hora.
+2. `CRON_SECRET` com `openssl rand -hex 32`; o `vercel.json` agenda `/api/cron/deadlines` uma vez por dia, às 8h (limite do plano Hobby; no Pro pode voltar a ser de hora em hora). Região das funções: `gru1` (São Paulo), junto do Supabase.
 3. Domínio `app.deltaflow.com.br`.
 
 ## 4. Worker (Render ou equivalente)
