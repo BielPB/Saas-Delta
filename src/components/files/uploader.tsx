@@ -8,7 +8,9 @@ import { bytes } from "@/lib/format";
 import { storagePath, cn } from "@/lib/utils";
 import { findDuplicate, registerAsset } from "@/app/app/conteudos/actions";
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 ** 3; // mirrors the bucket file_size_limit
+// Supabase Free caps each upload at 50 MB (the bucket allows 5 GB on paid plans).
+// Raise NEXT_PUBLIC_MAX_UPLOAD_MB after upgrading; until then large videos go through a Google Drive link.
+export const MAX_UPLOAD_BYTES = Math.min(5 * 1024, Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_MB) || 50) * 1024 ** 2;
 const ACCEPT: Record<string, string> = {
   video: "video/mp4,video/quicktime,video/webm,video/x-matroska",
   image: "image/jpeg,image/png,image/webp,image/heic,image/gif",
@@ -123,7 +125,7 @@ export function Uploader({ workspaceId, clientId, serviceId, category, accept = 
         continue;
       }
       if (file.size > MAX_UPLOAD_BYTES) {
-        setItems((xs) => [...xs, { key, file, progress: 0, status: "error", error: `Máximo de ${bytes(MAX_UPLOAD_BYTES)}.` }]);
+        setItems((xs) => [...xs, { key, file, progress: 0, status: "error", error: `${bytes(file.size)}: o limite é ${bytes(MAX_UPLOAD_BYTES)}. Envie pelo Google Drive e cole o link.` }]);
         continue;
       }
       const item: Item = { key, file, progress: 0, status: "checking" };
@@ -147,7 +149,7 @@ export function Uploader({ workspaceId, clientId, serviceId, category, accept = 
         <p className="text-sm">Arraste {multiple ? "arquivos" : "o arquivo"} aqui ou{" "}
           <button type="button" className="font-medium underline underline-offset-4" onClick={() => input.current?.click()}>selecione</button>
         </p>
-        <p className="mt-1 text-xs text-muted">Até {bytes(MAX_UPLOAD_BYTES)} por arquivo. Envio retomável se a conexão cair.</p>
+        <p className="mt-1 text-xs text-muted">Até {bytes(MAX_UPLOAD_BYTES)} por arquivo. Maior que isso: use um link do Google Drive.</p>
         <input ref={input} type="file" hidden accept={ACCEPT[accept]} multiple={multiple} onChange={(e) => e.target.files && addFiles(e.target.files)} />
       </div>
       {items.length > 0 && (

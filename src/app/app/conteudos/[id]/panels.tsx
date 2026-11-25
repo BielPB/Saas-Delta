@@ -11,6 +11,7 @@ import { PublicationDialog } from "@/components/content/publication-dialog";
 import { Uploader } from "@/components/files/uploader";
 import { channels, deliverableKind, textKinds, type ApprovalStatus, type DeliverableKind, type PublicationStatus, type VersionStatus } from "@/lib/domain";
 import { toLocalInput } from "@/lib/format";
+import { parseMediaLink } from "@/lib/media-link";
 import { addComment } from "@/app/app/tarefas/actions";
 import { addVersion, archiveContents, cancelContent, duplicateContent, invalidateApproval, setAssignees, unschedulePublication, updateContent } from "../actions";
 
@@ -145,9 +146,7 @@ function VersionDialog({ item, contentId, workspaceId, clientId, serviceId, onCl
                 Pode enviar vários arquivos: todos entram na mesma versão e o cliente vê e avalia o conjunto.
               </p>
             )}
-            <label className="block text-[13px] font-medium">Ou link do arquivo <span className="font-normal text-muted">(ex.: pasta do Drive com material bruto)</span>
-              <Input className="mt-1.5" type="url" placeholder="https://" value={url} onChange={(e) => setUrl(e.target.value)} />
-            </label>
+            <DriveLinkField kind={item.kind} id={item.id} url={url} setUrl={setUrl} />
           </>
         )}
         <label className="block text-[13px] font-medium">Motivo da alteração {needsReason ? <span className="text-[var(--tone-danger-fg)]">(obrigatório: substitui versão aprovada)</span> : <span className="font-normal text-muted">(opcional)</span>}
@@ -237,5 +236,30 @@ export function CommentBox({ contentId }: { contentId: string }) {
         onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (body.trim()) run(() => addComment(contentId, body), () => setBody("")); } }} />
       <div className="flex justify-end"><Button type="submit" size="sm" disabled={pending || !body.trim()}>Comentar</Button></div>
     </form>
+  );
+}
+
+/** Link field for media hosted on Google Drive (keeps large videos off the 50 MB upload limit). */
+function DriveLinkField({ kind, id, url, setUrl }: { kind: DeliverableKind; id: string; url: string; setUrl: (v: string) => void }) {
+  const isVideo = kind === "video" || kind === "raw_footage";
+  const parsed = parseMediaLink(url);
+  const note = "mt-1 text-xs";
+  return (
+    <div className="rounded-md border border-border bg-surface-2/40 p-3">
+      <label className="block text-[13px] font-medium" htmlFor={`url-${id}`}>
+        {isVideo ? "Ou cole o link do vídeo no Google Drive" : "Ou cole um link do Google Drive"}
+        {isVideo && <span className="font-normal text-muted"> · recomendado para vídeos (o envio direto aceita até 50 MB)</span>}
+      </label>
+      <Input id={`url-${id}`} className="mt-1.5" type="url" placeholder="https://drive.google.com/file/d/…" value={url} onChange={(e) => setUrl(e.target.value)} />
+      {url && !parsed && <p className={`${note} text-[var(--tone-danger-fg)]`}>Link inválido: ele precisa começar com https://</p>}
+      {parsed?.kind === "drive-folder" && kind !== "raw_footage" && (
+        <p className={`${note} text-[var(--tone-warning-fg)]`}>Isto é uma pasta. Para o cliente ver no portal, abra o arquivo no Drive e copie o link dele.</p>
+      )}
+      {parsed && ["drive", "youtube", "vimeo"].includes(parsed.kind) && <p className={`${note} text-[var(--tone-success-fg)]`}>Link reconhecido: o arquivo vai aparecer direto no portal do cliente.</p>}
+      <p className={`${note} text-muted`}>
+        No Drive: botão direito no arquivo → <strong className="font-medium text-fg">Compartilhar</strong> → em “Acesso geral”, escolha{" "}
+        <strong className="font-medium text-fg">Qualquer pessoa com o link</strong> → Copiar link. Sem isso, o cliente não consegue assistir.
+      </p>
+    </div>
   );
 }

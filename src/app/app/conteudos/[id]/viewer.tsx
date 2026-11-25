@@ -1,12 +1,13 @@
 "use client";
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ExternalLink, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/overlay";
 import { deliverableKind, versionStatus, type DeliverableKind, type VersionStatus } from "@/lib/domain";
 import { relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LinkEmbed } from "@/components/content/link-embed";
 
 export interface ViewerAsset {
   id: string; name: string; mime: string | null; provider: string; status: string; width: number | null; height: number | null;
@@ -125,9 +126,7 @@ export function ContentViewer({ deliverables, aspect }: { deliverables: ViewerDe
         ) : v.assets[0] ? (
           <Stage asset={v.assets[0]} aspect={aspect} />
         ) : v.url ? (
-          <a href={v.url} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2 rounded-md border border-border p-4 text-sm underline-offset-4 hover:underline">
-            <FileText className="size-4" /> {v.url}
-          </a>
+          <LinkEmbed url={v.url} aspect={d.kind === "cover" ? "4:5" : aspect} />
         ) : null}
 
         {v && (

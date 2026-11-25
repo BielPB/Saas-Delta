@@ -8,6 +8,7 @@ import { Dialog, useToast } from "@/components/ui/overlay";
 import type { PortalData, PortalDeliverable } from "@/lib/portal";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LinkEmbed } from "@/components/content/link-embed";
 import { bulkApproveAction, finalizeAction, respondAction } from "./actions";
 
 const kindLabel: Record<string, string> = { video: "Vídeo", cover: "Capa", caption: "Legenda", image: "Arte", carousel: "Carrossel", other: "Material" };
@@ -331,6 +332,7 @@ function CaptionCard({ d }: { d: PortalDeliverable }) {
   const toast = useToast();
   const v = d.version;
   if (!v) return <Pending d={d} />;
+  if (!v.text && v.external_url) return <LinkEmbed url={v.external_url} audience="client" />;
   return (
     <div className="max-w-2xl rounded-2xl border border-border bg-surface p-4 sm:p-5">
       <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{v.text}</p>
@@ -348,7 +350,11 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
   const [i, setI] = useState(0);
   const assets = d.version?.assets ?? [];
   if (!d.version) return <Pending d={d} />;
-  if (!assets.length) return <CaptionCard d={d} />;
+  if (!assets.length) {
+    return d.version.external_url
+      ? <LinkEmbed url={d.version.external_url} aspect={d.kind === "cover" ? "4:5" : aspect} audience="client" />
+      : <CaptionCard d={d} />;
+  }
   const a = assets[Math.min(i, assets.length - 1)];
   const url = a.provider === "supabase" ? media[a.preview_path ?? a.path ?? ""] : undefined;
   const r = a.width && a.height ? `${a.width} / ${a.height}` : ratio(d.kind === "cover" ? "4:5" : aspect);
