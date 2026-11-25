@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, Bell, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
+  Activity, ArrowLeft, Bell, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
   ListTodo, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Plug, Settings, Stamp, User, Users, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,7 +43,16 @@ export function Shell({ sections, projects, canManageClients, children, initialC
   // Instant feedback: every page and filter change is a server round trip, so show progress at once.
   const [navigating, setNavigating] = useState(false);
   const [lastUrl, setLastUrl] = useState(`${pathname}?${search}`);
-  if (lastUrl !== `${pathname}?${search}`) { setLastUrl(`${pathname}?${search}`); setNavigating(false); }
+  // How many in-app navigations happened since this tab loaded: "Voltar" only uses history when it stays inside the app.
+  const [steps, setSteps] = useState(0);
+  if (lastUrl !== `${pathname}?${search}`) { setLastUrl(`${pathname}?${search}`); setNavigating(false); setSteps((n) => n + 1); }
+  const router = useRouter();
+  const parent = pathname === "/app" ? null : pathname.split("/").slice(0, -1).join("/") || "/app";
+  const goBack = () => {
+    setNavigating(true);
+    if (steps > 0) router.back();
+    else router.push(parent ?? "/app");
+  };
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -149,7 +158,13 @@ export function Shell({ sections, projects, canManageClients, children, initialC
           menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 py-5 transition-opacity duration-200 sm:px-6 lg:px-8", navigating && "opacity-60")}>{children}</main>
+        <main id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 py-5 transition-opacity duration-200 sm:px-6 lg:px-8", navigating && "opacity-60")}>
+          {parent && (
+            <button type="button" onClick={goBack}
+              className="-ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+              <ArrowLeft className="size-4" aria-hidden /> Voltar
+            </button>
+          )}{children}</main>
       </div>
     </div>
   );
