@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Film, Plus, Stamp } from "lucide-react";
+import { CalendarDays, Check, Film, Plus, Stamp } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { contentSelect, listFormats, listMembers, memberMap, signPaths, taskSelect, thumbnails, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatDateTime, monthStart, relative, bytes } from "@/lib/format";
-import { isUuid } from "@/lib/utils";
+import { cn, isUuid } from "@/lib/utils";
 import { activityText } from "@/lib/activity";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, EmptyState, PageHeader, Panel, Progress, Table } from "@/components/ui/primitives";
@@ -65,7 +65,10 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       />
       <LinkTabs tabs={tabs} active={tab} base={`/app/clientes/${id}`} />
 
-      {tab === "visao" && <Overview ws={ctx.workspace.id} client={id} month={month} />}
+      {tab === "visao" && (
+        <Overview ws={ctx.workspace.id} client={id} month={month} servicesCount={(services ?? []).length} contentCount={contentCount ?? 0}
+          can={{ clients: canManage, contents: ctx.can("contents.manage"), approvals: ctx.can("approvals.manage") }} />
+      )}
       {tab === "conteudos" && <ClientContents ws={ctx.workspace.id} client={id} />}
       {tab === "servicos" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
@@ -97,59 +100,176 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   );
 }
 
-async function Overview({ ws, client, month }: { ws: string; client: string; month: string }) {
+async function Overview({ ws, client, month, servicesCount, contentCount, can }: {
+  ws: string; client: string; month: string; servicesCount: number; contentCount: number;
+  can: { clients: boolean; contents: boolean; approvals: boolean };
+}) {
   const sb = await createClient();
-  const { data } = await sb.rpc("client_progress", { p_ws: ws, p_month: month, p_client: client });
+  const [{ data }, { count: batchCount }, { count: publishedEver }, { count: movedOn }] = await Promise.all([
+    sb.rpc("client_progress", { p_ws: ws, p_month: month, p_client: client }),
+    sb.from("approval_batches").select("id", { count: "exact", head: true }).eq("client_id", client),
+    sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).eq("publication_status", "published"),
+    sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).not("stage", "in", "(planning,cancelled)"),
+  ]);
   const rows = (data ?? []) as Progress[];
+  const n = (v: number | string) => Number(v);
   const total = rows.reduce((a, r) => ({
-    planned: a.planned + Number(r.planned), approved: a.approved + Number(r.approved), published: a.published + Number(r.published),
-    scheduled: a.scheduled + Number(r.scheduled),
+    planned: a.planned + n(r.planned), approved: a.approved + n(r.approved), published: a.published + n(r.published), scheduled: a.scheduled + n(r.scheduled),
   }), { planned: 0, approved: 0, published: 0, scheduled: 0 });
   const target = rows[0]?.client_target ?? 0;
   const prev = new Date(`${month}T12:00:00`); prev.setMonth(prev.getMonth() - 1);
   const next = new Date(`${month}T12:00:00`); next.setMonth(next.getMonth() + 1);
   const ym = (d: Date) => d.toISOString().slice(0, 7);
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${month}T12:00:00`));
-  const maxPlanned = Math.max(1, ...rows.map((r) => Number(r.planned)));
+  const hasTarget = target > 0 || rows.some((r) => (r.service_target ?? 0) > 0);
+
+  const steps = [
+    { done: servicesCount > 0, title: "Cadastre os serviços do cliente", text: "São os pilares de conteúdo, como “Fotona Laser” ou “Institucional”. Eles organizam o pipeline e aparecem como subdivisões no menu Projetos.", href: "?aba=servicos", cta: "Cadastrar serviço", allowed: can.clients },
+    { done: hasTarget, title: "Defina a meta do mês", text: "Quantos conteúdos aprovados vocês combinaram entregar por mês. Serve para acompanhar se o contrato está em dia.", href: "?aba=servicos", cta: "Definir meta", allowed: can.clients },
+    { done: contentCount > 0, title: "Crie o primeiro conteúdo", text: "Escolha o formato (Reels, carrossel…) e o sistema cria as tarefas de roteiro, gravação, edição, capa e legenda.", href: `/app/conteudos/novo?cliente=${client}`, cta: "Novo conteúdo", allowed: can.contents },
+    { done: (movedOn ?? 0) > 0, title: "Acompanhe a produção no pipeline", text: "Cada conteúdo avança sozinho de coluna quando a equipe conclui as tarefas e envia os arquivos.", href: `/app/pipeline?cliente=${client}`, cta: "Abrir pipeline", allowed: true },
+    { done: (batchCount ?? 0) > 0, title: "Envie para aprovação do cliente", text: "Gere um link seguro e mande pelo WhatsApp. O cliente aprova ou pede ajustes sem precisar de cadastro.", href: `/app/aprovacoes/novo?cliente=${client}`, cta: "Gerar link de aprovação", allowed: can.approvals },
+    { done: (publishedEver ?? 0) > 0, title: "Agende e confirme a publicação", text: "Conteúdos aprovados vão para a coluna Pronto. Registre a data agendada e confirme quando for ao ar.", href: `/app/pipeline?cliente=${client}`, cta: "Ir para o pipeline", allowed: true },
+  ];
+  const doneSteps = steps.filter((x) => x.done).length;
+  const nextStep = steps.findIndex((x) => !x.done);
+
+  const stats = [
+    { label: "Planejados", value: total.planned, hint: "Conteúdos previstos para publicar neste mês." },
+    { label: "Aprovados", value: total.approved, hint: "Liberados pelo cliente no link de aprovação." },
+    { label: "Agendados", value: total.scheduled, hint: "Com data marcada para ir ao ar." },
+    { label: "Publicados", value: total.published, hint: "Já foram ao ar neste mês." },
+  ];
 
   return (
-    <div className="space-y-4">
-      <Panel title={monthName.charAt(0).toUpperCase() + monthName.slice(1)} actions={<>
-        <Link className="text-xs text-muted hover:text-fg" href={`?aba=visao&mes=${ym(prev)}`}>← anterior</Link>
-        <Link className="text-xs text-muted hover:text-fg" href={`?aba=visao&mes=${ym(next)}`}>próximo →</Link>
-      </>}>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div className="sm:col-span-2">
-            <p className="text-xs text-muted">Meta mensal (aprovados)</p>
-            <Progress className="mt-2" value={total.approved} max={target} label="Aprovados sobre a meta" />
+    <div className="space-y-6">
+      {doneSteps < steps.length && (
+        <section aria-labelledby="passos" className="rounded-lg border border-border bg-surface">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div>
+              <h2 id="passos" className="text-[15px] font-semibold">Primeiros passos com este cliente</h2>
+              <p className="text-[13px] text-muted">Siga na ordem para colocar o cliente para rodar. Esta seção some quando tudo estiver feito.</p>
+            </div>
+            <span className="tabular text-xs text-muted">{doneSteps} de {steps.length} concluídos</span>
+          </header>
+          <ol className="divide-y divide-border">
+            {steps.map((st, i) => {
+              const current = i === nextStep;
+              return (
+                <li key={st.title} className={cn("flex flex-wrap items-start gap-3 px-4 py-3 sm:flex-nowrap", current && "bg-accent-soft/40")}>
+                  <span className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    st.done ? "bg-accent text-accent-fg" : current ? "border-2 border-accent-ink text-accent-ink" : "border border-border-strong text-muted")}>
+                    {st.done ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("text-sm font-medium", st.done && "text-muted line-through decoration-border-strong")}>
+                      {st.title}<span className="sr-only">{st.done ? " (concluído)" : ""}</span>
+                    </p>
+                    {!st.done && <p className="mt-0.5 text-[13px] text-muted">{st.text}</p>}
+                  </div>
+                  {!st.done && st.allowed && (
+                    <ButtonLink href={st.href} size="sm" variant={current ? "primary" : "secondary"} className="shrink-0">{st.cta}</ButtonLink>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+
+      <section aria-labelledby="resumo">
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="resumo" className="text-[15px] font-semibold">Resumo de {monthName}</h2>
+            <p className="text-[13px] text-muted">Considera os conteúdos com publicação prevista para este mês.</p>
           </div>
-          <div><p className="text-xs text-muted">Planejados</p><p className="tabular text-xl font-semibold">{total.planned}</p></div>
-          <div><p className="text-xs text-muted">Publicados</p><p className="tabular text-xl font-semibold">{total.published}</p></div>
+          <nav aria-label="Mês" className="flex gap-3">
+            <Link className="text-xs text-muted hover:text-fg" href={`?aba=visao&mes=${ym(prev)}`}>← mês anterior</Link>
+            <Link className="text-xs text-muted hover:text-fg" href={`?aba=visao&mes=${ym(next)}`}>próximo mês →</Link>
+          </nav>
         </div>
-      </Panel>
-      <Panel title="Operação por serviço" padded={false}>
-        {rows.length === 0 ? <EmptyState compact title="Nenhum serviço ativo" description="Cadastre serviços para acompanhar metas por pilar." /> : (
-          <Table>
-            <thead><tr><th>Serviço</th><th>Volume</th><th className="text-right">Planejados</th><th className="text-right">Vídeos prontos</th><th className="text-right">Capas prontas</th><th className="text-right">Legendas prontas</th><th className="text-right">Aprovados</th><th className="text-right">Agendados</th><th className="text-right">Publicados</th></tr></thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.service_id ?? "none"}>
-                  <td><ServiceDot color={r.service_color} name={r.service_name} /></td>
-                  <td className="min-w-40">
-                    {r.service_target ? <Progress value={Number(r.approved)} max={r.service_target} label={`Meta ${r.service_name}`} /> : (
-                      <div className="h-1.5 rounded-full bg-surface-3"><div className="h-full rounded-full bg-fg/50" style={{ width: `${(Number(r.planned) / maxPlanned) * 100}%` }} /></div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-lg border border-border bg-surface p-4 sm:col-span-2 lg:col-span-1">
+            <p className="text-xs font-medium text-muted">Meta do mês</p>
+            {target > 0 ? (
+              <>
+                <p className="tabular mt-1 text-2xl font-semibold">{total.approved}<span className="text-base font-normal text-muted"> de {target}</span></p>
+                <Progress className="mt-2" value={total.approved} max={target} label="Aprovados sobre a meta" />
+                <p className="mt-2 text-xs text-muted">Aprovados pelo cliente, comparados à meta combinada.</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-sm">Sem meta definida</p>
+                <p className="mt-1 text-xs text-muted">Defina quantos conteúdos aprovados vocês entregam por mês.</p>
+                {can.clients && <Link href="?aba=servicos" className="mt-2 inline-block text-xs font-medium text-accent-ink hover:underline">Definir meta →</Link>}
+              </>
+            )}
+          </div>
+          {stats.map((st) => (
+            <div key={st.label} className="rounded-lg border border-border bg-surface p-4">
+              <p className="text-xs font-medium text-muted">{st.label}</p>
+              <p className="tabular mt-1 text-2xl font-semibold">{st.value}</p>
+              <p className="mt-2 text-xs text-muted">{st.hint}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="servicos">
+        <div className="mb-2">
+          <h2 id="servicos" className="text-[15px] font-semibold">Produção por serviço</h2>
+          <p className="text-[13px] text-muted">
+            Em que ponto estão os conteúdos de cada serviço neste mês. <strong className="font-medium text-fg">Produção</strong> mostra o que a equipe já entregou;{" "}
+            <strong className="font-medium text-fg">Entrega</strong> mostra o que o cliente aprovou e o que já foi publicado.
+          </p>
+        </div>
+        {rows.length === 0 ? (
+          <Panel><EmptyState compact title="Nenhum serviço cadastrado" description="Cadastre os serviços do cliente para acompanhar a produção de cada um."
+            action={can.clients ? <ButtonLink href="?aba=servicos" variant="primary" size="sm">Cadastrar serviço</ButtonLink> : undefined} /></Panel>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {rows.map((r) => {
+              const planned = n(r.planned);
+              const prod = [["Vídeos", n(r.videos_ready)], ["Capas", n(r.covers_ready)], ["Legendas", n(r.captions_ready)]] as const;
+              const deliv = [["Aprovados", n(r.approved)], ["Agendados", n(r.scheduled)], ["Publicados", n(r.published)]] as const;
+              return (
+                <article key={r.service_id ?? "none"} className="rounded-lg border border-border bg-surface">
+                  <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                    <div className="min-w-0">
+                      <ServiceDot color={r.service_color} name={r.service_name} />
+                      <p className="mt-0.5 text-xs text-muted">
+                        {planned === 0 ? "Nenhum conteúdo previsto neste mês" : `${planned} conteúdo(s) previsto(s)`}
+                        {r.service_target ? ` · meta de ${r.service_target} aprovados` : ""}
+                      </p>
+                    </div>
+                    {r.service_id && (
+                      <Link href={`/app/pipeline?cliente=${client}&servico=${r.service_id}`} className="shrink-0 text-xs font-medium text-accent-ink hover:underline">Ver no pipeline →</Link>
                     )}
-                  </td>
-                  {[r.planned, r.videos_ready, r.covers_ready, r.captions_ready, r.approved, r.scheduled, r.published].map((v, i) => (
-                    <td key={i} className="tabular text-right">{Number(v)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+                  </header>
+                  <div className="grid gap-4 p-4 sm:grid-cols-2">
+                    {[["Produção", "arquivos e textos já enviados", prod], ["Entrega", "decisão do cliente e publicação", deliv]].map(([title, sub, items]) => (
+                      <div key={title as string}>
+                        <p className="text-xs font-semibold">{title as string} <span className="font-normal text-muted">· {sub as string}</span></p>
+                        <ul className="mt-2 space-y-2">
+                          {(items as ReadonlyArray<readonly [string, number]>).map(([label, v]) => (
+                            <li key={label}>
+                              <div className="flex justify-between text-xs"><span className="text-muted">{label}</span><span className="tabular font-medium">{v}/{planned}</span></div>
+                              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+                                <div className={cn("h-full rounded-full", planned > 0 && v >= planned ? "bg-accent" : "bg-fg/50")} style={{ width: `${planned ? Math.min(100, (v / planned) * 100) : 0}%` }} />
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         )}
-        <p className="border-t border-border px-4 py-2 text-xs text-muted">Valores contam conteúdos (um Reels com vídeo, capa e legenda conta como 1). “Prontos” = entregável com versão enviada.</p>
-      </Panel>
+        <p className="mt-2 text-xs text-muted">Cada conteúdo conta uma vez: um Reels com vídeo, capa e legenda é 1 conteúdo. “Enviado” não significa aprovado — a aprovação é do cliente.</p>
+      </section>
     </div>
   );
 }
