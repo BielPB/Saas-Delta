@@ -7,7 +7,8 @@ import {
 } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { FilterBar } from "@/components/content/filter-bar";
-import { PipelineBoard, boardColumns } from "@/components/content/pipeline-board";
+import { PipelineBoard } from "@/components/content/pipeline-board";
+import { boardColumns } from "@/lib/board";
 
 export const metadata: Metadata = { title: "Pipeline de produção" };
 
