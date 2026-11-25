@@ -83,7 +83,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
               action={status === "active" && ctx.can("clients.manage") && <ButtonLink href="/app/clientes/novo" variant="primary"><Plus /> Cadastrar cliente</ButtonLink>} />
           ) : (
             <Table>
-              <thead><tr><th>Cliente</th><th className="hidden md:table-cell">Segmento</th><th className="hidden sm:table-cell">Serviços</th><th>Meta do mês</th><th className="hidden lg:table-cell">Equipe</th></tr></thead>
+              <thead><tr><th>Cliente</th><th className="hidden md:table-cell">Segmento</th><th className="hidden sm:table-cell">Subdivisões</th><th>Meta do mês</th><th className="hidden lg:table-cell">Equipe</th></tr></thead>
               <tbody>
                 {(clients ?? []).map((c) => {
                   const e = byClient.get(c.id as string);

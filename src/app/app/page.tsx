@@ -248,7 +248,7 @@ async function onboardingState(ws: string) {
     { label: "Convidar colaboradores", done: (members.count ?? 0) > 1, href: "/app/colaboradores" },
     { label: "Revisar funções e permissões", done: (members.count ?? 0) > 1, href: "/app/configuracoes?aba=funcoes" },
     { label: "Cadastrar clientes", done: (clients.count ?? 0) > 0, href: "/app/clientes/novo" },
-    { label: "Cadastrar serviços", done: (services.count ?? 0) > 0, href: "/app/clientes" },
+    { label: "Cadastrar subdivisões", done: (services.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Configurar metas mensais", done: (targets.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Conectar Google Drive", done: (drive.count ?? 0) > 0, href: "/app/integracoes" },
     { label: "Criar o primeiro conteúdo", done: (contents.count ?? 0) > 0, href: "/app/conteudos/novo" },

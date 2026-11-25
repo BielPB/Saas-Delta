@@ -74,8 +74,8 @@ export function BatchBuilder({ clients, clientId, sensitive, contents, preselect
             <Button size="sm" onClick={() => pick(ready.map((c) => c.id))}>Todos prontos ({ready.length})</Button>
             <Button size="sm" onClick={() => pick(ready.filter((c) => c.approval === "not_sent").map((c) => c.id))}>Ainda não enviados</Button>
             {services.length > 0 && (
-              <Select aria-label="Por serviço" className="h-8 w-auto text-[13px]" value="" onChange={(e) => pick(ready.filter((c) => c.serviceId === e.target.value).map((c) => c.id))}>
-                <option value="">Por serviço…</option>{services.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+              <Select aria-label="Por subdivisão" className="h-8 w-auto text-[13px]" value="" onChange={(e) => pick(ready.filter((c) => c.serviceId === e.target.value).map((c) => c.id))}>
+                <option value="">Por subdivisão…</option>{services.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
               </Select>
             )}
             {weeks.length > 0 && (

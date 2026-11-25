@@ -11,7 +11,7 @@ export default async function NewClientPage() {
   return (
     <div className="max-w-3xl">
       <PageHeader eyebrow={<Link href="/app/clientes" className="hover:text-fg">Clientes</Link>} title="Cadastrar cliente"
-        description="Depois do cadastro você define serviços, metas e a equipe responsável." />
+        description="Depois do cadastro você define subdivisões, metas e a equipe responsável." />
       <Panel><ClientForm /></Panel>
     </div>
   );

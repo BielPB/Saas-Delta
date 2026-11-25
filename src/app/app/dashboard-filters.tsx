@@ -27,8 +27,8 @@ export function DashboardFilters({ clients, services, formats, members }: {
       <Select aria-label="Cliente" value={client} onChange={(e) => set("cliente", e.target.value)} className="h-8 w-40 text-[13px]">
         <option value="">Todos os clientes</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
-      <Select aria-label="Serviço" value={sp.get("servico") ?? ""} onChange={(e) => set("servico", e.target.value)} className="h-8 w-36 text-[13px]">
-        <option value="">Todos os serviços</option>
+      <Select aria-label="Subdivisão" value={sp.get("servico") ?? ""} onChange={(e) => set("servico", e.target.value)} className="h-8 w-36 text-[13px]">
+        <option value="">Todas as subdivisões</option>
         {services.filter((s) => !client || s.client_id === client).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </Select>
       <Select aria-label="Formato" value={sp.get("formato") ?? ""} onChange={(e) => set("formato", e.target.value)} className="h-8 w-36 text-[13px]">

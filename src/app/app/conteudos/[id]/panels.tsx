@@ -179,8 +179,8 @@ export function EditDetails({ content, canEdit, services, members, assignees }: 
       ) : (
         <div className="space-y-3">
           <label className="block text-xs font-medium">Título<Input className="mt-1" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} /></label>
-          <label className="block text-xs font-medium">Serviço
-            <Select className="mt-1" value={v.service_id} onChange={(e) => setV({ ...v, service_id: e.target.value })}><option value="">Sem serviço</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+          <label className="block text-xs font-medium">Subdivisão
+            <Select className="mt-1" value={v.service_id} onChange={(e) => setV({ ...v, service_id: e.target.value })}><option value="">Sem subdivisão</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
           </label>
           <label className="block text-xs font-medium">Objetivo<Input className="mt-1" value={v.objective} onChange={(e) => setV({ ...v, objective: e.target.value })} /></label>
           <label className="block text-xs font-medium">Briefing<Textarea className="mt-1" rows={4} value={v.briefing} onChange={(e) => setV({ ...v, briefing: e.target.value })} /></label>

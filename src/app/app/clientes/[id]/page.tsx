@@ -7,9 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { contentSelect, listFormats, listMembers, memberMap, signPaths, taskSelect, thumbnails, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatDateTime, monthStart, relative, bytes } from "@/lib/format";
 import { cn, isUuid } from "@/lib/utils";
+import { subdivisionText } from "@/lib/labels";
 import { activityText } from "@/lib/activity";
 import { ButtonLink } from "@/components/ui/button";
-import { Badge, EmptyState, PageHeader, Panel, Progress, Table } from "@/components/ui/primitives";
+import { Avatar, Badge, EmptyState, PageHeader, Panel, Progress, Table } from "@/components/ui/primitives";
 import { LinkTabs } from "@/components/ui/tabs";
 import { ContentTable } from "@/components/content/content-table";
 import { ServiceDot } from "@/components/content/badges";
@@ -47,7 +48,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
   const tabs = [
     { key: "visao", label: "Visão geral" }, { key: "conteudos", label: "Conteúdos", count: contentCount ?? 0 },
-    { key: "servicos", label: "Serviços", count: (services ?? []).length }, { key: "calendario", label: "Calendário" },
+    { key: "servicos", label: "Subdivisões", count: (services ?? []).length }, { key: "calendario", label: "Calendário" },
     { key: "tarefas", label: "Tarefas", count: taskCount ?? 0 }, { key: "aprovacoes", label: "Aprovações" },
     { key: "arquivos", label: "Arquivos" }, { key: "historico", label: "Histórico" }, { key: "configuracoes", label: "Configurações" },
   ];
@@ -105,11 +106,13 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
   can: { clients: boolean; contents: boolean; approvals: boolean };
 }) {
   const sb = await createClient();
-  const [{ data }, { count: batchCount }, { count: publishedEver }, { count: movedOn }] = await Promise.all([
+  const [{ data }, { count: batchCount }, { count: publishedEver }, { count: movedOn }, { data: taskRows }, members] = await Promise.all([
     sb.rpc("client_progress", { p_ws: ws, p_month: month, p_client: client }),
     sb.from("approval_batches").select("id", { count: "exact", head: true }).eq("client_id", client),
     sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).eq("publication_status", "published"),
     sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).not("stage", "in", "(planning,cancelled)"),
+    sb.from("tasks").select("assignee_id, status, due_at, completed_at").eq("client_id", client).neq("status", "cancelled").limit(3000),
+    memberMap(ws),
   ]);
   const rows = (data ?? []) as Progress[];
   const n = (v: number | string) => Number(v);
@@ -124,7 +127,7 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
   const hasTarget = target > 0 || rows.some((r) => (r.service_target ?? 0) > 0);
 
   const steps = [
-    { done: servicesCount > 0, title: "Cadastre os serviços do cliente", text: "São os pilares de conteúdo, como “Fotona Laser” ou “Institucional”. Eles organizam o pipeline e aparecem como subdivisões no menu Projetos.", href: "?aba=servicos", cta: "Cadastrar serviço", allowed: can.clients },
+    { done: servicesCount > 0, title: "Cadastre as subdivisões do cliente", text: "São as categorias de conteúdo, como “Fotona Laser” ou “Institucional”. Elas organizam o pipeline e aparecem no menu Projetos.", href: "?aba=servicos", cta: "Cadastrar subdivisão", allowed: can.clients },
     { done: hasTarget, title: "Defina a meta do mês", text: "Quantos conteúdos aprovados vocês combinaram entregar por mês. Serve para acompanhar se o contrato está em dia.", href: "?aba=servicos", cta: "Definir meta", allowed: can.clients },
     { done: contentCount > 0, title: "Crie o primeiro conteúdo", text: "Escolha o formato (Reels, carrossel…) e o sistema cria as tarefas de roteiro, gravação, edição, capa e legenda.", href: `/app/conteudos/novo?cliente=${client}`, cta: "Novo conteúdo", allowed: can.contents },
     { done: (movedOn ?? 0) > 0, title: "Acompanhe a produção no pipeline", text: "Cada conteúdo avança sozinho de coluna quando a equipe conclui as tarefas e envia os arquivos.", href: `/app/pipeline?cliente=${client}`, cta: "Abrir pipeline", allowed: true },
@@ -133,6 +136,24 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
   ];
   const doneSteps = steps.filter((x) => x.done).length;
   const nextStep = steps.findIndex((x) => !x.done);
+
+  // "Equipe agora": open work per person on this client, plus what they finished in the selected month.
+  const nowIso = new Date().toISOString();
+  const m0 = `${month}T00:00:00`; const m1 = `${ym(next)}-01T00:00:00`;
+  const team = new Map<string, { todo: number; doing: number; done: number; late: number }>();
+  for (const t of (taskRows ?? []) as Array<{ assignee_id: string | null; status: string; due_at: string | null; completed_at: string | null }>) {
+    const k = t.assignee_id ?? "";
+    const e = team.get(k) ?? { todo: 0, doing: 0, done: 0, late: 0 };
+    if (["pending", "reopened", "blocked"].includes(t.status)) e.todo++;
+    else if (["in_progress", "in_review"].includes(t.status)) e.doing++;
+    else if (t.status === "done" && t.completed_at && t.completed_at >= m0 && t.completed_at < m1) e.done++;
+    if (!["done", "blocked"].includes(t.status) && t.due_at && t.due_at < nowIso) e.late++;
+    team.set(k, e);
+  }
+  const teamRows = [...team.entries()]
+    .filter(([, e]) => e.todo + e.doing + e.done > 0)
+    .map(([id, e]) => ({ id, name: id ? members.get(id)?.full_name || members.get(id)?.email || "Colaborador" : "Sem responsável", avatar: id ? members.get(id)?.avatar_url ?? null : null, ...e }))
+    .sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || b.late - a.late || (b.todo + b.doing) - (a.todo + a.doing));
 
   const stats = [
     { label: "Planejados", value: total.planned, hint: "Conteúdos previstos para publicar neste mês." },
@@ -215,17 +236,60 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
         </div>
       </section>
 
+      <section aria-labelledby="equipe">
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="equipe" className="text-[15px] font-semibold">Equipe agora</h2>
+            <p className="text-[13px] text-muted">
+              O que cada pessoa tem neste cliente. O status muda quando o colaborador usa <strong className="font-medium text-fg">Iniciar</strong> e{" "}
+              <strong className="font-medium text-fg">Concluir</strong> em Minhas tarefas.
+            </p>
+          </div>
+          <Link href={`/app/tarefas?cliente=${client}`} className="text-xs font-medium text-accent-ink hover:underline">Ver todas as tarefas →</Link>
+        </div>
+        {teamRows.length === 0 ? (
+          <Panel><EmptyState compact title="Nenhuma tarefa ainda" description="As tarefas aparecem aqui quando você cria conteúdos para este cliente." /></Panel>
+        ) : (
+          <Panel padded={false}>
+            <Table>
+              <thead><tr>
+                <th>Pessoa</th>
+                <th className="text-right"><span title="Pendentes, reabertas ou aguardando etapa anterior">A fazer</span></th>
+                <th className="text-right">Em andamento</th>
+                <th className="text-right"><span title={`Concluídas em ${monthName}`}>Concluídas no mês</span></th>
+                <th className="text-right">Atrasadas</th>
+                <th><span className="sr-only">Ações</span></th>
+              </tr></thead>
+              <tbody>
+                {teamRows.map((p) => (
+                  <tr key={p.id || "none"}>
+                    <td><span className="flex items-center gap-2">{p.id ? <Avatar name={p.name} src={p.avatar} size={24} /> : null}<span className={p.id ? "" : "text-muted"}>{p.name}</span></span></td>
+                    <td className="tabular text-right">{p.todo}</td>
+                    <td className="tabular text-right">{p.doing > 0 ? <Badge tone="progress">{p.doing}</Badge> : 0}</td>
+                    <td className="tabular text-right">{p.done > 0 ? <Badge tone="success">{p.done}</Badge> : 0}</td>
+                    <td className="tabular text-right">{p.late > 0 ? <Badge tone="danger">{p.late}</Badge> : <span className="text-muted">0</span>}</td>
+                    <td className="text-right">
+                      <Link href={`/app/tarefas?cliente=${client}${p.id ? `&responsavel=${p.id}` : "&situacao=sem_responsavel"}`} className="whitespace-nowrap text-xs font-medium text-accent-ink hover:underline">Ver tarefas</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Panel>
+        )}
+      </section>
+
       <section aria-labelledby="servicos">
         <div className="mb-2">
-          <h2 id="servicos" className="text-[15px] font-semibold">Produção por serviço</h2>
+          <h2 id="servicos" className="text-[15px] font-semibold">Produção por subdivisão</h2>
           <p className="text-[13px] text-muted">
-            Em que ponto estão os conteúdos de cada serviço neste mês. <strong className="font-medium text-fg">Produção</strong> mostra o que a equipe já entregou;{" "}
+            Em que ponto estão os conteúdos de cada subdivisão neste mês. <strong className="font-medium text-fg">Produção</strong> mostra o que a equipe já entregou;{" "}
             <strong className="font-medium text-fg">Entrega</strong> mostra o que o cliente aprovou e o que já foi publicado.
           </p>
         </div>
         {rows.length === 0 ? (
-          <Panel><EmptyState compact title="Nenhum serviço cadastrado" description="Cadastre os serviços do cliente para acompanhar a produção de cada um."
-            action={can.clients ? <ButtonLink href="?aba=servicos" variant="primary" size="sm">Cadastrar serviço</ButtonLink> : undefined} /></Panel>
+          <Panel><EmptyState compact title="Nenhuma subdivisão cadastrada" description="Cadastre as subdivisões do cliente para acompanhar a produção de cada uma."
+            action={can.clients ? <ButtonLink href="?aba=servicos" variant="primary" size="sm">Cadastrar subdivisão</ButtonLink> : undefined} /></Panel>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {rows.map((r) => {
@@ -236,7 +300,7 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
                 <article key={r.service_id ?? "none"} className="rounded-lg border border-border bg-surface">
                   <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                     <div className="min-w-0">
-                      <ServiceDot color={r.service_color} name={r.service_name} />
+                      <ServiceDot color={r.service_color} name={subdivisionText(r.service_name)} />
                       <p className="mt-0.5 text-xs text-muted">
                         {planned === 0 ? "Nenhum conteúdo previsto neste mês" : `${planned} conteúdo(s) previsto(s)`}
                         {r.service_target ? ` · meta de ${r.service_target} aprovados` : ""}

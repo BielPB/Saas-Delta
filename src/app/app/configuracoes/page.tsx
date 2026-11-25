@@ -6,6 +6,7 @@ import { listFormats, listTemplates, signPaths } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 import { PageHeader, Panel, Table } from "@/components/ui/primitives";
 import { LinkTabs } from "@/components/ui/tabs";
+import { subdivisionText } from "@/lib/labels";
 import { AgencyForm, ApprovalSettingsForm, FormatsManager, RolesManager, TemplatesManager } from "./forms";
 
 export const metadata: Metadata = { title: "Configurações" };
@@ -63,7 +64,7 @@ async function RolesTab({ ws, canEdit, mine }: { ws: string; canEdit: boolean; m
   return <RolesManager canEdit={canEdit} mine={mine}
     roles={(roles ?? []).map((r) => ({ key: r.key as string, name: r.name as string, description: (r.description as string) ?? "", system: r.is_system as boolean,
       produces: r.produces_kinds as string[], permissions: (r.role_permissions as Array<{ permission_key: string }>).map((p) => p.permission_key) }))}
-    permissions={(perms ?? []) as Array<{ key: string; resource: string; description: string }>} />;
+    permissions={((perms ?? []) as Array<{ key: string; resource: string; description: string }>).map((p) => ({ ...p, description: subdivisionText(p.description) }))} />;
 }
 
 async function TemplatesTab({ ws, canEdit }: { ws: string; canEdit: boolean }) {

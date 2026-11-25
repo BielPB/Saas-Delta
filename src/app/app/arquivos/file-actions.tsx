@@ -9,6 +9,7 @@ import { Uploader } from "@/components/files/uploader";
 import { deliverableKind, type DeliverableKind } from "@/lib/domain";
 import { requestPreview } from "@/app/app/integracoes/actions";
 import { archiveAsset, linkAsset, suggestionsFor, type Suggestion } from "./actions";
+import { subdivisionText } from "@/lib/labels";
 
 export function FileActions({ asset, canManage, canCreateContent }: {
   asset: { id: string; name: string; provider: string; linked: boolean; clientId: string | null; mime: string | null };
@@ -49,7 +50,7 @@ export function FileActions({ asset, canManage, canCreateContent }: {
               <li key={s.deliverable_id} className="flex items-center gap-3 rounded-md border border-border p-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium"><span className="font-mono text-xs text-subtle">#{s.code}</span> {s.title}</p>
-                  <p className="text-xs text-muted">{deliverableKind[s.deliverable_kind as DeliverableKind]} · {s.reasons.join(" · ")}</p>
+                  <p className="text-xs text-muted">{deliverableKind[s.deliverable_kind as DeliverableKind]} · {subdivisionText(s.reasons.join(" · "))}</p>
                 </div>
                 <Button size="sm" variant="primary" disabled={pending} onClick={() => run(() => linkAsset(asset.id, s.deliverable_id, s.content_id))}>Confirmar</Button>
               </li>

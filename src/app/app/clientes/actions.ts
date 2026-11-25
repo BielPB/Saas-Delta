@@ -78,7 +78,7 @@ export async function saveService(_: ActionResult | null, form: FormData): Promi
     : await sb.from("client_services").insert({ ...rest, workspace_id: ctx.workspace.id });
   if (error) return fail(error);
   revalidatePath(`/app/clientes/${rest.client_id}`);
-  return { ok: true, message: id ? "Serviço atualizado." : "Serviço cadastrado." };
+  return { ok: true, message: id ? "Subdivisão atualizada." : "Subdivisão cadastrada." };
 }
 
 export async function toggleService(id: string, client: string, active: boolean) {
@@ -87,7 +87,7 @@ export async function toggleService(id: string, client: string, active: boolean)
   const { error } = await sb.from("client_services").update({ active }).eq("id", id).eq("workspace_id", ctx.workspace.id);
   if (error) return fail(error);
   revalidatePath(`/app/clientes/${client}`);
-  return { ok: true as const, message: active ? "Serviço ativado." : "Serviço desativado." };
+  return { ok: true as const, message: active ? "Subdivisão ativada." : "Subdivisão desativada." };
 }
 
 const targetSchema = z.object({

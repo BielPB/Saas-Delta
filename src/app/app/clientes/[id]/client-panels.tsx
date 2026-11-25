@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -27,17 +28,28 @@ export function ServicesManager({ clientId, services, canManage, created }: { cl
   const toast = useToast();
   const router = useRouter();
   return (
-    <Panel title="Serviços e pilares de conteúdo" padded={false}
-      actions={canManage && <Button size="sm" onClick={() => setEditing("new")}><Plus /> Novo serviço</Button>}>
+    <Panel title="Subdivisões" padded={false}
+      actions={canManage && <Button size="sm" onClick={() => setEditing("new")}><Plus /> Nova subdivisão</Button>}>
+      <div className="border-b border-border bg-surface-2/50 px-4 py-3 text-[13px] text-muted">
+        <p>
+          <strong className="font-medium text-fg">Subdivisão é uma categoria de conteúdo</strong> deste cliente, como “Fotona Laser” ou “Institucional”.
+          Ela organiza o pipeline, os filtros e as metas, e aparece no menu Projetos.
+        </p>
+        <p className="mt-1.5">
+          Ela não é marcada como feita: o andamento do trabalho fica nas <strong className="font-medium text-fg">tarefas</strong> de cada conteúdo
+          (a fazer, em andamento, concluída). Acompanhe na aba <Link href={`/app/clientes/${clientId}?aba=tarefas`} className="font-medium text-accent-ink hover:underline">Tarefas</Link>{" "}
+          ou na Visão geral, em “Equipe agora”.
+        </p>
+      </div>
       {services.length === 0 ? (
-        <EmptyState compact title="Nenhum serviço cadastrado" description="Ex.: Transplante capilar, Fotona Laser, Institucional." />
+        <EmptyState compact title="Nenhuma subdivisão cadastrada" description="Ex.: Transplante capilar, Fotona Laser, Institucional." />
       ) : (
         <ul className="divide-y divide-border">
           {services.map((s) => (
             <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
               <span className="size-3 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativo</Badge>}</p>
+                <p className="text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativa</Badge>}</p>
                 {s.description && <p className="truncate text-xs text-muted">{s.description}</p>}
               </div>
               <span className="text-xs text-muted">{s.monthly_target ? `meta ${s.monthly_target}/mês` : "sem meta"}</span>
@@ -65,7 +77,7 @@ function ServiceDialog({ clientId, service, onClose }: { clientId: string; servi
   useResultToast(state, onClose);
   const fe = state && !state.ok ? state.fieldErrors : undefined;
   return (
-    <Dialog open onClose={onClose} title={service ? "Editar serviço" : "Novo serviço"}>
+    <Dialog open onClose={onClose} title={service ? "Editar subdivisão" : "Nova subdivisão"}>
       <form action={action} className="space-y-4">
         <input type="hidden" name="client_id" value={clientId} />
         {service && <input type="hidden" name="id" value={service.id} />}
@@ -86,7 +98,7 @@ function ServiceDialog({ clientId, service, onClose }: { clientId: string; servi
           <Field label="Meta mensal" hint="Opcional" error={fe?.monthly_target}>{(p) => <Input {...p} name="monthly_target" type="number" min={0} defaultValue={service?.monthly_target ?? ""} />}</Field>
           <Field label="Pasta do Drive (ID)" error={fe?.drive_folder_id}>{(p) => <Input {...p} name="drive_folder_id" defaultValue={service?.drive_folder_id ?? ""} />}</Field>
         </div>
-        <div className="flex justify-end gap-2"><Button onClick={onClose}>Cancelar</Button><SubmitButton>Salvar serviço</SubmitButton></div>
+        <div className="flex justify-end gap-2"><Button onClick={onClose}>Cancelar</Button><SubmitButton>Salvar subdivisão</SubmitButton></div>
       </form>
     </Dialog>
   );
@@ -114,7 +126,7 @@ export function TargetsManager({ clientId, targets, services, formats, canManage
           <input type="hidden" name="client_id" value={clientId} />
           <label className="col-span-1 text-xs text-muted">Mês<Input name="month" type="month" defaultValue={thisMonth} required className="mt-1" /></label>
           <label className="col-span-1 text-xs text-muted">Quantidade<Input name="target" type="number" min={0} required className="mt-1" /></label>
-          <label className="col-span-1 text-xs text-muted">Serviço
+          <label className="col-span-1 text-xs text-muted">Subdivisão
             <Select name="service_id" className="mt-1"><option value="">Todos</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
           </label>
           <label className="col-span-1 text-xs text-muted">Formato
@@ -131,7 +143,7 @@ export function TargetsManager({ clientId, targets, services, formats, canManage
           {targets.map((t) => (
             <li key={t.id} className="flex items-center gap-2 px-4 py-2 text-[13px]">
               <span className="tabular w-16 text-muted">{t.month.slice(0, 7)}</span>
-              <span className="min-w-0 flex-1 truncate">{t.service_id ? sName.get(t.service_id) : "Todos os serviços"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
+              <span className="min-w-0 flex-1 truncate">{t.service_id ? sName.get(t.service_id) : "Todas as subdivisões"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
               <span className="tabular font-medium">{t.target}</span>
               {canManage && <Button size="icon-sm" variant="ghost" aria-label="Remover meta" onClick={() => start(async () => {
                 const r = await deleteTarget(t.id, clientId); if (r.ok) { toast.success(r.message ?? "Feito."); router.refresh(); } else toast.error(r.error);

@@ -87,7 +87,7 @@ function FolderPicker({ conn, clients, services, onClose }: {
   useEffect(() => { load("root"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Dialog open onClose={onClose} size="lg" title="Vincular pasta do Drive" description={`Conta ${conn.google_email}. Navegue até a pasta do cliente ou do serviço.`}
+    <Dialog open onClose={onClose} size="lg" title="Vincular pasta do Drive" description={`Conta ${conn.google_email}. Navegue até a pasta do cliente ou da subdivisão.`}
       footer={<><Button onClick={onClose}>Cancelar</Button>
         <Button variant="primary" disabled={pending || !client || current.id === "root"} onClick={() => start(async () => {
           const r = await mapFolder({ connection_id: conn.id, drive_folder_id: current.id, folder_name: current.name, folder_path: trail.slice(1).map((t) => t.name).join(" / "),
@@ -114,7 +114,7 @@ function FolderPicker({ conn, clients, services, onClose }: {
         <label className="text-xs font-medium">Cliente
           <Select className="mt-1" value={client} onChange={(e) => { setClient(e.target.value); setService(""); }}><option value="">Selecione…</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
         </label>
-        <label className="text-xs font-medium">Serviço (subpasta)
+        <label className="text-xs font-medium">Subdivisão (subpasta)
           <Select className="mt-1" value={service} onChange={(e) => setService(e.target.value)} disabled={!client}><option value="">Pasta geral do cliente</option>{services.filter((s) => s.client_id === client).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
         </label>
         <label className="text-xs font-medium">Tipo de material

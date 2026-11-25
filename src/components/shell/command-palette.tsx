@@ -11,7 +11,7 @@ const kindIcon: Record<string, React.ReactNode> = {
   member: <User />, approval: <Stamp />,
 };
 const kindLabel: Record<string, string> = {
-  client: "Clientes", content: "Conteúdos", task: "Tarefas", service: "Serviços", file: "Arquivos", member: "Colaboradores", approval: "Aprovações",
+  client: "Clientes", content: "Conteúdos", task: "Tarefas", service: "Subdivisões", file: "Arquivos", member: "Colaboradores", approval: "Aprovações",
 };
 const quick: Hit[] = [
   { kind: "content", id: "n1", title: "Criar conteúdo", subtitle: null, href: "/app/conteudos/novo" },

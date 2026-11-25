@@ -71,8 +71,8 @@ export function FilterBar({ clients, services, formats, members, show = ["q", "c
         </Select>
       )}
       {show.includes("servico") && (
-        <Select aria-label="Serviço" value={sp.get("servico") ?? ""} onChange={(e) => set("servico", e.target.value)} className={cls}>
-          <option value="">Serviço</option>{services.filter((s) => !client || s.client_id === client).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        <Select aria-label="Subdivisão" value={sp.get("servico") ?? ""} onChange={(e) => set("servico", e.target.value)} className={cls}>
+          <option value="">Subdivisão</option>{services.filter((s) => !client || s.client_id === client).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
       )}
       {show.includes("formato") && (

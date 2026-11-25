@@ -58,7 +58,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         </form>
       </div>
 
-      {unlinkedTab && <p className="mb-3 text-[13px] text-muted">Arquivos novos das pastas monitoradas aparecem aqui. As sugestões consideram nome, pasta, serviço e entregáveis em aberto; nada é vinculado sem sua confirmação.</p>}
+      {unlinkedTab && <p className="mb-3 text-[13px] text-muted">Arquivos novos das pastas monitoradas aparecem aqui. As sugestões consideram nome, pasta, subdivisão e entregáveis em aberto; nada é vinculado sem sua confirmação.</p>}
 
       {rows.length === 0 ? (
         <Panel><EmptyState icon={<FolderOpen />} title={unlinkedTab ? "Tudo vinculado" : "Nenhum arquivo"} description={unlinkedTab ? "Nenhum arquivo pendente de vínculo." : "Envie arquivos ou conecte o Google Drive em Integrações."} /></Panel>

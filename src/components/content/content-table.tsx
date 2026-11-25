@@ -33,7 +33,7 @@ export function ContentTable({ rows, thumb, selectable, formId, showClient = tru
           {selectable && <th className="w-8"><span className="sr-only">Selecionar</span></th>}
           <th>Conteúdo</th>
           {showClient && <th className="hidden md:table-cell">Cliente</th>}
-          <th className="hidden lg:table-cell">Serviço</th>
+          <th className="hidden lg:table-cell">Subdivisão</th>
           <th>Etapa</th>
           <th className="hidden sm:table-cell">Aprovação</th>
           <th className="hidden xl:table-cell">Publicação</th>

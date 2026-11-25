@@ -52,10 +52,10 @@ export function NewContentForm({ clients, services, formats, templates, members,
             </Select>
           )}
         </Field>
-        <Field label="Serviço ou pilar" hint={client && !services.some((s) => s.client_id === client) ? "Este cliente ainda não tem serviços." : undefined}>
+        <Field label="Subdivisão" hint={client && !services.some((s) => s.client_id === client) ? "Este cliente ainda não tem subdivisões." : undefined}>
           {(p) => (
             <Select {...p} name="service_id" disabled={!client}>
-              <option value="">Sem serviço</option>
+              <option value="">Sem subdivisão</option>
               {services.filter((s) => s.client_id === client).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}

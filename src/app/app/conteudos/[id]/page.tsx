@@ -138,7 +138,7 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
               <dt className="text-muted">Produção</dt><dd><ProductionBadge s={content.production_status} /></dd>
               <dt className="text-muted">Aprovação</dt><dd><ApprovalBadge s={content.approval_status} /></dd>
               <dt className="text-muted">Publicação</dt><dd><PublicationBadge c={content} /></dd>
-              <dt className="text-muted">Serviço</dt><dd><ServiceDot color={content.client_services?.color} name={content.client_services?.name} /></dd>
+              <dt className="text-muted">Subdivisão</dt><dd><ServiceDot color={content.client_services?.color} name={content.client_services?.name} /></dd>
               <dt className="text-muted">Formato</dt><dd>{content.content_formats?.name} <span className="text-subtle">{content.content_formats?.aspect_ratio}</span></dd>
               <dt className="text-muted">Canal</dt><dd>{content.channel ? channels[content.channel] : "—"}</dd>
               <dt className="text-muted">Prioridade</dt><dd>{priorityLabel[content.priority].label}</dd>

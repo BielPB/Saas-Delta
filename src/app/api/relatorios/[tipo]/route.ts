@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { subdivisionText } from "@/lib/labels";
 import { toCsv } from "@/lib/utils";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ tipo: string }> }) {
@@ -16,11 +17,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   let csv: string;
   if (tipo === "clientes") {
     const { data } = await sb.rpc("report_clients", args);
-    csv = toCsv((data ?? []) as Array<Record<string, unknown>>, [
+    const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      ...r, by_service: Object.fromEntries(Object.entries((r.by_service ?? {}) as Record<string, number>).map(([k, v]) => [subdivisionText(k), v])),
+    }));
+    csv = toCsv(rows, [
       { key: "client_name", label: "Cliente" }, { key: "contracted", label: "Contratados" }, { key: "produced", label: "Produzidos" },
       { key: "approved", label: "Aprovados" }, { key: "published", label: "Publicados" }, { key: "target_pct", label: "Cumprimento da meta (%)" },
       { key: "adjustments", label: "Solicitações de ajuste" }, { key: "avg_approval_hours", label: "Tempo médio de aprovação (h)" },
-      { key: "by_service", label: "Por serviço" }, { key: "by_format", label: "Por formato" },
+      { key: "by_service", label: "Por subdivisão" }, { key: "by_format", label: "Por formato" },
     ]);
   } else if (tipo === "colaboradores") {
     const { data } = await sb.rpc("report_members", args);
