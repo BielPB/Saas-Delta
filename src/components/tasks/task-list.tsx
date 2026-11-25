@@ -6,11 +6,13 @@ import { Avatar, EmptyState } from "@/components/ui/primitives";
 import { PriorityBadge, TaskStatusBadge } from "@/components/content/badges";
 import { TaskQuickActions } from "./task-actions";
 
-export function TaskList({ tasks, members, empty, showAssignee = true, currentUser, canManage }: {
+export function TaskList({ tasks, members, empty, showAssignee = true, showAssigneeName, currentUser, canManage }: {
   tasks: TaskRow[];
   members: Map<string, MemberRow>;
   empty?: string;
   showAssignee?: boolean;
+  /** Show the first name next to the avatar (lists that mix people). */
+  showAssigneeName?: boolean;
   currentUser: string;
   canManage: boolean;
 }) {
@@ -31,7 +33,9 @@ export function TaskList({ tasks, members, empty, showAssignee = true, currentUs
             <PriorityBadge p={t.priority} />
             {/* "Pendente" is implied by the Iniciar button; show the status only when it adds information. */}
             {(t.status !== "pending" || !(mine || canManage) || isTaskOverdue(t)) && <TaskStatusBadge t={t} />}
-            {showAssignee && (who ? <Avatar name={who.full_name} src={who.avatar_url} size={22} /> : <span className="text-xs text-subtle">Sem responsável</span>)}
+            {showAssignee && (who
+              ? <span className="flex shrink-0 items-center gap-1.5"><Avatar name={who.full_name} src={who.avatar_url} size={22} />{showAssigneeName && <span className="hidden w-20 truncate text-xs text-muted sm:inline">{who.full_name.split(" ")[0]}</span>}</span>
+              : <span className="text-xs text-subtle">Sem responsável</span>)}
             {(mine || canManage) && <TaskQuickActions task={{ id: t.id, status: t.status, kind: t.kind, hasDeliverable: Boolean(t.deliverable_id), contentId: t.content_id }} canManage={canManage} />}
           </li>
         );
