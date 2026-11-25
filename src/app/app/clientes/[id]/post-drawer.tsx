@@ -15,16 +15,19 @@ import { CommentBox, DeliverablesManager, type DeliverableItem } from "@/app/app
 import { setAssignees, updateContent } from "@/app/app/conteudos/actions";
 import { setEditor, setPostStatus, submitPost } from "./post-actions";
 import { StatusPill } from "./post-grid";
+import { NewTaskButton } from "@/app/app/tarefas/new-task";
 
 export interface DrawerPost {
   id: string; code: number; number: number; title: string; clientId: string; lock: number; status: PostStatusKey; work: WorkStatus;
   format: string; aspect: string; planned: string; serviceId: string | null; briefing: string; editorId: string | null; assignees: string[];
 }
 
-export function PostDrawer({ post, viewer, managerItems, missing, adjust, comments, members, services, canEdit, canSubmit, workspaceId, closeHref, prevHref, nextHref }: {
+export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks, canTask, comments, members, services, canEdit, canSubmit, workspaceId, closeHref, prevHref, nextHref }: {
   post: DrawerPost; viewer: ViewerDeliverable[];
   managerItems: DeliverableItem[];
-  missing: string[]; adjust: string[]; comments: Array<{ id: string; body: string; at: string; author: string; avatar: string | null }>;
+  missing: string[]; adjust: string[];
+  tasks: Array<{ id: string; title: string; status: string; due: string | null; who: string | null; whoAvatar: string | null }>; canTask: boolean;
+  comments: Array<{ id: string; body: string; at: string; author: string; avatar: string | null }>;
   members: Array<{ id: string; name: string; avatar: string | null }>; services: Array<{ id: string; name: string }>;
   canEdit: boolean; canSubmit: boolean; workspaceId: string; closeHref: string; prevHref: string | null; nextHref: string | null;
 }) {
@@ -139,6 +142,23 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, commen
                 </Button>
               </div>
             )}
+
+            <Field label="Tarefas deste post" hint="Ex.: edição, gravação, captação. Cada tarefa vai para Minhas demandas de quem receber.">
+              {tasks.length > 0 && (
+                <ul className="mb-2 space-y-1">
+                  {tasks.map((t) => (
+                    <li key={t.id}>
+                      <Link href={`/app/tarefas/${t.id}`} className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5 text-[12.5px] hover:border-border-strong">
+                        {t.who ? <Avatar name={t.who} src={t.whoAvatar} size={18} /> : <span className="size-[18px] shrink-0 rounded-full border border-dashed border-border-strong" aria-hidden />}
+                        <span className={cn("min-w-0 flex-1 truncate", t.status === "done" && "text-muted line-through")}>{t.title.replace(/ — .*$/, "")}</span>
+                        <span className="shrink-0 text-[11px] text-muted">{({ pending: "A fazer", blocked: "Aguardando", in_progress: "Fazendo", in_review: "Revisão", done: "Feita", reopened: "Reaberta" } as Record<string, string>)[t.status] ?? t.status}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canTask && <NewTaskButton clients={[]} members={members.map((m) => ({ id: m.id, name: m.name }))} post={{ id: post.id, clientId: post.clientId, title: post.title }} label="Tarefa" size="sm" variant="secondary" />}
+            </Field>
 
             <Field label="Responsáveis" hint="Quem cuida do post (roteiro, legenda, gestão).">
               <ul className="space-y-1">

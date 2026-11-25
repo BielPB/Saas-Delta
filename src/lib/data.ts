@@ -298,3 +298,11 @@ export async function postBlockers(contentIds: string[]) {
   }
   return out;
 }
+
+/** Open posts for pickers ("Post (opcional)" in Nova tarefa). */
+export async function openPostsLite(ws: string) {
+  const sb = await createClient();
+  const { data } = await sb.from("content_items").select("id, client_id, code, title").eq("workspace_id", ws).is("archived_at", null)
+    .not("stage", "in", "(published,cancelled)").order("planned_publish_at", { ascending: true, nullsFirst: false }).limit(500);
+  return ((data ?? []) as Array<{ id: string; client_id: string; code: number; title: string }>).map((p) => ({ id: p.id, client_id: p.client_id, label: `#${p.code} ${p.title}` }));
+}

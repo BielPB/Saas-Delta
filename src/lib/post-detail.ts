@@ -20,7 +20,7 @@ export async function loadPostDetail(ws: string, id: string, members: Map<string
     sb.from("approval_responses").select("version_id, decision, comment, reviewer_name, created_at").eq("content_id", id).order("created_at", { ascending: false }),
     sb.from("comments").select("id, body, author_id, created_at").eq("content_id", id).order("created_at"),
     sb.from("content_assignees").select("user_id").eq("content_id", id),
-    sb.from("tasks").select("deliverable_id, assignee_id, status").eq("content_id", id),
+    sb.from("tasks").select("id, title, kind, deliverable_id, assignee_id, status, due_at").eq("content_id", id).order("created_at"),
   ]);
   const deliverables = ((dels ?? []) as unknown as DeliverableRow[]).map((d) => ({
     ...d, deliverable_versions: [...d.deliverable_versions].sort((a, b) => b.version_number - a.version_number),
@@ -30,7 +30,7 @@ export async function loadPostDetail(ws: string, id: string, members: Map<string
   const respByVersion = new Map<string, Array<{ decision: string; comment: string | null; reviewer_name: string | null; created_at: string }>>();
   for (const r of responses ?? []) respByVersion.set(r.version_id as string, [...(respByVersion.get(r.version_id as string) ?? []), r as never]);
   const assigneeIds = (assignees ?? []).map((a) => a.user_id as string);
-  const taskRows = (tasks ?? []) as Array<{ deliverable_id: string | null; assignee_id: string | null; status: string }>;
+  const taskRows = (tasks ?? []) as Array<{ id: string; title: string; kind: string; deliverable_id: string | null; assignee_id: string | null; status: string; due_at: string | null }>;
 
   const viewer: ViewerDeliverable[] = deliverables.filter((d) => d.kind !== "script").map((d) => ({
     id: d.id, kind: d.kind, title: d.title, clientFacing: d.client_facing, approval: d.approval_status, currentVersionId: d.current_version_id,
@@ -58,6 +58,7 @@ export async function loadPostDetail(ws: string, id: string, members: Map<string
 
   return {
     content, viewer, managerItems, missing, adjust, assigneeIds,
+    tasks: taskRows.filter((t) => t.status !== "cancelled").map((t) => ({ id: t.id, title: t.title, status: t.status, due: t.due_at, who: t.assignee_id ? members.get(t.assignee_id)?.full_name ?? "Ex-colaborador" : null, whoAvatar: t.assignee_id ? members.get(t.assignee_id)?.avatar_url ?? null : null })),
     canEdit: can.manage || isPerson, canSubmit: can.submit,
     comments: (comments ?? []).map((cm) => {
       const m = members.get(cm.author_id as string);

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { contentSelect, listClientsLite, listFormats, memberMap, taskSelect, type ContentRow, type TaskRow } from "@/lib/data";
+import { contentSelect, listClientsLite, listFormats, memberMap, openPostsLite, taskSelect, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatGroups, postStatus, postStatusMeta, type PostStatusKey } from "@/lib/post-status";
 import { cn, isUuid } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/primitives";
@@ -40,8 +40,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
   q = ids.length ? q.or(`editor_id.eq.${uid},id.in.(${ids.join(",")})`) : q.eq("editor_id", uid);
   const { data } = await q;
   const all = (data ?? []) as unknown as Row[];
-  // Legacy task chains: only tasks of posts not already listed above.
-  const tasks = ((taskData ?? []) as unknown as TaskRow[]).filter((t) => !t.content_id || !all.some((p) => p.id === t.content_id));
+  // Tasks given to the person (general ones always; template steps only when the post is not already listed above).
+  const tasks = ((taskData ?? []) as unknown as TaskRow[]).filter((t) => t.kind === "general" || !t.content_id || !all.some((p) => p.id === t.content_id));
 
   const now = new Date().getTime();
   const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
@@ -109,7 +109,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
               members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
           )}
           {ctx.can("tasks.manage") && (
-            <NewTaskButton clients={await listClientsLite(ws)}
+            <NewTaskButton clients={await listClientsLite(ws)} posts={await openPostsLite(ws)}
               members={[...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))} />
           )}
         </div>
@@ -183,10 +183,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       )}
 
       {tasks.length > 0 && (
-        <details className="group mt-6 rounded-lg border border-border bg-surface" open={tasks.some((t) => !t.content_id)}>
+        <details className="group mt-6 rounded-lg border border-border bg-surface" open={tasks.some((t) => t.kind === "general")}>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
             <span className="text-[13px] font-semibold">Tarefas <span className="tabular ml-1 font-normal text-muted">{tasks.length}</span>
-              <span className="ml-2 text-xs font-normal text-subtle">avulsas e etapas de conteúdos antigos</span></span>
+              <span className="ml-2 text-xs font-normal text-subtle">atribuídas a você (edição, gravação, reunião…)</span></span>
             <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
           </summary>
           <div className="border-t border-border">

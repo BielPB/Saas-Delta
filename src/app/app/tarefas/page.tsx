@@ -3,7 +3,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { listClientsLite, listMembers, memberMap, parseFilters, qs, taskSelect, type TaskRow } from "@/lib/data";
+import { listClientsLite, listMembers, memberMap, openPostsLite, parseFilters, qs, taskSelect, type TaskRow } from "@/lib/data";
 import { taskStatus } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/primitives";
@@ -56,7 +56,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Tarefas da equipe" description="Tarefas avulsas (reunião, gravação, captação…) e etapas de produção. Use “Nova tarefa” para atribuir algo a alguém."
-        actions={ctx.can("tasks.manage") && <NewTaskButton clients={clients} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
+        actions={ctx.can("tasks.manage") && <NewTaskButton clients={clients} posts={await openPostsLite(ctx.workspace.id)} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Situação" className="flex rounded-lg border border-border bg-surface p-0.5">
           {tabs.map((t) => (

@@ -111,7 +111,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       {isGrid && (
         <PostsTab ws={ctx.workspace.id} clientId={id} tab={tab as "posts" | "reels" | "stories"} ym={ym} postId={isUuid(sp.post) ? sp.post! : null}
           formats={formats} services={((services ?? []) as Array<{ id: string; name: string; active: boolean }>).filter((s) => s.active)}
-          me={ctx.user.id} can={{ create: ctx.can("contents.manage"), manage: ctx.can("contents.manage"), submit: ctx.can("approvals.manage") || ctx.can("tasks.manage") }}
+          me={ctx.user.id} can={{ create: ctx.can("contents.manage"), manage: ctx.can("contents.manage"), submit: ctx.can("approvals.manage") || ctx.can("tasks.manage"), tasks: ctx.can("tasks.manage") }}
           baseHref={tabHref(tab)} />
       )}
       {tab === "visao" && (
@@ -195,7 +195,7 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
 async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, can, baseHref }: {
   ws: string; clientId: string; tab: "posts" | "reels" | "stories"; ym: string; postId: string | null;
   formats: Array<{ id: string; key: string; name: string; aspect_ratio: string | null; active: boolean }>;
-  services: Array<{ id: string; name: string }>; me: string; can: { create: boolean; manage: boolean; submit: boolean }; baseHref: string;
+  services: Array<{ id: string; name: string }>; me: string; can: { create: boolean; manage: boolean; submit: boolean; tasks: boolean }; baseHref: string;
 }) {
   const sb = await createClient();
   const group = formatGroups.find((g) => g.key === tab)!;
@@ -251,7 +251,7 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
             format: c.content_formats?.name ?? "", aspect: c.content_formats?.aspect_ratio ?? "4:5", planned: toLocalInput(c.planned_publish_at),
             serviceId: c.service_id, briefing: c.briefing ?? "", editorId: c.editor_id, assignees: d.assigneeIds,
           }}
-          viewer={d.viewer} managerItems={d.managerItems} missing={d.missing} adjust={d.adjust} comments={d.comments} members={activeMembers} services={services}
+          viewer={d.viewer} managerItems={d.managerItems} missing={d.missing} adjust={d.adjust} tasks={d.tasks} canTask={can.tasks} comments={d.comments} members={activeMembers} services={services}
           canEdit={d.canEdit} canSubmit={d.canSubmit} />
       );
     }
