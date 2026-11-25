@@ -1,4 +1,7 @@
 "use server";
+import { after } from "next/server";
+import { appOrigin } from "@/lib/origin";
+import { syncPersonIfConnected } from "@/lib/calendar/sync";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getContext } from "@/lib/auth";
@@ -45,6 +48,7 @@ export async function createTask(_: ActionResult | null, form: FormData): Promis
     kind: "general", status: "pending", created_by: ctx.user.id,
   });
   if (error) return fail(error);
+  if (d.assignee_id && d.due_at) { const origin = await appOrigin(); after(() => syncPersonIfConnected(ctx.workspace.id, d.assignee_id, origin)); }
   revalidatePath("/app", "layout");
   return { ok: true, message: "Tarefa criada." };
 }
@@ -62,8 +66,15 @@ export async function updateTask(id: string, patch: { assignee_id?: string | nul
       id: String(c.id ?? i), text: String(c.text ?? "").slice(0, 300), done: Boolean(c.done),
     }));
   }
+  const { data: before } = "assignee_id" in clean || "due_at" in clean
+    ? await sb.from("tasks").select("assignee_id").eq("id", id).maybeSingle() : { data: null };
   const { error } = await sb.from("tasks").update(clean).eq("id", id).eq("workspace_id", ctx.workspace.id);
   if (error) return fail(error);
+  if ("assignee_id" in clean || "due_at" in clean) {
+    const origin = await appOrigin();
+    const people = [...new Set([before?.assignee_id as string | null | undefined, clean.assignee_id as string | null | undefined])];
+    after(async () => { for (const u of people) await syncPersonIfConnected(ctx.workspace.id, u, origin); });
+  }
   revalidatePath("/app", "layout");
   return { ok: true as const, message: "Tarefa atualizada." };
 }

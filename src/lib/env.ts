@@ -46,4 +46,9 @@ export const integrations = {
     return Boolean(e.googleClientId && e.googleClientSecret && e.driveTokenKey && e.serviceRoleKey);
   },
   email: () => Boolean(serverEnv().resendApiKey && serverEnv().serviceRoleKey),
+  /** Google Agenda uses the same Google OAuth client and token key as Drive. */
+  calendar: () => {
+    const e = serverEnv();
+    return Boolean(e.googleClientId && e.googleClientSecret && e.driveTokenKey && e.serviceRoleKey);
+  },
 };

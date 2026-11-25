@@ -11,6 +11,9 @@ import { TaskList } from "@/components/tasks/task-list";
 import { clientHue } from "@/lib/client-color";
 import { StatusPill } from "@/app/app/clientes/[id]/post-grid";
 import { ViewAs } from "./view-as";
+import { AgendaStrip } from "./agenda";
+import { Suspense } from "react";
+import { appOrigin } from "@/lib/origin";
 import { NewTaskButton } from "@/app/app/tarefas/new-task";
 
 export const metadata: Metadata = { title: "Minhas demandas" };
@@ -114,6 +117,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
           )}
         </div>
       </header>
+
+      <Suspense fallback={<div className="skeleton mb-5 h-36 rounded-xl" aria-hidden />}>
+        <AgendaStrip ws={ws} uid={uid} isSelf={uid === ctx.user.id} tz={ctx.workspace.timezone} origin={await appOrigin()} />
+      </Suspense>
 
       <nav aria-label="Filtro por prazo" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {counters.map((c) => (
