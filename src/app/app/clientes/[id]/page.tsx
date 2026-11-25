@@ -77,7 +77,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           <ClientLogo workspaceId={ctx.workspace.id} clientId={id} name={client.name as string} canEdit={canManage}
             src={client.logo_path ? (await signPaths([client.logo_path as string], 3600)).get(client.logo_path as string) ?? null : null} />
           <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight">
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
               {client.name as string}
               {client.is_sensitive && <Badge tone="warning">Sensível</Badge>}
               {client.status !== "active" && <Badge>{client.status === "archived" ? "Arquivado" : "Inativo"}</Badge>}
@@ -102,9 +102,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
       <nav aria-label="Seções do cliente" className="-mx-1 mb-5 flex gap-1 overflow-x-auto border-b border-border px-1">
         {tabs.map((t, i) => (
-          <Link key={t.key} href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
-            className={cn("relative -mb-px flex h-9 shrink-0 items-center border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg",
-              tab === t.key && "border-accent font-semibold text-fg", i === 3 && "ml-3")}>{t.label}</Link>
+          <span key={t.key} className="flex shrink-0 items-center">
+            {i === 3 && <span className="mx-2 h-4 w-px bg-border" aria-hidden />}
+            <Link href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
+              className={cn("relative -mb-px flex h-9 items-center border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg",
+                tab === t.key && "border-accent font-semibold text-fg")}>{t.label}</Link>
+          </span>
         ))}
       </nav>
 

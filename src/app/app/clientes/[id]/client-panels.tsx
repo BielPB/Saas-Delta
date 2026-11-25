@@ -52,7 +52,7 @@ export function ServicesManager({ clientId, services, canManage, created }: { cl
                 <p className="text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativa</Badge>}</p>
                 {s.description && <p className="truncate text-xs text-muted">{s.description}</p>}
               </div>
-              <span className="text-xs text-muted">{s.monthly_target ? `meta ${s.monthly_target}/mês` : "sem meta"}</span>
+              <span className="text-xs text-muted" title="Posts aprovados por mês vindos desta subdivisão">{s.monthly_target ? `meta: ${s.monthly_target} aprovado(s)/mês` : "sem meta própria"}</span>
               {canManage && (
                 <>
                   <Button size="icon-sm" variant="ghost" aria-label={`Editar ${s.name}`} onClick={() => setEditing(s)}><Pencil /></Button>
@@ -95,7 +95,7 @@ function ServiceDialog({ clientId, service, onClose }: { clientId: string; servi
           </div>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Meta mensal" hint="Opcional" error={fe?.monthly_target}>{(p) => <Input {...p} name="monthly_target" type="number" min={0} defaultValue={service?.monthly_target ?? ""} />}</Field>
+          <Field label="Meta da subdivisão" hint="Opcional. Posts aprovados por mês que devem vir desta subdivisão." error={fe?.monthly_target}>{(p) => <Input {...p} name="monthly_target" type="number" min={0} defaultValue={service?.monthly_target ?? ""} />}</Field>
           <Field label="Pasta do Drive (ID)" error={fe?.drive_folder_id}>{(p) => <Input {...p} name="drive_folder_id" defaultValue={service?.drive_folder_id ?? ""} />}</Field>
         </div>
         <div className="flex justify-end gap-2"><Button onClick={onClose}>Cancelar</Button><SubmitButton>Salvar subdivisão</SubmitButton></div>
@@ -120,31 +120,35 @@ export function TargetsManager({ clientId, targets, services, formats, canManage
   const fName = new Map(formats.map((f) => [f.id, f.name]));
   const thisMonth = new Date().toISOString().slice(0, 7);
   return (
-    <Panel title="Metas mensais" padded={false}>
+    <Panel title="Meta de um mês específico" padded={false}>
+      <p className="border-b border-border bg-surface-2/50 px-4 py-3 text-[13px] text-muted">
+        Use só quando um mês for diferente do normal (ex.: dezembro com campanha). Vale apenas para o mês escolhido e
+        substitui a <strong className="font-medium text-fg">meta do cliente</strong> (posts aprovados por mês, definida em Configurações).
+      </p>
       {canManage && (
-        <form action={action} className="grid grid-cols-2 gap-2 border-b border-border p-4">
+        <form action={action} className="grid grid-cols-2 gap-3 border-b border-border p-4">
           <input type="hidden" name="client_id" value={clientId} />
           <label className="col-span-1 text-xs text-muted">Mês<Input name="month" type="month" defaultValue={thisMonth} required className="mt-1" /></label>
-          <label className="col-span-1 text-xs text-muted">Quantidade<Input name="target" type="number" min={0} required className="mt-1" /></label>
+          <label className="col-span-1 text-xs text-muted">Posts aprovados<Input name="target" type="number" min={0} required className="mt-1" placeholder="Ex.: 12" /></label>
           <label className="col-span-1 text-xs text-muted">Subdivisão
-            <Select name="service_id" className="mt-1"><option value="">Todos</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+            <Select name="service_id" className="mt-1"><option value="">Todas (meta do cliente)</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
           </label>
           <label className="col-span-1 text-xs text-muted">Formato
             <Select name="format_id" className="mt-1"><option value="">Todos</option>{formats.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select>
           </label>
           <div className="col-span-2 flex items-center justify-between gap-2">
             <FormError message={state && !state.ok ? state.error : null} />
-            <SubmitButton size="sm" className="ml-auto">Salvar meta</SubmitButton>
+            <SubmitButton size="sm" className="ml-auto">Salvar meta do mês</SubmitButton>
           </div>
         </form>
       )}
-      {targets.length === 0 ? <EmptyState compact title="Sem metas específicas" description="A meta mensal do cadastro é usada como padrão." /> : (
+      {targets.length === 0 ? <EmptyState compact title="Nenhum mês diferente" description="Todos os meses usam a meta do cliente." /> : (
         <ul className="divide-y divide-border">
           {targets.map((t) => (
             <li key={t.id} className="flex items-center gap-2 px-4 py-2 text-[13px]">
               <span className="tabular w-16 text-muted">{t.month.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{t.service_id ? sName.get(t.service_id) : "Todas as subdivisões"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
-              <span className="tabular font-medium">{t.target}</span>
+              <span className="tabular font-medium">{t.target} <span className="font-normal text-muted">aprovados</span></span>
               {canManage && <Button size="icon-sm" variant="ghost" aria-label="Remover meta" onClick={() => start(async () => {
                 const r = await deleteTarget(t.id, clientId); if (r.ok) { toast.success(r.message ?? "Feito."); router.refresh(); } else toast.error(r.error);
               })}><Trash2 /></Button>}

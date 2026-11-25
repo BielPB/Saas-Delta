@@ -101,7 +101,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Minhas demandas</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {canViewOthers && (

@@ -27,7 +27,7 @@ export default async function MembersPage() {
         actions={canManage && <InviteButton roles={roleList} canGrantOwner={ctx.roles.includes("owner")} />} />
       <Panel padded={false}>
         <Table>
-          <thead><tr><th>Pessoa</th><th>Funções</th><th className="hidden md:table-cell">Carga</th><th className="text-right"><span title="Posts aprovados por mês: usado no ranking do painel">Meta/mês</span></th><th>Status</th>{canManage && <th className="w-10"><span className="sr-only">Ações</span></th>}</tr></thead>
+          <thead><tr><th>Pessoa</th><th>Funções</th><th className="hidden md:table-cell">Carga</th><th className="text-right"><span title="Posts aprovados por mês em que a pessoa é responsável ou editora. Usada no ranking do painel.">Meta individual</span></th><th>Status</th>{canManage && <th className="w-10"><span className="sr-only">Ações</span></th>}</tr></thead>
           <tbody>
             {members.map((m) => {
               const w = workload.get(m.user_id);
@@ -56,6 +56,9 @@ export default async function MembersPage() {
           </tbody>
         </Table>
       </Panel>
+      <p className="mt-2 text-xs text-muted">
+        <strong className="font-medium text-fg">Meta individual:</strong> quantos posts aprovados por mês a pessoa deve entregar, como responsável ou editora. É usada no ranking do painel; quem fica sem meta não entra nele.
+      </p>
     </>
   );
 }

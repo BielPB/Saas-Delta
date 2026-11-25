@@ -31,7 +31,7 @@ export function ClientForm({ initial, disabled }: { initial?: ClientValues; disa
         <Field label="Instagram" error={fe?.instagram}>{(p) => <Input {...p} name="instagram" defaultValue={v.instagram ?? ""} placeholder="@perfil" />}</Field>
         <Field label="Website" error={fe?.website}>{(p) => <Input {...p} name="website" type="url" defaultValue={v.website ?? ""} placeholder="https://" />}</Field>
         <Field label="Início do contrato" error={fe?.contract_start}>{(p) => <Input {...p} name="contract_start" type="date" defaultValue={v.contract_start ?? ""} />}</Field>
-        <Field label="Meta mensal de conteúdos" hint="Metas por mês, subdivisão e formato ficam na aba Subdivisões." error={fe?.monthly_target}>
+        <Field label="Meta do cliente (posts aprovados por mês)" hint="Quanto o cliente deve aprovar por mês, como combinado no contrato. É a meta do painel e da lista de clientes. Para um mês diferente, use a aba Subdivisões." error={fe?.monthly_target}>
           {(p) => <Input {...p} name="monthly_target" type="number" min={0} inputMode="numeric" defaultValue={v.monthly_target ?? 0} />}
         </Field>
         <Field label="Pasta do Google Drive (ID)" hint="Também pode ser vinculada em Integrações." error={fe?.drive_folder_id} className="sm:col-span-2">

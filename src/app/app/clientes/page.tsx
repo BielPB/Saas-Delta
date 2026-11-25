@@ -95,12 +95,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                 <div className="w-48 shrink-0">
                   {target > 0 ? (
                     <>
-                      <p className="mb-1 flex justify-between text-xs"><span className="text-muted">Meta do mês</span><span className="tabular font-medium">{approved} de {target}</span></p>
+                      <p className="mb-1 flex justify-between text-xs"><span className="text-muted">Aprovados no mês</span><span className="tabular font-medium">{approved} de {target}</span></p>
                       <div className="h-1.5 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuemin={0} aria-valuemax={target} aria-valuenow={approved} aria-label={`Meta do mês de ${c.name}`}>
                         <div className={cn("h-full rounded-full", approved >= target ? "bg-accent" : "bg-fg/60")} style={{ width: `${Math.min(100, (approved / target) * 100)}%` }} />
                       </div>
                     </>
-                  ) : <p className="text-xs text-subtle">Sem meta definida</p>}
+                  ) : <p className="text-xs text-subtle">Sem meta do cliente</p>}
                 </div>
                 <Link href={`/app/pipeline?cliente=${c.id}`} className="shrink-0 text-xs font-medium text-accent-ink hover:underline">Pipeline →</Link>
               </li>

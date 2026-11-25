@@ -136,6 +136,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {target ? <>{MonthName} está em <span className="text-accent-ink">{pct}% da meta</span>.</> : <>{MonthName} ainda sem meta definida.</>}
           </h1>
           <p className="mt-1 text-sm text-muted">{cheer}</p>
+          {target > 0 && <p className="mt-1 text-xs text-subtle">Posts aprovados pelos clientes no mês ÷ soma das metas dos clientes.</p>}
           {missing.length > 0 && <a href="#falta" className="mt-4 inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-medium hover:bg-surface-2">Ver o que falta ({missing.reduce((n, m) => n + m.left, 0)})</a>}
         </div>
         <div className="relative size-36 shrink-0" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
@@ -154,8 +155,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: "Clientes", value: activeClients ?? 0, sub: "ativos", href: "/app/clientes" },
-          { label: "Meta do mês", value: target, sub: target ? `faltam ${Math.max(0, target - delivered)}` : "não definida", href: "/app/clientes" },
-          { label: "Entregues", value: delivered, sub: target ? `${pct}% da meta` : "aprovados pelo cliente", accent: true, href: "/app/clientes" },
+          { label: "Meta do mês", value: target, sub: target ? `posts aprovados · faltam ${Math.max(0, target - delivered)}` : "defina a meta de cada cliente", href: "/app/clientes" },
+          { label: "Aprovados", value: delivered, sub: target ? `${pct}% da meta` : "pelos clientes no mês", accent: true, href: "/app/clientes" },
           { label: "Travados", value: stuck, sub: stuck ? "ajustes, aprovações paradas e atrasos" : "tudo fluindo", danger: stuck > 0, href: "#atencao" },
         ].map((k) => (
           <Link key={k.label} href={k.href} className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
@@ -174,8 +175,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Panel>
         <Panel title="Top membros" actions={
           <nav aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
-            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", byGoal && "bg-accent text-accent-fg")}>Meta</Link>
-            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", !byGoal && "bg-accent text-accent-fg")}>Geral</Link>
+            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", byGoal && "bg-accent text-accent-fg")} title="% da meta individual de cada pessoa">Meta individual</Link>
+            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", !byGoal && "bg-accent text-accent-fg")} title="Quantidade de posts aprovados">Geral</Link>
           </nav>}>
           {ranking.length === 0 ? (
             <p className="text-[13px] text-muted">{byGoal ? <>Defina a meta mensal de cada pessoa em <Link href="/app/colaboradores" className="underline">Equipe</Link> para ver o ranking por meta.</> : "Aparece quando os posts com responsável ou editor forem aprovados."}</p>
@@ -193,13 +194,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               ))}
             </ol>
           )}
-          {byGoal && ranking.length > 0 && noGoal > 0 && <p className="mt-3 text-xs text-muted">{noGoal} pessoa(s) sem meta definida não entram neste ranking.</p>}
+          {byGoal && ranking.length > 0 && noGoal > 0 && <p className="mt-3 text-xs text-muted">{noGoal} pessoa(s) sem meta individual não entram neste ranking. Defina em Equipe.</p>}
         </Panel>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section id="falta" aria-labelledby="falta-t" className="rounded-xl border border-border bg-surface">
-          <h2 id="falta-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">O que falta para a meta</h2>
+          <h2 id="falta-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">O que falta para a meta <span className="font-normal text-muted">· por cliente</span></h2>
           {missing.length === 0 ? <p className="px-4 py-4 text-[13px] text-muted">{target ? "Todos os clientes bateram a meta do mês." : "Nenhuma meta definida."}</p> : (
             <ul className="divide-y divide-border">
               {missing.map((m) => (
@@ -253,7 +254,7 @@ async function onboardingState(ws: string) {
     { label: "Revisar funções e permissões", done: (members.count ?? 0) > 1, href: "/app/configuracoes?aba=funcoes" },
     { label: "Cadastrar clientes", done: (clients.count ?? 0) > 0, href: "/app/clientes/novo" },
     { label: "Cadastrar subdivisões", done: (services.count ?? 0) > 0, href: "/app/clientes" },
-    { label: "Configurar metas mensais", done: (targets.count ?? 0) > 0, href: "/app/clientes" },
+    { label: "Definir a meta dos clientes", done: (targets.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Conectar Google Drive", done: (drive.count ?? 0) > 0, href: "/app/integracoes" },
     { label: "Criar o primeiro post", done: (contents.count ?? 0) > 0, href: "/app/clientes" },
     { label: "Configurar pipeline e templates", done: (contents.count ?? 0) > 0, href: "/app/configuracoes?aba=templates" },
