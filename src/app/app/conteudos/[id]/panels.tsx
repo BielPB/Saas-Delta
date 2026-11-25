@@ -136,8 +136,13 @@ function VersionDialog({ item, contentId, workspaceId, clientId, serviceId, onCl
           <>
             <Uploader workspaceId={workspaceId} clientId={clientId} serviceId={serviceId} category={category as never}
               accept={item.kind === "raw_footage" || item.kind === "video" ? "video" : item.kind === "cover" || item.kind === "image" || item.kind === "carousel" ? "image" : "any"}
-              multiple={item.kind === "carousel"} onUploaded={(ids) => setAssets((a) => [...new Set([...a, ...ids])])} />
-            {item.kind === "carousel" && assets.length > 0 && <p className="text-xs text-muted">{assets.length} slide(s), na ordem de envio.</p>}
+              multiple={["carousel", "image", "raw_footage"].includes(item.kind)} onUploaded={(ids) => setAssets((a) => [...new Set([...a, ...ids])])} />
+            {["carousel", "image", "raw_footage"].includes(item.kind) && (
+              <p className="text-xs text-muted">
+                {assets.length > 0 ? `${assets.length} arquivo(s) nesta versão, na ordem de envio. ` : ""}
+                Pode enviar vários arquivos: todos entram na mesma versão e o cliente vê e avalia o conjunto.
+              </p>
+            )}
             <label className="block text-[13px] font-medium">Ou link do arquivo <span className="font-normal text-muted">(ex.: pasta do Drive com material bruto)</span>
               <Input className="mt-1.5" type="url" placeholder="https://" value={url} onChange={(e) => setUrl(e.target.value)} />
             </label>

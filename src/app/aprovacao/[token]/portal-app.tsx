@@ -358,6 +358,7 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
       <div className="relative mx-auto flex w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-black"
         style={{ aspectRatio: r, maxHeight: "72vh", maxWidth: `calc(72vh * (${r}))` }}>
         {badge && isVideo && <span className="absolute left-3 top-3 z-10 rounded-full border border-accent bg-black/60 px-2.5 py-0.5 text-xs font-bold text-accent">{badge}</span>}
+        {assets.length > 1 && <span className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-bold text-white">{i + 1}/{assets.length}</span>}
         {!url ? (
           <p className="p-6 text-center text-sm text-white/70">Pré-visualização em preparação. A agência foi avisada.</p>
         ) : isVideo ? (
@@ -368,10 +369,26 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
         )}
       </div>
       {assets.length > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-3">
-          <Button size="icon" onClick={() => setI((x) => Math.max(0, x - 1))} disabled={i === 0} aria-label="Slide anterior"><ChevronLeft /></Button>
-          <span className="tabular text-sm text-muted" aria-live="polite">{i + 1} / {assets.length}</span>
-          <Button size="icon" onClick={() => setI((x) => Math.min(assets.length - 1, x + 1))} disabled={i === assets.length - 1} aria-label="Próximo slide"><ChevronRight /></Button>
+        <div className="mt-3">
+          <div className="flex items-center justify-center gap-3">
+            <Button size="icon" onClick={() => setI((x) => Math.max(0, x - 1))} disabled={i === 0} aria-label="Imagem anterior"><ChevronLeft /></Button>
+            <span className="tabular text-sm font-semibold" aria-live="polite">{i + 1} de {assets.length}</span>
+            <Button size="icon" onClick={() => setI((x) => Math.min(assets.length - 1, x + 1))} disabled={i === assets.length - 1} aria-label="Próxima imagem"><ChevronRight /></Button>
+          </div>
+          <ul className="mt-2 flex justify-center gap-2 overflow-x-auto pb-1" aria-label="Todas as imagens">
+            {assets.map((x, n) => {
+              const thumb = x.provider === "supabase" ? media[x.thumbnail_path ?? x.preview_path ?? x.path ?? ""] : undefined;
+              return (
+                <li key={x.id ?? n}>
+                  <button type="button" onClick={() => setI(n)} aria-label={`Ver ${n + 1} de ${assets.length}`} aria-current={n === i}
+                    className={cn("block size-14 overflow-hidden rounded-lg border-2", n === i ? "border-accent" : "border-transparent opacity-70 hover:opacity-100")}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                    {thumb && !x.mime_type?.startsWith("video/") ? <img src={thumb} alt="" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center bg-surface-2 text-xs font-bold">{n + 1}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>
