@@ -28,12 +28,15 @@ export function isConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+/** Pasted secrets often carry spaces, line breaks or quotes: strip them. */
+const clean = (v: string | undefined) => (v ?? "").trim().replace(/^["']|["']$/g, "").trim();
+
 export function serverEnv() {
   return {
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-    googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    driveTokenKey: process.env.DRIVE_TOKEN_ENCRYPTION_KEY ?? "",
+    googleClientId: clean(process.env.GOOGLE_CLIENT_ID),
+    googleClientSecret: clean(process.env.GOOGLE_CLIENT_SECRET),
+    driveTokenKey: clean(process.env.DRIVE_TOKEN_ENCRYPTION_KEY),
     resendApiKey: process.env.RESEND_API_KEY ?? "",
     emailFrom: process.env.EMAIL_FROM ?? "Delta Flow <no-reply@deltaflow.com.br>",
     cronSecret: process.env.CRON_SECRET ?? "",
