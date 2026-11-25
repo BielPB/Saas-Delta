@@ -1,33 +1,43 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Check, Film, Plus, Stamp } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Stamp } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { contentSelect, listFormats, listMembers, memberMap, signPaths, taskSelect, thumbnails, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
-import { formatDateTime, monthStart, relative, bytes } from "@/lib/format";
+import { contentSelect, listFormats, listMembers, memberMap, postThumbs, signPaths, taskSelect, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
+import { formatDateTime, monthStart, relative, bytes, toLocalInput } from "@/lib/format";
+import { formatGroups, postStatus, type WorkStatus } from "@/lib/post-status";
+import { loadPostDetail } from "@/lib/post-detail";
 import { cn, isUuid } from "@/lib/utils";
 import { subdivisionText } from "@/lib/labels";
 import { activityText } from "@/lib/activity";
 import { ButtonLink } from "@/components/ui/button";
-import { Avatar, Badge, EmptyState, PageHeader, Panel, Progress, Table } from "@/components/ui/primitives";
-import { LinkTabs } from "@/components/ui/tabs";
-import { ContentTable } from "@/components/content/content-table";
+import { Avatar, Badge, EmptyState, Panel, Progress, Table } from "@/components/ui/primitives";
 import { ServiceDot } from "@/components/content/badges";
 import { TaskList } from "@/components/tasks/task-list";
 import { ClientForm } from "../client-form";
 import { ClientStatusActions, ClientTeam, ServicesManager, TargetsManager } from "./client-panels";
+import { ClientAvatar } from "@/components/shell/client-nav";
+import { PostGrid, type GridPost } from "./post-grid";
+import { PostDrawer } from "./post-drawer";
 
 export const metadata: Metadata = { title: "Cliente" };
 
-const TABS = ["visao", "conteudos", "servicos", "calendario", "tarefas", "aprovacoes", "arquivos", "historico", "configuracoes"] as const;
+const TABS = ["posts", "reels", "stories", "visao", "aprovacoes", "servicos", "tarefas", "arquivos", "historico", "configuracoes"] as const;
+type Tab = (typeof TABS)[number];
 
 interface Progress {
   service_id: string | null; service_name: string; service_color: string; service_target: number | null; client_target: number;
   planned: number; videos_ready: number; covers_ready: number; captions_ready: number; approved: number; scheduled: number; published: number;
 }
 
-export default async function ClientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aba?: string; mes?: string; novo?: string }> }) {
+const monthLabel = (ym: string) => {
+  const s = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(`${ym}-15T12:00:00`));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+const shiftMonth = (ym: string, d: number) => { const x = new Date(`${ym}-15T12:00:00`); x.setMonth(x.getMonth() + d); return x.toISOString().slice(0, 7); };
+
+export default async function ClientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aba?: string; mes?: string; novo?: string; post?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   if (!isUuid(id)) notFound();
@@ -36,53 +46,75 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const { data: client } = await sb.from("clients").select("*").eq("id", id).eq("workspace_id", ctx.workspace.id).maybeSingle();
   if (!client) notFound(); // RLS: not allocated => invisible => 404 (no existence leak)
 
-  const tab = (TABS as readonly string[]).includes(sp.aba ?? "") ? (sp.aba as (typeof TABS)[number]) : "visao";
-  const month = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? `${sp.mes}-01` : monthStart();
+  const tab: Tab = (TABS as readonly string[]).includes(sp.aba ?? "") ? (sp.aba as Tab) : "posts";
+  const ym = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : monthStart().slice(0, 7);
+  const month = `${ym}-01`;
   const canManage = ctx.can("clients.manage");
+  const isGrid = tab === "posts" || tab === "reels" || tab === "stories";
 
-  const [{ data: services }, { count: contentCount }, { count: taskCount }] = await Promise.all([
+  const [{ data: services }, formats] = await Promise.all([
     sb.from("client_services").select("*").eq("client_id", id).order("name"),
-    sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", id).is("archived_at", null),
-    sb.from("tasks").select("id", { count: "exact", head: true }).eq("client_id", id).not("status", "in", "(done,cancelled)"),
+    listFormats(ctx.workspace.id),
   ]);
-
-  const tabs = [
-    { key: "visao", label: "Visão geral" }, { key: "conteudos", label: "Conteúdos", count: contentCount ?? 0 },
-    { key: "servicos", label: "Subdivisões", count: (services ?? []).length }, { key: "calendario", label: "Calendário" },
-    { key: "tarefas", label: "Tarefas", count: taskCount ?? 0 }, { key: "aprovacoes", label: "Aprovações" },
-    { key: "arquivos", label: "Arquivos" }, { key: "historico", label: "Histórico" }, { key: "configuracoes", label: "Configurações" },
+  const tabHref = (t: Tab, extra: Record<string, string> = {}) => {
+    const p = new URLSearchParams({ aba: t, mes: ym, ...extra });
+    return `/app/clientes/${id}?${p}`;
+  };
+  const tabs: Array<{ key: Tab; label: string }> = [
+    { key: "posts", label: "Posts" }, { key: "reels", label: "Reels" }, { key: "stories", label: "Stories" },
+    { key: "visao", label: "Visão geral" }, { key: "aprovacoes", label: "Aprovações" }, { key: "servicos", label: "Subdivisões" },
+    { key: "tarefas", label: "Tarefas" }, { key: "arquivos", label: "Arquivos" }, { key: "historico", label: "Histórico" }, { key: "configuracoes", label: "Configurações" },
   ];
 
   return (
     <>
-      <PageHeader
-        eyebrow={<Link href="/app/clientes" className="hover:text-fg">Clientes</Link>}
-        title={<span className="flex items-center gap-2">{client.name}{client.is_sensitive && <Badge tone="warning">Sensível</Badge>}{client.status !== "active" && <Badge>{client.status === "archived" ? "Arquivado" : "Inativo"}</Badge>}</span>}
-        description={[client.company_name, client.segment, client.instagram].filter(Boolean).join(" · ") || undefined}
-        actions={<>
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <ClientAvatar name={client.name as string} size={44} />
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight">
+              {client.name as string}
+              {client.is_sensitive && <Badge tone="warning">Sensível</Badge>}
+              {client.status !== "active" && <Badge>{client.status === "archived" ? "Arquivado" : "Inativo"}</Badge>}
+            </h1>
+            <p className="truncate text-[13px] text-muted">{[client.segment, client.company_name, client.instagram].filter(Boolean).join(" · ") || "Cliente"}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {(isGrid || tab === "visao") && (
+            <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
+              <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronLeft className="size-4" /></Link>
+              <span className="min-w-32 text-center text-[13px] font-semibold">{monthLabel(ym)}</span>
+              <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
+            </nav>
+          )}
           {ctx.can("approvals.manage") && <ButtonLink href={`/app/aprovacoes/novo?cliente=${id}`}><Stamp /> Link de aprovação</ButtonLink>}
-          {ctx.can("contents.manage") && <ButtonLink href={`/app/conteudos/novo?cliente=${id}`} variant="primary"><Plus /> Novo conteúdo</ButtonLink>}
-        </>}
-      />
-      <LinkTabs tabs={tabs} active={tab} base={`/app/clientes/${id}`} />
+        </div>
+      </header>
 
+      <nav aria-label="Seções do cliente" className="-mx-1 mb-5 flex gap-1 overflow-x-auto border-b border-border px-1">
+        {tabs.map((t, i) => (
+          <Link key={t.key} href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
+            className={cn("relative -mb-px flex h-9 shrink-0 items-center border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg",
+              tab === t.key && "border-accent font-semibold text-fg", i === 3 && "ml-3")}>{t.label}</Link>
+        ))}
+      </nav>
+
+      {isGrid && (
+        <PostsTab ws={ctx.workspace.id} clientId={id} tab={tab as "posts" | "reels" | "stories"} ym={ym} postId={isUuid(sp.post) ? sp.post! : null}
+          formats={formats} services={((services ?? []) as Array<{ id: string; name: string; active: boolean }>).filter((s) => s.active)}
+          me={ctx.user.id} can={{ create: ctx.can("contents.manage"), manage: ctx.can("contents.manage"), submit: ctx.can("approvals.manage") || ctx.can("tasks.manage") }}
+          baseHref={tabHref(tab)} />
+      )}
       {tab === "visao" && (
-        <Overview ws={ctx.workspace.id} client={id} month={month} servicesCount={(services ?? []).length} contentCount={contentCount ?? 0}
+        <Overview ws={ctx.workspace.id} client={id} month={month} servicesCount={(services ?? []).length}
           can={{ clients: canManage, contents: ctx.can("contents.manage"), approvals: ctx.can("approvals.manage") }} />
       )}
-      {tab === "conteudos" && <ClientContents ws={ctx.workspace.id} client={id} />}
       {tab === "servicos" && (
         <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <ServicesManager clientId={id} services={(services ?? []) as never} canManage={canManage} created={sp.novo === "1"} />
           <TargetsPanel ws={ctx.workspace.id} client={id} canManage={canManage} services={(services ?? []) as Array<{ id: string; name: string }>} />
         </div>
-      )}
-      {tab === "calendario" && (
-        <Panel>
-          <EmptyState icon={<CalendarDays />} title="Calendário editorial do cliente"
-            description="O calendário completo, com arrastar e soltar, abre filtrado por este cliente."
-            action={<ButtonLink href={`/app/calendario?cliente=${id}`} variant="primary">Abrir calendário</ButtonLink>} />
-        </Panel>
       )}
       {tab === "tarefas" && <ClientTasks ws={ctx.workspace.id} client={id} me={ctx.user.id} canManage={ctx.can("tasks.manage")} />}
       {tab === "aprovacoes" && <ClientApprovals client={id} />}
@@ -101,18 +133,95 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   );
 }
 
-async function Overview({ ws, client, month, servicesCount, contentCount, can }: {
-  ws: string; client: string; month: string; servicesCount: number; contentCount: number;
+/** Posts / Reels / Stories of the month as a grid; ?post=<id> opens the side panel. */
+async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, can, baseHref }: {
+  ws: string; clientId: string; tab: "posts" | "reels" | "stories"; ym: string; postId: string | null;
+  formats: Array<{ id: string; key: string; name: string; aspect_ratio: string | null; active: boolean }>;
+  services: Array<{ id: string; name: string }>; me: string; can: { create: boolean; manage: boolean; submit: boolean }; baseHref: string;
+}) {
+  const sb = await createClient();
+  const group = formatGroups.find((g) => g.key === tab)!;
+  const groupFormats = formats.filter((f) => f.active && group.formats.includes(f.key));
+  const m0 = `${ym}-01T00:00:00Z`; const m1 = `${shiftMonth(ym, 1)}-01T00:00:00Z`;
+  const [{ data }, members] = await Promise.all([
+    groupFormats.length
+      ? sb.from("content_items").select(`${contentSelect}, work_status, editor_id`).eq("workspace_id", ws).eq("client_id", clientId).is("archived_at", null)
+        .neq("publication_status", "cancelled").in("format_id", groupFormats.map((f) => f.id))
+        .or(`and(planned_publish_at.gte.${m0},planned_publish_at.lt.${m1}),and(planned_publish_at.is.null,created_at.gte.${m0},created_at.lt.${m1})`)
+        .order("planned_publish_at", { ascending: true, nullsFirst: false }).order("code").limit(300)
+      : Promise.resolve({ data: [] as unknown[] }),
+    memberMap(ws),
+  ]);
+  const rows = (data ?? []) as unknown as Array<ContentRow & { work_status: string; editor_id: string | null }>;
+  const ids = rows.map((r) => r.id);
+  const [thumbs, { data: ass }, { data: com }] = await Promise.all([
+    postThumbs(ids),
+    ids.length ? sb.from("content_assignees").select("content_id, user_id").in("content_id", ids) : Promise.resolve({ data: [] as unknown[] }),
+    ids.length ? sb.from("comments").select("content_id").in("content_id", ids) : Promise.resolve({ data: [] as unknown[] }),
+  ]);
+  const assignBy = new Map<string, string[]>();
+  for (const a of (ass ?? []) as Array<{ content_id: string; user_id: string }>) assignBy.set(a.content_id, [...(assignBy.get(a.content_id) ?? []), a.user_id]);
+  const commentsBy = new Map<string, number>();
+  for (const c of (com ?? []) as Array<{ content_id: string }>) commentsBy.set(c.content_id, (commentsBy.get(c.content_id) ?? 0) + 1);
+  const fmtByKey = new Map(formats.map((f) => [f.id, f]));
+  const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Fortaleza" });
+
+  const posts: GridPost[] = rows.map((r, i) => {
+    const people = [...new Set([...(assignBy.get(r.id) ?? []), ...(r.editor_id ? [r.editor_id] : [])])]
+      .map((u) => members.get(u)).filter(Boolean).map((m) => ({ name: m!.full_name, avatar: m!.avatar_url }));
+    const t = thumbs.get(r.id);
+    return {
+      id: r.id, number: i + 1, title: r.title, format: r.content_formats?.name ?? "Post", formatKey: fmtByKey.get(r.format_id)?.key ?? "",
+      status: postStatus(r), thumb: t?.url ?? null, link: t?.link ?? false, people, comments: commentsBy.get(r.id) ?? 0,
+      date: r.planned_publish_at ? dateFmt.format(new Date(r.planned_publish_at)) : null,
+    };
+  });
+  const hrefFor = Object.fromEntries(posts.map((p) => [p.id, `${baseHref}&post=${p.id}`]));
+  const activeMembers = [...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name, avatar: m.avatar_url }));
+
+  let drawer: React.ReactNode = null;
+  if (postId) {
+    const d = await loadPostDetail(ws, postId, members, me, { manage: can.manage, submit: can.submit });
+    if (d) {
+      const idx = posts.findIndex((p) => p.id === postId);
+      const c = d.content;
+      drawer = (
+        <PostDrawer workspaceId={ws} closeHref={baseHref} prevHref={idx > 0 ? hrefFor[posts[idx - 1].id] : null} nextHref={idx >= 0 && idx < posts.length - 1 ? hrefFor[posts[idx + 1].id] : null}
+          post={{
+            id: c.id, code: c.code, number: idx >= 0 ? idx + 1 : 0, title: c.title, clientId, lock: c.lock_version, status: postStatus(c),
+            work: (["planning", "production", "review"].includes(c.work_status) ? c.work_status : "planning") as WorkStatus,
+            format: c.content_formats?.name ?? "", aspect: c.content_formats?.aspect_ratio ?? "4:5", planned: toLocalInput(c.planned_publish_at),
+            serviceId: c.service_id, briefing: c.briefing ?? "", editorId: c.editor_id, assignees: d.assigneeIds,
+          }}
+          viewer={d.viewer} managerItems={d.managerItems} missing={d.missing} comments={d.comments} members={activeMembers} services={services}
+          canEdit={d.canEdit} canSubmit={d.canSubmit} />
+      );
+    }
+  }
+
+  const defaultDate = `${ym}-${ym === new Date().toISOString().slice(0, 7) ? String(new Date().getDate()).padStart(2, "0") : "01"}T09:00`;
+  return (
+    <>
+      <PostGrid posts={posts} hrefFor={hrefFor} baseHref={baseHref} label={group.label} clientId={clientId}
+        formats={groupFormats.map((f) => ({ id: f.id, name: f.name, key: f.key }))} services={services} canCreate={can.create} defaultDate={defaultDate} />
+      {drawer}
+    </>
+  );
+}
+
+async function Overview({ ws, client, month, servicesCount, can }: {
+  ws: string; client: string; month: string; servicesCount: number;
   can: { clients: boolean; contents: boolean; approvals: boolean };
 }) {
   const sb = await createClient();
-  const [{ data }, { count: batchCount }, { count: publishedEver }, { count: movedOn }, { data: taskRows }, members] = await Promise.all([
+  const [{ data }, { count: batchCount }, { count: publishedEver }, { count: movedOn }, { data: taskRows }, members, { count: contentCount }] = await Promise.all([
     sb.rpc("client_progress", { p_ws: ws, p_month: month, p_client: client }),
     sb.from("approval_batches").select("id", { count: "exact", head: true }).eq("client_id", client),
     sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).eq("publication_status", "published"),
     sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).not("stage", "in", "(planning,cancelled)"),
     sb.from("tasks").select("assignee_id, status, due_at, completed_at").eq("client_id", client).neq("status", "cancelled").limit(3000),
     memberMap(ws),
+    sb.from("content_items").select("id", { count: "exact", head: true }).eq("client_id", client).is("archived_at", null),
   ]);
   const rows = (data ?? []) as Progress[];
   const n = (v: number | string) => Number(v);
@@ -129,7 +238,7 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
   const steps = [
     { done: servicesCount > 0, title: "Cadastre as subdivisões do cliente", text: "São as categorias de conteúdo, como “Fotona Laser” ou “Institucional”. Elas organizam o pipeline e aparecem no menu Projetos.", href: "?aba=servicos", cta: "Cadastrar subdivisão", allowed: can.clients },
     { done: hasTarget, title: "Defina a meta do mês", text: "Quantos conteúdos aprovados vocês combinaram entregar por mês. Serve para acompanhar se o contrato está em dia.", href: "?aba=servicos", cta: "Definir meta", allowed: can.clients },
-    { done: contentCount > 0, title: "Crie o primeiro conteúdo", text: "Escolha o formato (Reels, carrossel…) e o sistema cria as tarefas de roteiro, gravação, edição, capa e legenda.", href: `/app/conteudos/novo?cliente=${client}`, cta: "Novo conteúdo", allowed: can.contents },
+    { done: (contentCount ?? 0) > 0, title: "Crie o primeiro post", text: "Na aba Posts (ou Reels/Stories), clique em Novo post. Depois envie a mídia e a legenda no próprio post.", href: `/app/clientes/${client}?aba=posts`, cta: "Ir para Posts", allowed: can.contents },
     { done: (movedOn ?? 0) > 0, title: "Acompanhe a produção no pipeline", text: "Cada conteúdo avança sozinho de coluna quando a equipe conclui as tarefas e envia os arquivos.", href: `/app/pipeline?cliente=${client}`, cta: "Abrir pipeline", allowed: true },
     { done: (batchCount ?? 0) > 0, title: "Envie para aprovação do cliente", text: "Gere um link seguro e mande pelo WhatsApp. O cliente aprova ou pede ajustes sem precisar de cadastro.", href: `/app/aprovacoes/novo?cliente=${client}`, cta: "Gerar link de aprovação", allowed: can.approvals },
     { done: (publishedEver ?? 0) > 0, title: "Agende e confirme a publicação", text: "Conteúdos aprovados vão para a coluna Pronto. Registre a data agendada e confirme quando for ao ar.", href: `/app/pipeline?cliente=${client}`, cta: "Ir para o pipeline", allowed: true },
@@ -335,19 +444,6 @@ async function Overview({ ws, client, month, servicesCount, contentCount, can }:
         <p className="mt-2 text-xs text-muted">Cada conteúdo conta uma vez: um Reels com vídeo, capa e legenda é 1 conteúdo. “Enviado” não significa aprovado — a aprovação é do cliente.</p>
       </section>
     </div>
-  );
-}
-
-async function ClientContents({ ws, client }: { ws: string; client: string }) {
-  const sb = await createClient();
-  const { data } = await sb.from("content_items").select(contentSelect).eq("workspace_id", ws).eq("client_id", client)
-    .is("archived_at", null).order("updated_at", { ascending: false }).limit(100);
-  const rows = (data ?? []) as unknown as ContentRow[];
-  const thumb = await thumbnails(rows);
-  return (
-    <Panel padded={false} actions={<Link href={`/app/conteudos?cliente=${client}`} className="text-xs text-muted hover:text-fg">Abrir na central com filtros</Link>} title="Conteúdos recentes">
-      {rows.length === 0 ? <EmptyState icon={<Film />} title="Nenhum conteúdo para este cliente" /> : <ContentTable rows={rows} thumb={thumb} showClient={false} />}
-    </Panel>
   );
 }
 

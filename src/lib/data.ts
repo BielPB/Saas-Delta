@@ -217,22 +217,56 @@ export async function pipelineExtras(ws: string, contentIds: string[]) {
   return empty;
 }
 
-/** Sidebar "Projetos": active clients with their services and open-content counts. */
-export async function projectTree(ws: string) {
+/** Sidebar: client categories (folders) and clients with their open-post counts. */
+export async function clientNav(ws: string) {
   const sb = await createClient();
-  const [clients, services, { data: open }] = await Promise.all([
-    listClientsLite(ws),
-    listServicesLite(ws),
-    sb.from("content_items").select("client_id, service_id").eq("workspace_id", ws).not("stage", "in", "(published,cancelled)").limit(2000),
+  const [{ data: cats }, { data: cls }, { data: open }] = await Promise.all([
+    sb.from("client_categories").select("id, name, position").eq("workspace_id", ws).order("position").order("name"),
+    sb.from("clients").select("id, name, status, category_id").eq("workspace_id", ws).neq("status", "archived").order("name"),
+    sb.from("content_items").select("client_id").eq("workspace_id", ws).not("stage", "in", "(published,cancelled)").limit(3000),
   ]);
-  const byService = new Map<string, number>();
-  const byClient = new Map<string, number>();
-  for (const o of (open ?? []) as Array<{ client_id: string; service_id: string | null }>) {
-    byClient.set(o.client_id, (byClient.get(o.client_id) ?? 0) + 1);
-    if (o.service_id) byService.set(o.service_id, (byService.get(o.service_id) ?? 0) + 1);
+  const count = new Map<string, number>();
+  for (const o of (open ?? []) as Array<{ client_id: string }>) count.set(o.client_id, (count.get(o.client_id) ?? 0) + 1);
+  return {
+    categories: (cats ?? []) as Array<{ id: string; name: string; position: number }>,
+    clients: ((cls ?? []) as Array<{ id: string; name: string; status: string; category_id: string | null }>).map((c) => ({ ...c, open: count.get(c.id) ?? 0 })),
+  };
+}
+
+/**
+ * Card thumbnails for the post grid: the first image of the current version of the
+ * cover / art / carousel (or a video poster). Drive links are flagged so the card can show a play badge.
+ */
+export async function postThumbs(contentIds: string[]) {
+  const out = new Map<string, { url: string | null; link: boolean }>();
+  if (!contentIds.length) return out;
+  const sb = await createClient();
+  const { data: ds } = await sb.from("deliverables").select("content_id, kind, current_version_id").in("content_id", contentIds).not("current_version_id", "is", null);
+  const rows = (ds ?? []) as Array<{ content_id: string; kind: string; current_version_id: string }>;
+  const rank = (k: string) => ({ cover: 0, image: 1, carousel: 2, video: 3 } as Record<string, number>)[k] ?? 9;
+  const best = new Map<string, { kind: string; version: string }>();
+  for (const r of rows) {
+    if (rank(r.kind) === 9) continue;
+    const cur = best.get(r.content_id);
+    if (!cur || rank(r.kind) < rank(cur.kind)) best.set(r.content_id, { kind: r.kind, version: r.current_version_id });
   }
-  return clients.filter((c) => c.status !== "inactive").map((c) => ({
-    id: c.id, name: c.name, count: byClient.get(c.id) ?? 0,
-    services: services.filter((s) => s.client_id === c.id && s.active).map((s) => ({ id: s.id, name: s.name, count: byService.get(s.id) ?? 0 })),
-  }));
+  const versionIds = [...best.values()].map((b) => b.version);
+  if (!versionIds.length) return out;
+  const [{ data: assets }, { data: versions }] = await Promise.all([
+    sb.from("deliverable_version_assets").select("version_id, position, file_assets(storage_path, thumbnail_path, mime_type)").in("version_id", versionIds).order("position"),
+    sb.from("deliverable_versions").select("id, external_url").in("id", versionIds),
+  ]);
+  const firstAsset = new Map<string, string>();
+  for (const a of (assets ?? []) as unknown as Array<{ version_id: string; file_assets: { storage_path: string | null; thumbnail_path: string | null; mime_type: string | null } | null }>) {
+    if (firstAsset.has(a.version_id) || !a.file_assets) continue;
+    const p = a.file_assets.mime_type?.startsWith("image/") ? a.file_assets.thumbnail_path ?? a.file_assets.storage_path : a.file_assets.thumbnail_path;
+    if (p) firstAsset.set(a.version_id, p);
+  }
+  const ext = new Map(((versions ?? []) as Array<{ id: string; external_url: string | null }>).map((v) => [v.id, v.external_url]));
+  const signed = await signPaths([...firstAsset.values()]);
+  for (const [content, b] of best) {
+    const p = firstAsset.get(b.version);
+    out.set(content, { url: p ? signed.get(p) ?? null : null, link: !p && Boolean(ext.get(b.version)) });
+  }
+  return out;
 }

@@ -144,3 +144,25 @@ export async function setClientMembers(client: string, userIds: string[]) {
   revalidatePath(`/app/clientes/${client}`);
   return { ok: true as const, message: "Equipe do cliente atualizada." };
 }
+
+export async function createCategory(name: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  const n = name.trim().slice(0, 60);
+  if (!n) return fail("Dê um nome para a categoria.");
+  const sb = await createClient();
+  const { data: last } = await sb.from("client_categories").select("position").eq("workspace_id", ctx.workspace.id).order("position", { ascending: false }).limit(1).maybeSingle();
+  const { error } = await sb.from("client_categories").insert({ workspace_id: ctx.workspace.id, name: n, position: ((last?.position as number | undefined) ?? -1) + 1 });
+  if (error) return fail(/duplicate|unique/i.test(error.message) ? "Já existe uma categoria com esse nome." : error);
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Categoria criada." };
+}
+
+export async function setClientCategory(clientId: string, categoryId: string | null): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || (categoryId !== null && !isUuid(categoryId))) return fail("Seleção inválida.");
+  const sb = await createClient();
+  const { error } = await sb.from("clients").update({ category_id: categoryId }).eq("id", clientId).eq("workspace_id", ctx.workspace.id);
+  if (error) return fail(error);
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Cliente movido." };
+}

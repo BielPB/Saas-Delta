@@ -6,6 +6,8 @@ export function activityText(action: string, data: Record<string, unknown> = {})
   switch (action) {
     case "content.created": return `criou o conteúdo “${data.title ?? ""}”`;
     case "content.duplicated": return "duplicou um conteúdo";
+    case "content.status_set": return `mudou o status para “${({ planning: "Planejamento", production: "Em produção", review: "Revisão" } as Record<string, string>)[String(data.status)] ?? data.status}”`;
+    case "content.submitted": return "liberou o post para aprovação do cliente";
     case "content.cancelled": return "cancelou o conteúdo";
     case "task.started": return "iniciou uma tarefa";
     case "task.completed": return "concluiu uma tarefa";

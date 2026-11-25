@@ -71,7 +71,7 @@ export function ContentActions({ content, can, clientId }: {
   );
 }
 
-interface DeliverableItem { id: string; kind: DeliverableKind; title: string; approval: VersionStatus; required: boolean; clientFacing: boolean; versions: number; current: number; canUpload: boolean; lastText: string | null }
+export interface DeliverableItem { id: string; kind: DeliverableKind; title: string; approval: VersionStatus; required: boolean; clientFacing: boolean; versions: number; current: number; canUpload: boolean; lastText: string | null }
 
 export function DeliverablesManager({ contentId, workspaceId, clientId, serviceId, deliverables, canInvalidate, bare }: {
   contentId: string; workspaceId: string; clientId: string; serviceId: string | null; deliverables: DeliverableItem[]; canInvalidate: boolean; me: string;

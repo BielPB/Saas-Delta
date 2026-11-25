@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, ArrowLeft, Bell, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
+  Activity, ArrowLeft, Bell, ChevronDown, ChevronRight, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
   ListTodo, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Plug, Settings, Stamp, User, Users, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/overlay";
 import { Header } from "./header";
-import { ProjectTree, type ProjectNode } from "./project-tree";
+import { ClientNav, type NavCategory, type NavClient } from "./client-nav";
 
 const icons: Record<string, ReactNode> = {
   layout: <LayoutGrid />, check: <CheckSquare />, list: <ListTodo />, kanban: <Kanban />, calendar: <CalendarDays />,
@@ -21,9 +21,9 @@ const icons: Record<string, ReactNode> = {
 
 export interface NavSection { title: string; items: Array<{ href: string; label: string; icon: string }> }
 
-export function Shell({ sections, projects, canManageClients, children, initialCollapsed, unread, user, workspace, workspaces }: {
+export function Shell({ sections, clientsNav, canManageClients, children, initialCollapsed, unread, user, workspace, workspaces }: {
   sections: NavSection[];
-  projects: ProjectNode[];
+  clientsNav: { categories: NavCategory[]; clients: NavClient[] };
   canManageClients: boolean;
   children: ReactNode;
   initialCollapsed: boolean;
@@ -81,34 +81,45 @@ export function Shell({ sections, projects, canManageClients, children, initialC
 
   const isActive = (href: string) => (href === "/app" ? pathname === "/app" : pathname.startsWith(href));
 
+  const [moreOpen, setMoreOpen] = useState(() => sections.slice(1).some((sec) => sec.items.some((i) => isActive(i.href))));
+
+  const renderItems = (items: NavSection["items"], compact: boolean) => (
+    <ul className="space-y-px">
+      {items.map((i) => {
+        const active = isActive(i.href);
+        const link = (
+          <Link href={i.href} aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0",
+              active && "bg-surface-2 font-medium text-fg",
+              compact && "w-8 justify-center px-0",
+            )}>
+            {active && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
+            {icons[i.icon]}
+            {compact ? <span className="sr-only">{i.label}</span> : <span className="truncate">{i.label}</span>}
+            {i.href === "/app/notificacoes" && unread > 0 && !compact && (
+              <span className="tabular ml-auto rounded-sm bg-accent px-1 text-[10.5px] font-semibold text-accent-fg">{unread > 99 ? "99+" : unread}</span>
+            )}
+          </Link>
+        );
+        return <li key={i.href}>{compact ? <Tooltip content={i.label} side="right">{link}</Tooltip> : link}</li>;
+      })}
+    </ul>
+  );
+
   const navList = (compact: boolean) => (
-    <nav aria-label="Navegação principal" className="flex-1 space-y-5 overflow-y-auto px-2 py-3">
-      {!compact && <ProjectTree projects={projects} canManage={canManageClients} />}
-      {sections.map((s) => (
-        <div key={s.title}>
-          {!compact && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wider text-subtle">{s.title}</p>}
-          {compact && <div className="mx-2 mb-1 h-px bg-border" aria-hidden />}
-          <ul className="space-y-px">
-            {s.items.map((i) => {
-              const active = isActive(i.href);
-              const link = (
-                <Link href={i.href} aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0",
-                    active && "bg-surface-2 font-medium text-fg",
-                    compact && "w-8 justify-center px-0",
-                  )}>
-                  {active && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
-                  {icons[i.icon]}
-                  {compact ? <span className="sr-only">{i.label}</span> : <span className="truncate">{i.label}</span>}
-                  {i.href === "/app/notificacoes" && unread > 0 && !compact && (
-                    <span className="tabular ml-auto rounded-sm bg-accent px-1 text-[10.5px] font-semibold text-accent-fg">{unread > 99 ? "99+" : unread}</span>
-                  )}
-                </Link>
-              );
-              return <li key={i.href}>{compact ? <Tooltip content={i.label} side="right">{link}</Tooltip> : link}</li>;
-            })}
-          </ul>
+    <nav aria-label="Navegação principal" className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
+      {sections[0] && renderItems(sections[0].items, compact)}
+      {!compact && <ClientNav categories={clientsNav.categories} clients={clientsNav.clients} canManage={canManageClients} />}
+      {sections.slice(1).map((sec) => compact ? (
+        <div key={sec.title}><div className="mx-2 mb-1 h-px bg-border" aria-hidden />{renderItems(sec.items, true)}</div>
+      ) : (
+        <div key={sec.title}>
+          <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}
+            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
+            {moreOpen ? <ChevronDown className="size-3" aria-hidden /> : <ChevronRight className="size-3" aria-hidden />} {sec.title}
+          </button>
+          {moreOpen && renderItems(sec.items, false)}
         </div>
       ))}
     </nav>
