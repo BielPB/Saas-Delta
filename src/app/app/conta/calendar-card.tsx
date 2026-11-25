@@ -16,7 +16,7 @@ const notices: Record<string, string> = {
   configuracao: "A integração com o Google ainda não foi configurada no servidor (GOOGLE_CLIENT_ID / SECRET).",
 };
 
-export function CalendarCard({ conn, configured, notice }: { conn: Conn | null; configured: boolean; notice: string | null }) {
+export function CalendarCard({ conn, configured, notice, redirectUri }: { conn: Conn | null; configured: boolean; notice: string | null; redirectUri: string }) {
   const [pending, start] = useTransition();
   const [leaving, setLeaving] = useState(false);
   const toast = useToast();
@@ -70,6 +70,14 @@ export function CalendarCard({ conn, configured, notice }: { conn: Conn | null; 
             ))}
           </ul>
         </>
+      )}
+      {!conn && configured && (
+        <details className="text-xs text-muted">
+          <summary className="cursor-pointer">Deu erro “redirect_uri_mismatch” no Google?</summary>
+          <p className="mt-1.5">No Google Cloud, em Clientes → seu cliente → URIs de redirecionamento autorizados, cadastre exatamente:</p>
+          <code className="mt-1 block break-all rounded bg-surface-2 px-2 py-1 font-mono text-[11px] text-fg">{redirectUri}</code>
+          <p className="mt-1.5">Abra o sistema sempre por este mesmo endereço ao conectar.</p>
+        </details>
       )}
       <Dialog open={leaving} onClose={() => setLeaving(false)} size="sm" title="Desconectar o Google Agenda?"
         description="O Delta Flow perde o acesso à sua agenda. Seus outros compromissos não são tocados."

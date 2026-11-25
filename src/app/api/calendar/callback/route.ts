@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getContext } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/drive/crypto";
-import { appOrigin } from "@/lib/origin";
+import { appOrigin, requestOrigin } from "@/lib/origin";
 import { exchangeCode, userInfo } from "@/lib/drive/google";
 import { CALENDAR_SCOPE } from "@/lib/calendar/google";
 import { syncCalendar } from "@/lib/calendar/sync";
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const origin = await appOrigin();
-    const tokens = await exchangeCode(code, `${origin}/api/calendar/callback`);
+    const tokens = await exchangeCode(code, `${await requestOrigin()}/api/calendar/callback`);
     if (!tokens.refresh_token) return back("erro-offline");
     if (!tokens.scope.split(" ").includes(CALENDAR_SCOPE)) return back("escopo");
     const me = await userInfo(tokens.access_token);

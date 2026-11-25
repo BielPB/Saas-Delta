@@ -18,3 +18,15 @@ export async function appOrigin(): Promise<string> {
   if (env && !(isLocal(env) && fromRequest && !isLocal(fromRequest))) return env;
   return fromRequest || env || "http://localhost:3000";
 }
+
+/**
+ * Origin the browser is actually on (Vercel forwards it). OAuth redirects must use this one:
+ * the state cookie lives on this host, so the callback has to come back here.
+ */
+export async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (!host) return appOrigin();
+  const proto = h.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)/.test(host) ? "http" : "https");
+  return `${proto}://${host}`;
+}
