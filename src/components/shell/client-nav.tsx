@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Menu, MenuItem, useToast } from "@/components/ui/overlay";
 import { createCategory, setClientCategory } from "@/app/app/clientes/actions";
 
-export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number }
+export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number; logo: string | null }
 export interface NavCategory { id: string; name: string; position: number }
 
 /** Deterministic, calm avatar colour per client (no logos uploaded yet). */
@@ -17,8 +17,12 @@ export function clientHue(name: string) {
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return hues[h % hues.length];
 }
-export function ClientAvatar({ name, size = 24 }: { name: string; size?: number }) {
+export function ClientAvatar({ name, size = 24, src }: { name: string; size?: number; src?: string | null }) {
   const hue = clientHue(name);
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element -- signed private URL
+    return <img src={src} alt="" aria-hidden className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
+  }
   return (
     <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold"
       style={{ width: size, height: size, fontSize: Math.max(10, size * 0.42), background: `hsl(${hue} 45% 22%)`, color: `hsl(${hue} 70% 78%)` }}>
@@ -91,7 +95,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
                         {on && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
                         <Link href={`/app/clientes/${c.id}`} aria-current={on ? "page" : undefined}
                           className={cn("flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px]", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
-                          <ClientAvatar name={c.name} size={22} />
+                          <ClientAvatar name={c.name} size={22} src={c.logo} />
                           <span className="truncate">{c.name}</span>
                           {c.open > 0 && <span className="tabular ml-auto text-[11px] text-subtle group-hover:hidden">{c.open}</span>}
                         </Link>

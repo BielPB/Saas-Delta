@@ -17,11 +17,12 @@ import { ServiceDot } from "@/components/content/badges";
 import { TaskList } from "@/components/tasks/task-list";
 import { ClientForm } from "../client-form";
 import { ClientStatusActions, ClientTeam, ServicesManager, TargetsManager } from "./client-panels";
-import { ClientAvatar } from "@/components/shell/client-nav";
 import { PostGrid, type GridPost } from "./post-grid";
 import { PostDrawer } from "./post-drawer";
 import { FeedApproval, type FeedTile } from "./feed-approval";
 import { DuplicateMonth, OnboardingBar, ProfileForm } from "./client-sheet";
+import { ClientLogo } from "./client-logo";
+import { DownloadMonth } from "./download-month";
 import { onboardingOf } from "@/lib/client-sheet";
 
 export const metadata: Metadata = { title: "Cliente" };
@@ -73,7 +74,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     <>
       <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <ClientAvatar name={client.name as string} size={44} />
+          <ClientLogo workspaceId={ctx.workspace.id} clientId={id} name={client.name as string} canEdit={canManage}
+            src={client.logo_path ? (await signPaths([client.logo_path as string], 3600)).get(client.logo_path as string) ?? null : null} />
           <div className="min-w-0">
             <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight">
               {client.name as string}
@@ -91,6 +93,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
             </nav>
           )}
+          {(isGrid || tab === "aprovacoes") && <DownloadMonth clientId={id} ym={ym} fileName={`${String(client.name).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "cliente"}-${ym}.zip`} />}
           {isGrid && ctx.can("contents.manage") && <DuplicateMonth clientId={id} ym={ym} monthLabel={monthLabel(ym)} nextLabel={monthLabel(shiftMonth(ym, 1))} />}
         </div>
       </header>
@@ -177,7 +180,12 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
     return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, video: g === "reels", status: postStatus(r), ready: !missing.has(r.id), missing: missing.has(r.id),
       href: `/app/clientes/${clientId}?aba=${g}&mes=${ym}&post=${r.id}` };
   });
-  return <FeedApproval tiles={tiles} clientId={clientId} clientName={clientName} ym={ym} monthLabel={monthLabel(ym)} canSend={canSend} />;
+  const { data: batches } = await sb.from("approval_batches").select("id, status, approval_links(expires_at, revoked_at, last_accessed_at), approval_batch_items(content_id)")
+    .eq("workspace_id", ws).eq("client_id", clientId).eq("period_month", `${ym}-01`).in("status", ["open", "submitted"]).order("created_at", { ascending: false }).limit(3);
+  type B = { approval_links: Array<{ expires_at: string | null; revoked_at: string | null; last_accessed_at: string | null }>; approval_batch_items: Array<{ content_id: string }> };
+  const live = ((batches ?? []) as unknown as B[]).map((b) => ({ b, l: b.approval_links.find((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) })).find((x) => x.l);
+  const activeLink = live ? { expires: live.l!.expires_at, lastAccess: live.l!.last_accessed_at, posts: live.b.approval_batch_items.length } : null;
+  return <FeedApproval tiles={tiles} clientId={clientId} clientName={clientName} ym={ym} monthLabel={monthLabel(ym)} canSend={canSend} activeLink={activeLink} />;
 }
 
 /** Posts / Reels / Stories of the month as a grid; ?post=<id> opens the side panel. */

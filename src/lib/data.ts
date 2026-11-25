@@ -223,14 +223,16 @@ export async function clientNav(ws: string) {
   const sb = await createClient();
   const [{ data: cats }, { data: cls }, { data: open }] = await Promise.all([
     sb.from("client_categories").select("id, name, position").eq("workspace_id", ws).order("position").order("name"),
-    sb.from("clients").select("id, name, status, category_id").eq("workspace_id", ws).neq("status", "archived").order("name"),
+    sb.from("clients").select("id, name, status, category_id, logo_path").eq("workspace_id", ws).neq("status", "archived").order("name"),
     sb.from("content_items").select("client_id").eq("workspace_id", ws).not("stage", "in", "(published,cancelled)").limit(3000),
   ]);
   const count = new Map<string, number>();
   for (const o of (open ?? []) as Array<{ client_id: string }>) count.set(o.client_id, (count.get(o.client_id) ?? 0) + 1);
+  const list = (cls ?? []) as Array<{ id: string; name: string; status: string; category_id: string | null; logo_path: string | null }>;
+  const logos = await signPaths(list.map((c) => c.logo_path), 3600);
   return {
     categories: (cats ?? []) as Array<{ id: string; name: string; position: number }>,
-    clients: ((cls ?? []) as Array<{ id: string; name: string; status: string; category_id: string | null }>).map((c) => ({ ...c, open: count.get(c.id) ?? 0 })),
+    clients: list.map(({ logo_path, ...c }) => ({ ...c, open: count.get(c.id) ?? 0, logo: logo_path ? logos.get(logo_path) ?? null : null })),
   };
 }
 

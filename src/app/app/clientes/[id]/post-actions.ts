@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fail, type ActionResult } from "@/lib/errors";
 import { fromLocalInput } from "@/lib/format";
 import { isUuid } from "@/lib/utils";
-import { createBatch } from "@/app/app/aprovacoes/actions";
+import { appOrigin } from "@/lib/origin";
 
 const refresh = (clientId?: string, contentId?: string) => {
   if (clientId) revalidatePath(`/app/clientes/${clientId}`);
@@ -67,7 +67,7 @@ export async function setEditor(contentId: string, clientId: string, userId: str
  * "Enviar para aprovação" of the month's feed: releases every post whose files are all in
  * (same rule as the side panel), then creates one approval link with the posts ready for the client.
  */
-export async function sendFeedForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string; sent: number; skipped: number }>> {
+export async function sendFeedForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string | null; existing: boolean; pin: string | null; sent: number; skipped: number }>> {
   const ctx = await getContext();
   if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
   const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
@@ -100,12 +100,14 @@ export async function sendFeedForApproval(clientId: string, ym: string, contentI
     const st = (states ?? []).find((s) => s.id === id) as { approval_status: string; publication_status: string } | undefined;
     return r && !r.missing && !r.unreleased && st && st.approval_status !== "approved" && !["published", "cancelled"].includes(st.publication_status);
   });
-  if (!ready.length) return fail("Nenhum post está pronto para o cliente: envie a mídia e a legenda dos posts deste mês.");
+  if (!ready.length) return fail("Nenhum post está pronto para o cliente. Envie a mídia e a legenda dos posts deste mês.");
 
-  const { data: client } = await sb.from("clients").select("name").eq("id", clientId).eq("workspace_id", ctx.workspace.id).maybeSingle();
-  const label = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(new Date(`${ym}-15T12:00:00`)).replace(".", "").replace(" de ", "/");
-  const r = await createBatch({ client_id: clientId, name: `Preview — ${client?.name ?? "Cliente"} · ${label}`, content_ids: ready });
-  if (!r.ok) return r;
+  const { data: res, error: e } = await sb.rpc("send_month_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`, p_content_ids: ready });
+  if (e) return fail(e);
+  const out = res as { existing: boolean; added: number; token?: string; pin?: string | null };
   refresh(clientId);
-  return { ok: true, data: { url: r.data!.url, sent: ready.length, skipped: ids.length - ready.length } };
+  return { ok: true, data: {
+    url: out.token ? `${await appOrigin()}/aprovacao/${out.token}` : null, existing: out.existing, pin: out.pin ?? null,
+    sent: out.existing ? out.added : ready.length, skipped: ids.length - ready.length,
+  } };
 }
