@@ -143,7 +143,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
               </div>
             )}
 
-            <Field label="Tarefas deste post" hint="Ex.: edição, gravação, captação. Cada tarefa vai para Minhas demandas de quem receber.">
+            <Field label="Tarefas deste post" hint="Cada tarefa vai para Minhas demandas de quem receber. Com etapa definida, concluir a tarefa avança o post.">
               {tasks.length > 0 && (
                 <ul className="mb-2 space-y-1">
                   {tasks.map((t) => (
@@ -157,7 +157,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
                   ))}
                 </ul>
               )}
-              {canTask && <NewTaskButton clients={[]} members={members.map((m) => ({ id: m.id, name: m.name }))} post={{ id: post.id, clientId: post.clientId, title: post.title }} label="Tarefa" size="sm" variant="secondary" />}
+              {canTask && <NewTaskButton clients={[]} members={members.map((m) => ({ id: m.id, name: m.name }))} post={{ id: post.id, clientId: post.clientId, title: post.title, step: post.work }} label="Tarefa" size="sm" variant="secondary" />}
             </Field>
 
             <Field label="Responsáveis" hint="Quem cuida do post (roteiro, legenda, gestão).">

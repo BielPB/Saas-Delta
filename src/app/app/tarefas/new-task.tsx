@@ -15,11 +15,13 @@ import { createTask } from "./actions";
 export function NewTaskButton({ clients, members, posts = [], post, label = "Nova tarefa", size, variant = "primary" }: {
   clients: Array<{ id: string; name: string }>; members: Array<{ id: string; name: string }>;
   posts?: Array<{ id: string; client_id: string; label: string }>;
-  post?: { id: string; clientId: string; title: string };
+  post?: { id: string; clientId: string; title: string; step?: string };
   label?: string; size?: "sm" | "md"; variant?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
   const [client, setClient] = useState(post?.clientId ?? "");
+  const [postId, setPostId] = useState(post?.id ?? "");
+  const stepLabel: Record<string, string> = { script: "Roteiro", capture: "Gravação", editing: "Edição", finishing: "Finalização" };
   const toast = useToast();
   const router = useRouter();
   const [state, action] = useActionState<ActionResult | null, FormData>(async (prev, fd) => {
@@ -37,7 +39,7 @@ export function NewTaskButton({ clients, members, posts = [], post, label = "Nov
         <form action={action} className="space-y-4">
           <FormError message={state && !state.ok ? state.error : null} />
           <Field label="Título" error={fe?.title} required>
-            {(p) => <Input {...p} name="title" autoFocus defaultValue={post ? `Edição — ${post.title}` : ""} placeholder="Ex.: Edição, Gravação, Captação, Reunião…" />}
+            {(p) => <Input {...p} name="title" autoFocus defaultValue={post ? `${stepLabel[post.step ?? "editing"] ?? "Edição"} — ${post.title}` : ""} placeholder="Ex.: Edição, Gravação, Captação, Reunião…" />}
           </Field>
           {post ? (
             <>
@@ -55,13 +57,26 @@ export function NewTaskButton({ clients, members, posts = [], post, label = "Nov
               </Field>
               <Field label="Post (opcional)">
                 {(p) => (
-                  <Select {...p} name="content_id" key={client} defaultValue="" disabled={!client}>
+                  <Select {...p} name="content_id" key={client} defaultValue="" disabled={!client} onChange={(e) => setPostId(e.target.value)}>
                     <option value="">{client ? (clientPosts.length ? "Tarefa avulsa (sem post)" : "Nenhum post aberto") : "Escolha o cliente"}</option>
                     {clientPosts.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
                   </Select>
                 )}
               </Field>
             </div>
+          )}
+          {postId && (
+            <Field label="Etapa do post" hint="Ao concluir a tarefa, o post avança para a etapa seguinte no pipeline.">
+              {(p) => (
+                <Select {...p} name="step_key" defaultValue={post?.step ?? ""}>
+                  <option value="">Nenhuma (não move o post)</option>
+                  <option value="script">Roteiro → avança para Gravação</option>
+                  <option value="capture">Gravação → avança para Edição</option>
+                  <option value="editing">Edição → avança para Finalização</option>
+                  <option value="finishing">Finalização (o post fica pronto para enviar)</option>
+                </Select>
+              )}
+            </Field>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Responsável">{(p) => <Select {...p} name="assignee_id"><option value="">Sem responsável</option>{members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</Select>}</Field>

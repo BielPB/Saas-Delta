@@ -56,7 +56,11 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     : t.deliverable_id ? (delivered
         ? { tone: "info", title: "Entrega enviada", text: "Se estiver tudo certo, clique em Concluir." }
         : { tone: "info", title: `Envie a entrega${kindName ? ` (${kindName})` : ""}`, text: "A tarefa só pode ser concluída depois do envio.", cta: entregaHref ? { href: entregaHref, label: "Enviar entrega" } : undefined })
-    : { tone: "info", title: t.status === "in_progress" ? "Em andamento" : "Pronta para começar", text: "Use Iniciar e Concluir no topo da página." };
+    : { tone: "info", title: t.status === "in_progress" ? "Em andamento" : "Pronta para começar",
+        text: t.kind === "general" && t.content_id && t.step_key
+          ? `Ao concluir, o post avança para ${({ script: "Gravação", capture: "Edição", editing: "Finalização", finishing: "Finalização (pronto para enviar ao cliente)" } as Record<string, string>)[t.step_key] ?? "a próxima etapa"} no pipeline.`
+          : "Use Iniciar e Concluir no topo da página.",
+        cta: t.content_id ? { href: `/app/conteudos/${t.content_id}`, label: "Abrir post" } : undefined };
 
   const facts: Array<[string, React.ReactNode]> = [
     ["Status", <TaskStatusBadge key="s" t={t} />],

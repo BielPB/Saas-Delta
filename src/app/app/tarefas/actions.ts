@@ -27,6 +27,7 @@ const taskSchema = z.object({
   description: z.string().trim().max(5000).optional().transform((v) => v || null),
   client_id: z.string().uuid("Selecione o cliente."),
   content_id: z.string().optional().transform((v) => (isUuid(v) ? v : null)),
+  step_key: z.string().optional().transform((v) => (v && ["script", "capture", "editing", "finishing"].includes(v) ? v : null)),
   assignee_id: z.string().optional().transform((v) => (isUuid(v) ? v : null)),
   due_at: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
@@ -39,7 +40,7 @@ export async function createTask(_: ActionResult | null, form: FormData): Promis
   const d = parsed.data;
   const sb = await createClient();
   const { error } = await sb.from("tasks").insert({
-    workspace_id: ctx.workspace.id, client_id: d.client_id, content_id: d.content_id, title: d.title, description: d.description,
+    workspace_id: ctx.workspace.id, client_id: d.client_id, content_id: d.content_id, step_key: d.content_id ? d.step_key : null, title: d.title, description: d.description,
     assignee_id: d.assignee_id, due_at: fromLocalInput(d.due_at, ctx.workspace.timezone), priority: d.priority,
     kind: "general", status: "pending", created_by: ctx.user.id,
   });
