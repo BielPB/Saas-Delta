@@ -4,19 +4,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { ChevronDown, ChevronRight, FolderPlus, MoreHorizontal, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clientHue } from "@/lib/client-color";
 import { Menu, MenuItem, useToast } from "@/components/ui/overlay";
 import { createCategory, setClientCategory } from "@/app/app/clientes/actions";
 
 export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number; logo: string | null }
 export interface NavCategory { id: string; name: string; position: number }
 
-/** Deterministic, calm avatar colour per client (no logos uploaded yet). */
-const hues = [152, 200, 262, 28, 340, 92, 180, 8];
-export function clientHue(name: string) {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return hues[h % hues.length];
-}
 export function ClientAvatar({ name, size = 24, src }: { name: string; size?: number; src?: string | null }) {
   const hue = clientHue(name);
   if (src) {

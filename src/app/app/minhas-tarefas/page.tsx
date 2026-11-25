@@ -8,7 +8,7 @@ import { formatGroups, postStatus, postStatusMeta, type PostStatusKey } from "@/
 import { cn, isUuid } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/primitives";
 import { TaskList } from "@/components/tasks/task-list";
-import { clientHue } from "@/components/shell/client-nav";
+import { clientHue } from "@/lib/client-color";
 import { StatusPill } from "@/app/app/clientes/[id]/post-grid";
 import { ViewAs } from "./view-as";
 import { NewTaskButton } from "@/app/app/tarefas/new-task";
