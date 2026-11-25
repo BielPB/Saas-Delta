@@ -88,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     { key: "unconfirmed", icon: <Circle />, label: "Agendados sem confirmação", items: att.unconfirmed_published.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDateTime(c.at) })), more: link({ publicacao: "scheduled" }) },
     { key: "late", icon: <CalendarClock />, label: "Publicações atrasadas", items: att.late_publications.map((c) => ({ href: `/app/conteudos/${c.id}`, text: `#${c.code} ${c.title}`, meta: formatDate(c.at) })), more: link({ publicacao: "late" }) },
     { key: "files", icon: <FileWarning />, label: "Arquivos não encontrados", items: att.missing_files.map((x) => ({ href: `/app/arquivos?arquivo=${x.id}`, text: x.name })), more: "/app/arquivos?status=missing" },
-    { key: "target", icon: <Target />, label: "Clientes abaixo da meta", items: att.clients_below_target.map((c) => ({ href: `/app/clientes/${c.client_id}`, text: c.name, meta: `${c.produced} de ${c.expected} esperados` })), more: "/app/clientes?visao=progresso" },
+    { key: "target", icon: <Target />, label: "Clientes abaixo da meta", items: att.clients_below_target.map((c) => ({ href: `/app/clientes/${c.client_id}`, text: c.name, meta: `${c.produced} de ${c.expected} esperados` })), more: "/app/clientes" },
   ].filter((x) => x.items.length > 0) : [];
 
   const monthLabel = (m: string) => new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(`${m}-15`)).replace(".", "");
