@@ -10,7 +10,7 @@ export function ColumnChart({ data, label, height = 140 }: {
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
-    <figure>
+    <figure className="relative">
       <div className="flex items-end gap-[2px]" style={{ height }} aria-hidden>
         {data.map((d) => (
           <div key={d.label} className="group relative flex h-full flex-1 flex-col justify-end">
@@ -25,10 +25,13 @@ export function ColumnChart({ data, label, height = 140 }: {
       <div className="mt-1.5 flex gap-[2px] border-t border-border pt-1.5" aria-hidden>
         {data.map((d) => <span key={d.label} className="flex-1 truncate text-center text-[11px] text-subtle">{d.label}</span>)}
       </div>
-      <table className="sr-only">
-        <caption>{label}</caption>
-        <tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{d.value}</td><td>{d.detail}</td></tr>)}</tbody>
-      </table>
+      {/* Tables ignore width/height/overflow, so .sr-only on the table itself still stretches the page: wrap it. */}
+      <div className="sr-only">
+        <table>
+          <caption>{label}</caption>
+          <tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{d.value}</td><td>{d.detail}</td></tr>)}</tbody>
+        </table>
+      </div>
     </figure>
   );
 }
