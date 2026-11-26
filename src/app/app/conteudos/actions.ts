@@ -22,6 +22,7 @@ const newContent = z.object({
   due_at: z.string().optional(),
   planned_publish_at: z.string().optional(),
   channel: z.string().optional(),
+  stage: z.enum(["script", "capture", "editing", "finishing"]).optional(),
 });
 
 export async function createContentAction(_: ActionResult | null, form: FormData): Promise<ActionResult> {
@@ -45,6 +46,7 @@ export async function createContentAction(_: ActionResult | null, form: FormData
     p_assignees: assignees,
   });
   if (error) return fail(error);
+  if (!d.template_id && d.stage && d.stage !== "script") await sb.rpc("set_work_status", { p_content: data as string, p_status: d.stage });
   const another = form.get("_another") === "1";
   revalidatePath("/app", "layout");
   if (another) return { ok: true, message: "Conteúdo criado. Preencha o próximo." };

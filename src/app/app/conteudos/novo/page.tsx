@@ -18,7 +18,7 @@ export default async function NewContentPage({ searchParams }: { searchParams: P
   return (
     <div className="max-w-3xl">
       <PageHeader eyebrow={<Link href="/app/conteudos" className="hover:text-fg">Conteúdos</Link>} title="Novo conteúdo"
-        description="O template cria os entregáveis, as tarefas e as dependências entre etapas automaticamente." />
+        description="O post entra no pipeline na etapa escolhida. Mídia, legenda e responsáveis você completa no próprio post." />
       {clients.length === 0 ? (
         <Panel><EmptyState title="Cadastre um cliente primeiro" action={<ButtonLink href="/app/clientes/novo" variant="primary">Cadastrar cliente</ButtonLink>} /></Panel>
       ) : (

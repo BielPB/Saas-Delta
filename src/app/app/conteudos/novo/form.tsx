@@ -63,13 +63,23 @@ export function NewContentForm({ clients, services, formats, templates, members,
         <Field label="Formato" error={fe?.format_id} required>
           {(p) => <Select {...p} name="format_id" value={format} onChange={(e) => { setFormat(e.target.value); setTemplate(""); }}>{formats.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select>}
         </Field>
-        <Field label="Template de produção" hint={tpl?.description ?? (template ? undefined : `Sem template: cria só os entregáveis (${fmt?.required_kinds.map((k) => deliverableKind[k]).join(", ")}).`)}>
-          {(p) => (
-            <Select {...p} name="template_id" value={template} onChange={(e) => setTemplate(e.target.value)}>
-              <option value="">Sem template</option>{forFormat.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </Select>
-          )}
-        </Field>
+        {template ? (
+          <Field label="Modelo de tarefas encadeadas" hint={`${tpl?.description ?? ""} As etapas avançam pelas tarefas; não dá para arrastar no pipeline.`}>
+            {(p) => (
+              <Select {...p} name="template_id" value={template} onChange={(e) => setTemplate(e.target.value)}>
+                <option value="">Nenhum (fluxo simples)</option>{forFormat.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </Select>
+            )}
+          </Field>
+        ) : (
+          <Field label="Começa em" hint={`Etapa do pipeline. Cria os itens do formato: ${fmt?.required_kinds.map((k) => deliverableKind[k]).join(", ") ?? ""}.`}>
+            {(p) => (
+              <Select {...p} name="stage" defaultValue="script">
+                <option value="script">Roteiro</option><option value="capture">Gravação</option><option value="editing">Edição</option><option value="finishing">Finalização</option>
+              </Select>
+            )}
+          </Field>
+        )}
         <Field label="Prazo de produção">{(p) => <Input {...p} name="due_at" type="datetime-local" />}</Field>
         <Field label="Data prevista de postagem" hint="Intenção editorial. Não significa agendado.">{(p) => <Input {...p} name="planned_publish_at" type="datetime-local" />}</Field>
         <Field label="Canal">{(p) => <Select {...p} name="channel"><option value="">—</option>{Object.entries(channels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>}</Field>
@@ -78,6 +88,11 @@ export function NewContentForm({ clients, services, formats, templates, members,
         </Field>
         <Field label="Objetivo estratégico" className="sm:col-span-2">{(p) => <Input {...p} name="objective" placeholder="Gerar agendamentos de avaliação" />}</Field>
         <Field label="Briefing" className="sm:col-span-2">{(p) => <Textarea {...p} name="briefing" rows={3} />}</Field>
+        {!template && forFormat.length > 0 && (
+          <p className="text-xs text-muted sm:col-span-2">
+            Avançado: <button type="button" className="underline underline-offset-2 hover:text-fg" onClick={() => setTemplate(forFormat[0].id)}>usar um modelo de tarefas encadeadas</button> (cria roteiro, captação, edição… como tarefas dependentes).
+          </p>
+        )}
       </div>
 
       {tpl && (
