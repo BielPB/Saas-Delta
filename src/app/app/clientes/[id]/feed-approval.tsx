@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Check, Copy, ImageIcon, Loader2, MessageCircle, Play, Send, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, ImageIcon, Loader2, MessageCircle, Play, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, useToast } from "@/components/ui/overlay";
 import type { PostStatusKey } from "@/lib/post-status";
@@ -52,6 +52,15 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
     setDrag(null);
     saveOrder(ids);
   };
+  /** Touch screens have no drag: move one place back (-1) or forward (+1). */
+  const nudge = (id: string, dir: -1 | 1) => {
+    const ids = tiles.map((t) => t.id);
+    const from = ids.indexOf(id);
+    const to = from + dir;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    saveOrder(ids);
+  };
 
   const send = () => start(async () => {
     const r = await sendFeedForApproval(clientId, ym, open.map((t) => t.id));
@@ -77,8 +86,8 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
         <div className="flex flex-wrap items-center gap-2">
         {tiles.length > 1 && (
           <nav aria-label="Ordem do feed" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
-            <button type="button" onClick={() => custom && setMode(false)} aria-pressed={!custom} className={cn("rounded-full px-2.5 py-1 text-muted", !custom && "bg-surface-3 text-fg")}>Por data</button>
-            <button type="button" onClick={() => !custom && setMode(true)} aria-pressed={custom} className={cn("rounded-full px-2.5 py-1 text-muted", custom && "bg-surface-3 text-fg")}>Personalizada</button>
+            <button type="button" onClick={() => custom && setMode(false)} aria-pressed={!custom} className={cn("rounded-full px-2.5 py-1 text-muted pointer-coarse:py-2", !custom && "bg-surface-3 text-fg")}>Por data</button>
+            <button type="button" onClick={() => !custom && setMode(true)} aria-pressed={custom} className={cn("rounded-full px-2.5 py-1 text-muted pointer-coarse:py-2", custom && "bg-surface-3 text-fg")}>Personalizada</button>
           </nav>
         )}
         {canSend && (
@@ -87,7 +96,11 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
         </div>
       </div>
 
-      {custom && tiles.length > 1 && <p className="mb-2 text-center text-xs text-muted">Arraste as publicações para montar o feed. O link do cliente segue esta ordem.</p>}
+      {custom && tiles.length > 1 && (
+        <p className="mb-2 text-center text-xs text-muted">
+          <span className="pointer-coarse:hidden">Arraste as publicações</span><span className="hidden pointer-coarse:inline">Use as setas nas publicações</span> para montar o feed. O link do cliente segue esta ordem.
+        </p>
+      )}
       {tiles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-4 py-14 text-center text-sm text-muted">Nenhum post ou reels neste mês.</div>
       ) : (
@@ -114,6 +127,20 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
                     : <StatusPill s={t.status} className="shadow" />}
                 </span>
               </Link>
+              {custom && (
+                <span className="absolute inset-x-1 top-1/2 hidden -translate-y-1/2 justify-between pointer-coarse:flex">
+                  {([-1, 1] as const).map((dir) => {
+                    const n = tiles.findIndex((x) => x.id === t.id) + dir;
+                    return (
+                      <button key={dir} type="button" disabled={pending || n < 0 || n >= tiles.length} onClick={() => nudge(t.id, dir)}
+                        aria-label={dir < 0 ? `Mover ${t.title} para trás` : `Mover ${t.title} para frente`}
+                        className="flex size-9 items-center justify-center rounded-full bg-black/65 text-white shadow disabled:invisible">
+                        {dir < 0 ? <ChevronLeft className="size-5" aria-hidden /> : <ChevronRight className="size-5" aria-hidden />}
+                      </button>
+                    );
+                  })}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -140,7 +167,7 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
           <div className="space-y-3">
             <p className="break-all rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-xs">{result.url}</p>
             {result.pin && <p className="text-sm">PIN do link: <strong className="tabular">{result.pin}</strong> <span className="text-muted">(mande em outra mensagem)</span></p>}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button className="flex-1" onClick={() => navigator.clipboard.writeText(result.url!).then(() => toast.success("Link copiado."))}><Copy /> Copiar link</Button>
               <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer noopener"
                 className={cn("inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-accent-fg")}>

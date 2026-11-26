@@ -21,9 +21,9 @@ export function Panel({ children, className, title, actions, padded = true }: {
   return (
     <section className={cn("rounded-lg border border-border bg-surface", className)}>
       {(title || actions) && (
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-          {title && <h2 className="text-[13px] font-semibold text-fg">{title}</h2>}
-          {actions && <div className="flex items-center gap-1.5">{actions}</div>}
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
+          {title && <h2 className="min-w-0 text-[13px] font-semibold text-fg">{title}</h2>}
+          {actions && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
         </header>
       )}
       <div className={padded ? "p-4" : undefined}>{children}</div>
@@ -37,8 +37,9 @@ export function PageHeader({ title, description, actions, eyebrow }: {
   return (
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {eyebrow && <div className="mb-1 text-xs text-muted">{eyebrow}</div>}
-        <h1 className="truncate text-2xl font-bold tracking-tight text-fg">{title}</h1>
+        {eyebrow && <div className="mb-1 truncate text-xs text-muted">{eyebrow}</div>}
+        {/* Wraps instead of cutting long names on narrow screens. */}
+        <h1 className="break-words text-xl font-bold tracking-tight text-fg sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -104,11 +105,11 @@ export function Stat({ label, value, hint, href, tone }: { label: string; value:
         {tone && <span className="size-1.5 rounded-full" style={{ background: `var(--tone-${tone}-fg)` }} aria-hidden />}
         {label}
       </div>
-      <div className="tabular mt-1 text-2xl font-semibold tracking-tight text-fg">{value}</div>
+      <div className="tabular mt-1 text-xl font-semibold tracking-tight text-fg sm:text-2xl">{value}</div>
       {hint && <div className="mt-0.5 text-xs text-muted">{hint}</div>}
     </>
   );
-  const cls = "block rounded-lg border border-border bg-surface px-4 py-3";
+  const cls = "block min-w-0 rounded-lg border border-border bg-surface px-3 py-3 sm:px-4";
   return href ? (
     <a href={href} className={cn(cls, "transition-colors hover:border-border-strong hover:bg-surface-2")}>{inner}</a>
   ) : (

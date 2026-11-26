@@ -37,7 +37,7 @@ export function OnboardingBar({ clientId, items, canEdit }: { clientId: string; 
           {list.map((i) => (
             <span key={i.id} className={cn("group inline-flex items-center rounded-full border text-xs", i.done ? "border-accent-ink/50 bg-accent-soft" : "border-border")}>
               <button type="button" disabled={!canEdit} onClick={() => persist(list.map((x) => (x.id === i.id ? { ...x, done: !x.done } : x)))}
-                aria-pressed={i.done} className={cn("inline-flex items-center gap-1.5 py-1 pl-2.5 pr-2", i.done ? "text-fg line-through decoration-muted" : "text-muted hover:text-fg")}>
+                aria-pressed={i.done} className={cn("inline-flex items-center gap-1.5 py-1 pl-2.5 pr-2 pointer-coarse:py-1.5", i.done ? "text-fg line-through decoration-muted" : "text-muted hover:text-fg")}>
                 <span className={cn("flex size-3.5 items-center justify-center rounded-full border", i.done ? "border-accent bg-accent text-accent-fg" : "border-border-strong")}>
                   {i.done && <Check className="size-2.5" strokeWidth={3} aria-hidden />}
                 </span>
@@ -45,7 +45,7 @@ export function OnboardingBar({ clientId, items, canEdit }: { clientId: string; 
               </button>
               {canEdit && (
                 <button type="button" aria-label={`Remover ${i.label}`} onClick={() => persist(list.filter((x) => x.id !== i.id))}
-                  className="mr-1.5 hidden text-subtle hover:text-fg group-hover:inline"><X className="size-3" /></button>
+                  className="mr-1.5 hidden text-subtle hover:text-fg group-hover:inline pointer-coarse:inline pointer-coarse:p-1"><X className="size-3" /></button>
               )}
             </span>
           ))}
@@ -80,7 +80,7 @@ export function ProfileForm({ clientId, initial, canEdit }: { clientId: string; 
         </label>
       ))}
       {canEdit && (
-        <div className="sticky bottom-0 flex justify-end border-t border-border bg-bg/95 py-3 backdrop-blur">
+        <div className="sticky bottom-0 flex justify-end border-t border-border bg-bg/95 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur max-sm:[&>button]:w-full">
           <Button type="submit" variant="primary" disabled={pending || !dirty}>{pending && <Loader2 className="animate-spin" />} Salvar ficha</Button>
         </div>
       )}

@@ -1,9 +1,10 @@
 "use client";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Input, Select } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { stages, approvalStatus, publicationStatus } from "@/lib/domain";
 
 /**
@@ -55,16 +56,26 @@ export function FilterBar({ clients, services, formats, members, show = ["q", "c
 
   const client = sp.get("cliente") ?? "";
   const active = [...sp.keys()].filter((k) => !["visao", "pagina"].includes(k)).length;
-  const cls = "h-8 w-auto min-w-32 max-w-44 text-[13px]";
+  const selects = show.filter((k) => k !== "q");
+  const activeSelects = [...sp.keys()].filter((k) => selects.includes(k)).length;
+  // Phones: the selects fold behind a "Filtros" button (two per row when open) so the content starts higher.
+  const [open, setOpen] = useState(false);
+  const cls = "h-8 w-auto min-w-32 max-w-44 text-[13px] max-sm:min-w-0 max-sm:max-w-none max-sm:flex-1 max-sm:basis-[calc(50%-0.25rem)]";
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2" role="search" aria-label="Filtros">
       {show.includes("q") && (
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-2 size-4 text-subtle" aria-hidden />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Título ou #código" aria-label="Buscar" className="h-8 w-52 pl-8 text-[13px]" />
+        <div className="relative max-sm:min-w-0 max-sm:flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-subtle" aria-hidden />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Título ou #código" aria-label="Buscar" className="h-8 w-52 pl-8 text-[13px] max-sm:w-full" />
         </div>
       )}
+      {selects.length > 0 && (
+        <Button size="sm" className="sm:hidden" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <SlidersHorizontal /> Filtros{activeSelects ? ` (${activeSelects})` : ""}
+        </Button>
+      )}
+      <div className={cn("contents", !open && "max-sm:hidden")}>
       {show.includes("cliente") && (
         <Select aria-label="Cliente" value={client} onChange={(e) => set("cliente", e.target.value)} className={cls}>
           <option value="">Cliente</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -107,6 +118,7 @@ export function FilterBar({ clients, services, formats, members, show = ["q", "c
           <option value="prazo">Prazo de produção</option><option value="codigo">Código</option>
         </Select>
       )}
+      </div>
       {active > 0 && (
         <Button size="sm" variant="ghost" onClick={() => { setQ(""); const p = new URLSearchParams(); if (sp.get("visao")) p.set("visao", sp.get("visao")!); apply(p); }}>
           <X /> Limpar ({active})

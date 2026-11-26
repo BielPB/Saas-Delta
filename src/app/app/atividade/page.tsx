@@ -25,8 +25,8 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         {rows.length === 0 ? <EmptyState title="Nada registrado ainda" /> : (
           <ol className="divide-y divide-border">
             {rows.map((ev) => (
-              <li key={ev.id as number} className="flex gap-3 px-4 py-2 text-[13px]">
-                <time className="w-28 shrink-0 text-xs text-subtle" dateTime={ev.created_at as string}>{formatDateTime(ev.created_at as string)}</time>
+              <li key={ev.id as number} className="flex flex-wrap gap-x-3 gap-y-0.5 px-4 py-2 text-[13px] sm:flex-nowrap">
+                <time className="shrink-0 text-xs text-subtle max-sm:w-full sm:w-28" dateTime={ev.created_at as string}>{formatDateTime(ev.created_at as string)}</time>
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{ev.actor_type === "client" ? `${String(ev.actor_label ?? "Cliente")} (cliente)` : members.get(ev.actor_id as string)?.full_name ?? "Sistema"}</span>{" "}
                   <span className="text-muted">{activityText(ev.action as string, ev.data as Record<string, unknown>)}</span>

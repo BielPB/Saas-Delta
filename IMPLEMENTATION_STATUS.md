@@ -74,6 +74,7 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | Minhas demandas, Dashboard da meta, Calendário com miniaturas, ranking por meta individual | 🟢 |
 | Google Agenda por pessoa (leitura em Minhas demandas + eventos de prazos/publicações) | 🟢 testado com 1 conta |
 | Vídeos por link do Google Drive (player no portal) | 🟢 |
+| Celular: campos com 16px (sem zoom no iPhone), alvos de toque maiores (`pointer-coarse:`), janelas como folha inferior, área segura do iPhone (app instalado), filtros recolhidos, Pipeline com “Mover” por toque, Calendário em miniaturas, Preview do feed com setas, portal do cliente sem estouro | 🟢 build ok · ⏳ conferir em aparelho real |
 | E-mail (Resend) | ⏳ depende de domínio próprio |
 | Métricas de redes sociais, IA, financeiro | ⏳ fora do escopo atual |
 

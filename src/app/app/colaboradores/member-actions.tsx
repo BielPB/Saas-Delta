@@ -96,6 +96,6 @@ export function MemberTargetInput({ userId, value }: { userId: string; value: nu
     <input type="number" min={0} max={1000} inputMode="numeric" value={v} disabled={pending} onChange={(e) => setV(e.target.value)} onBlur={save}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
       placeholder="—" aria-label="Meta mensal de posts aprovados"
-      className="tabular h-8 w-20 rounded-md border border-border bg-surface px-2 text-right text-[13px]" />
+      className="tabular h-8 w-16 rounded-md border border-border bg-surface px-2 text-right text-[13px] pointer-coarse:h-10 sm:w-20" />
   );
 }

@@ -23,7 +23,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const { data } = await q;
   const rows = data ?? [];
   const tab = (label: string, href: string, on: boolean) => (
-    <Link href={href} aria-current={on ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-[13px] text-muted hover:text-fg", on && "bg-surface-2 font-medium text-fg")}>{label}</Link>
+    <Link href={href} aria-current={on ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-[13px] text-muted hover:text-fg pointer-coarse:py-2", on && "bg-surface-2 font-medium text-fg")}>{label}</Link>
   );
   return (
     <>
@@ -41,10 +41,12 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                 <NotificationLink id={n.id as string} href={(n.link as string) ?? "/app"} unread={!n.read_at}>
                   <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.read_at ? "bg-transparent" : "bg-accent")} aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium">{n.title as string}</span>
+                    <span className="block break-words text-[13px] font-medium">{n.title as string}</span>
                     {n.body && <span className="block truncate text-xs text-muted">{n.body as string}</span>}
+                    {/* Phones: category and time go under the text instead of squeezing it. */}
+                    <span className="mt-0.5 block text-[11px] text-subtle sm:hidden">{cats[n.category as string]} · {relative(n.created_at as string)}</span>
                   </span>
-                  <span className="shrink-0 text-xs text-subtle">{cats[n.category as string]} · {relative(n.created_at as string)}</span>
+                  <span className="hidden shrink-0 text-xs text-subtle sm:inline">{cats[n.category as string]} · {relative(n.created_at as string)}</span>
                 </NotificationLink>
               </li>
             ))}

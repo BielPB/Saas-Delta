@@ -114,6 +114,21 @@
   .tabular { font-variant-numeric: tabular-nums; }
 }
 
+/* ---------------------------------------------------------------------------
+   Touch screens (phones, tablets).
+   Unlayered on purpose: it must beat the utility classes (text-sm, text-[13px]…).
+   - iOS Safari zooms the whole page when a field with font-size < 16px gets focus.
+   - No grey flash on tap; no double-tap zoom delay on controls.
+   --------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

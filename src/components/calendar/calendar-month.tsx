@@ -94,20 +94,21 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
     const e = editorialStatus(i);
     return (
       <div draggable={canEdit && !["published", "cancelled"].includes(i.publication_status)} onDragStart={() => setDrag(i.id)}
-        className={cn("group rounded-sm border border-border bg-surface text-left", dense ? "px-1.5 py-1" : "p-2", conflicts.has(i.id) && "border-[var(--tone-warning-fg)]/60")}>
-        <Link href={i.href ?? `/app/conteudos/${i.id}`} className="flex items-center gap-1.5" draggable={false}>
+        className={cn("group min-w-0 rounded-sm border border-border bg-surface text-left", dense ? "px-1.5 py-1 max-sm:border-0 max-sm:bg-transparent max-sm:p-0" : "p-2", conflicts.has(i.id) && "border-[var(--tone-warning-fg)]/60")}>
+        <Link href={i.href ?? `/app/conteudos/${i.id}`} className="flex items-center gap-1.5" draggable={false} aria-label={dense ? `${i.client}: ${i.title}` : undefined}>
           {dense ? (
             i.thumb
               // eslint-disable-next-line @next/next/no-img-element -- signed private URL
-              ? <img src={i.thumb} alt="" className="size-6 shrink-0 rounded-sm object-cover" loading="lazy" />
-              : <span className="size-6 shrink-0 rounded-sm" style={{ background: i.color ?? "var(--surface-3)", opacity: 0.5 }} aria-hidden />
+              ? <img src={i.thumb} alt="" className="size-6 shrink-0 rounded-sm object-cover max-sm:size-5" loading="lazy" />
+              : <span className="size-6 shrink-0 rounded-sm max-sm:size-5" style={{ background: i.color ?? "var(--surface-3)", opacity: 0.5 }} aria-hidden />
           ) : (
             <>
               <span className="mt-1 size-1.5 shrink-0 self-start rounded-full" style={{ background: i.color ?? "var(--fg-subtle)" }} aria-hidden />
               <Thumb url={i.thumb} className="w-7" />
             </>
           )}
-          <span className="min-w-0 flex-1">
+          {/* Month grid on a phone: a day is ~46px wide, so only the thumbnail shows (tap the day to see the list). */}
+          <span className={cn("min-w-0 flex-1", dense && "max-sm:hidden")}>
             <span className={cn("block truncate font-medium", dense ? "text-[11.5px] leading-tight" : "text-[13px]")}>
               {i.at && <span className="tabular mr-1 text-subtle">{formatTime(i.at)}</span>}{dense ? <><span className="text-muted">{i.client} | </span>{i.title}</> : i.title}
             </span>
@@ -136,12 +137,12 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
         <Button size="icon-sm" onClick={() => shift(-1)} aria-label="Anterior"><ChevronLeft /></Button>
         <Button size="icon-sm" onClick={() => shift(1)} aria-label="Próximo"><ChevronRight /></Button>
         <Button size="sm" onClick={() => setCursor(new Date())}>Hoje</Button>
-        <h2 className="ml-1 text-[15px] font-semibold">{title}</h2>
+        <h2 className="ml-1 min-w-0 text-[15px] font-semibold">{title}</h2>
         <div className="flex-1" />
-        <div className="flex rounded-md border border-border p-0.5" role="tablist" aria-label="Visualização do calendário">
+        <div className="flex rounded-md border border-border p-0.5 max-sm:w-full" role="tablist" aria-label="Visualização do calendário">
           {(["mes", "semana", "dia", "lista"] as Mode[]).map((m) => (
             <button key={m} role="tab" aria-selected={mode === m} type="button" onClick={() => setMode(m)}
-              className={cn("h-7 rounded-sm px-2.5 text-[13px] text-muted", mode === m && "bg-surface-2 font-medium text-fg")}>
+              className={cn("h-7 rounded-sm px-2.5 text-[13px] text-muted max-sm:flex-1 pointer-coarse:h-9", mode === m && "bg-surface-2 font-medium text-fg")}>
               {{ mes: "Mês", semana: "Semana", dia: "Dia", lista: "Lista" }[m]}
             </button>
           ))}
@@ -155,22 +156,28 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
           )}
         </div>
       ) : (
-        <div className={cn("grid overflow-hidden rounded-lg border border-border bg-border gap-px", mode === "dia" ? "grid-cols-1" : "grid-cols-7")}>
-          {mode !== "dia" && WEEK.map((w) => <div key={w} className="bg-surface-2 px-2 py-1 text-[11px] font-medium text-muted">{w}</div>)}
+        // Week on a phone: the 7 days stack (each one full width) instead of 7 unreadable 46px columns.
+        <div className={cn("grid overflow-hidden rounded-lg border border-border bg-border gap-px",
+          mode === "dia" ? "grid-cols-1" : mode === "semana" ? "grid-cols-1 sm:grid-cols-7" : "grid-cols-7")}>
+          {mode !== "dia" && WEEK.map((w) => (
+            <div key={w} className={cn("bg-surface-2 px-2 py-1 text-[11px] font-medium text-muted max-sm:px-0 max-sm:text-center", mode === "semana" && "max-sm:hidden")}>{w}</div>
+          ))}
           {days.map((d) => {
             const k = ymd(d);
             const list = byDay.get(k) ?? [];
             const out = mode === "mes" && d.getMonth() !== cursor.getMonth();
             return (
               <div key={k} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(k)}
-                className={cn("bg-surface p-1.5", mode === "mes" ? "min-h-28" : "min-h-64", out && "bg-surface-2/60")}>
-                <div className={cn("mb-1 flex size-6 items-center justify-center rounded-full text-xs tabular", k === today ? "bg-accent font-semibold text-accent-fg" : out ? "text-subtle" : "text-muted")}>
-                  {d.getDate()}
-                </div>
-                <div className="space-y-1">
+                className={cn("min-w-0 bg-surface p-1.5", mode === "mes" ? "min-h-28 max-sm:min-h-[4.5rem] max-sm:p-1" : mode === "semana" ? "min-h-64 max-sm:min-h-0" : "min-h-64", out && "bg-surface-2/60")}>
+                <button type="button" onClick={() => { setCursor(d); setMode("dia"); }} aria-label={`Ver o dia ${d.getDate()}`} disabled={mode === "dia"}
+                  className={cn("mb-1 flex h-6 min-w-6 items-center justify-center gap-1 rounded-full px-1 text-xs tabular enabled:hover:bg-surface-2",
+                    k === today ? "bg-accent font-semibold text-accent-fg enabled:hover:bg-accent" : out ? "text-subtle" : "text-muted")}>
+                  {mode === "semana" && <span className="font-medium sm:hidden">{WEEK[d.getDay()]}</span>}{d.getDate()}
+                </button>
+                <div className={cn("space-y-1", mode === "mes" && "max-sm:flex max-sm:flex-wrap max-sm:gap-0.5 max-sm:space-y-0")}>
                   {(mode === "mes" ? list.slice(0, 3) : list).map((i) => <Card key={i.id} i={i} dense={mode === "mes"} />)}
                   {mode === "mes" && list.length > 3 && (
-                    <button type="button" className="px-1 text-[11px] text-muted hover:text-fg" onClick={() => { setCursor(d); setMode("dia"); }}>+{list.length - 3} mais</button>
+                    <button type="button" className="px-1 text-[11px] text-muted hover:text-fg" onClick={() => { setCursor(d); setMode("dia"); }}>+{list.length - 3}<span className="max-sm:hidden"> mais</span></button>
                   )}
                 </div>
               </div>

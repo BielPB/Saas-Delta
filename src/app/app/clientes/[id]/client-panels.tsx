@@ -46,13 +46,14 @@ export function ServicesManager({ clientId, services, canManage, created }: { cl
       ) : (
         <ul className="divide-y divide-border">
           {services.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+            <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:flex-nowrap">
               <span className="size-3 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativa</Badge>}</p>
+                <p className="break-words text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativa</Badge>}</p>
                 {s.description && <p className="truncate text-xs text-muted">{s.description}</p>}
               </div>
-              <span className="text-xs text-muted" title="Posts aprovados por mês vindos desta subdivisão">{s.monthly_target ? `meta: ${s.monthly_target} aprovado(s)/mês` : "sem meta própria"}</span>
+              {/* Phones: the goal goes under the name so the buttons keep their place. */}
+              <span className="text-xs text-muted max-sm:order-last max-sm:w-full max-sm:pl-6" title="Posts aprovados por mês vindos desta subdivisão">{s.monthly_target ? `meta: ${s.monthly_target} aprovado(s)/mês` : "sem meta própria"}</span>
               {canManage && (
                 <>
                   <Button size="icon-sm" variant="ghost" aria-label={`Editar ${s.name}`} onClick={() => setEditing(s)}><Pencil /></Button>
@@ -87,10 +88,10 @@ function ServiceDialog({ clientId, service, onClose }: { clientId: string; servi
         <Field label="Descrição" error={fe?.description}>{(p) => <Textarea {...p} name="description" rows={2} defaultValue={service?.description ?? ""} />}</Field>
         <fieldset>
           <legend className="mb-1.5 text-[13px] font-medium">Cor de identificação</legend>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {PALETTE.map((c) => (
               <button key={c} type="button" onClick={() => setColor(c)} aria-label={`Cor ${c}`} aria-pressed={color === c}
-                className="size-7 rounded-full border-2 border-transparent aria-pressed:border-fg" style={{ background: c }} />
+                className="size-7 rounded-full border-2 border-transparent aria-pressed:border-fg pointer-coarse:size-9" style={{ background: c }} />
             ))}
           </div>
         </fieldset>
@@ -146,7 +147,7 @@ export function TargetsManager({ clientId, targets, services, formats, canManage
         <ul className="divide-y divide-border">
           {targets.map((t) => (
             <li key={t.id} className="flex items-center gap-2 px-4 py-2 text-[13px]">
-              <span className="tabular w-16 text-muted">{t.month.slice(0, 7)}</span>
+              <span className="tabular w-16 shrink-0 text-muted">{t.month.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{t.service_id ? sName.get(t.service_id) : "Todas as subdivisões"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
               <span className="tabular font-medium">{t.target} <span className="font-normal text-muted">aprovados</span></span>
               {canManage && <Button size="icon-sm" variant="ghost" aria-label="Remover meta" onClick={() => start(async () => {

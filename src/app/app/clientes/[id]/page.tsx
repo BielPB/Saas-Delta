@@ -72,12 +72,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-5 sm:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <ClientLogo workspaceId={ctx.workspace.id} clientId={id} name={client.name as string} canEdit={canManage}
             src={client.logo_path ? (await signPaths([client.logo_path as string], 3600)).get(client.logo_path as string) ?? null : null} />
           <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
+            <h1 className="flex flex-wrap items-center gap-2 break-words text-xl font-bold tracking-tight sm:text-2xl">
               {client.name as string}
               {client.is_sensitive && <Badge tone="warning">Sensível</Badge>}
               {client.status !== "active" && <Badge>{client.status === "archived" ? "Arquivado" : "Inativo"}</Badge>}
@@ -88,9 +88,9 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         <div className="flex flex-wrap items-center gap-2">
           {(isGrid || tab === "visao" || tab === "aprovacoes") && (
             <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
-              <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronLeft className="size-4" /></Link>
+              <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronLeft className="size-4" /></Link>
               <span className="min-w-32 text-center text-[13px] font-semibold">{monthLabel(ym)}</span>
-              <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
+              <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronRight className="size-4" /></Link>
             </nav>
           )}
           {(isGrid || tab === "aprovacoes") && <DownloadMonth clientId={id} ym={ym} fileName={`${String(client.name).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "cliente"}-${ym}.zip`} />}
@@ -100,12 +100,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
       {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
 
-      <nav aria-label="Seções do cliente" className="-mx-1 mb-5 flex gap-1 overflow-x-auto border-b border-border px-1">
+      <nav aria-label="Seções do cliente" className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-border px-3 sm:-mx-1 sm:px-1">
         {tabs.map((t, i) => (
           <span key={t.key} className="flex shrink-0 items-center">
             {i === 3 && <span className="mx-2 h-4 w-px bg-border" aria-hidden />}
             <Link href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
-              className={cn("relative -mb-px flex h-9 items-center border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg",
+              className={cn("relative -mb-px flex h-9 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg pointer-coarse:h-11",
                 tab === t.key && "border-accent-ink font-semibold text-fg")}>{t.label}</Link>
           </span>
         ))}
@@ -363,7 +363,7 @@ async function Overview({ ws, client, month, servicesCount, can }: {
                     {!st.done && <p className="mt-0.5 text-[13px] text-muted">{st.text}</p>}
                   </div>
                   {!st.done && st.allowed && (
-                    <ButtonLink href={st.href} size="sm" variant={current ? "primary" : "secondary"} className="shrink-0">{st.cta}</ButtonLink>
+                    <ButtonLink href={st.href} size="sm" variant={current ? "primary" : "secondary"} className="shrink-0 max-sm:ml-9">{st.cta}</ButtonLink>
                   )}
                 </li>
               );
@@ -383,8 +383,8 @@ async function Overview({ ws, client, month, servicesCount, can }: {
             <Link className="text-xs text-muted hover:text-fg" href={`?aba=visao&mes=${ym(next)}`}>próximo mês →</Link>
           </nav>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-lg border border-border bg-surface p-4 sm:col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div className="col-span-2 rounded-lg border border-border bg-surface p-4 lg:col-span-1">
             <p className="text-xs font-medium text-muted">Meta do mês</p>
             {target > 0 ? (
               <>
@@ -401,9 +401,9 @@ async function Overview({ ws, client, month, servicesCount, can }: {
             )}
           </div>
           {stats.map((st) => (
-            <div key={st.label} className="rounded-lg border border-border bg-surface p-4">
+            <div key={st.label} className="min-w-0 rounded-lg border border-border bg-surface p-3 sm:p-4">
               <p className="text-xs font-medium text-muted">{st.label}</p>
-              <p className="tabular mt-1 text-2xl font-semibold">{st.value}</p>
+              <p className="tabular mt-1 text-xl font-semibold sm:text-2xl">{st.value}</p>
               <p className="mt-2 text-xs text-muted">{st.hint}</p>
             </div>
           ))}
@@ -597,8 +597,8 @@ async function ClientHistory({ ws, client }: { ws: string; client: string }) {
       {(data ?? []).length === 0 ? <EmptyState compact title="Sem atividades registradas" /> : (
         <ol className="divide-y divide-border">
           {(data ?? []).map((ev) => (
-            <li key={ev.id as number} className="flex items-start gap-3 px-4 py-2 text-[13px]">
-              <time className="w-28 shrink-0 text-xs text-subtle" dateTime={ev.created_at as string}>{formatDateTime(ev.created_at as string)}</time>
+            <li key={ev.id as number} className="flex flex-col gap-0.5 px-4 py-2 text-[13px] sm:flex-row sm:items-start sm:gap-3">
+              <time className="shrink-0 text-xs text-subtle sm:w-28" dateTime={ev.created_at as string}>{formatDateTime(ev.created_at as string)}</time>
               <span className="min-w-0 flex-1">
                 <span className="font-medium">{ev.actor_type === "client" ? `${ev.actor_label} (cliente)` : members.get(ev.actor_id as string)?.full_name ?? "Sistema"}</span>{" "}
                 <span className="text-muted">{activityText(ev.action as string, ev.data as Record<string, unknown>)}</span>

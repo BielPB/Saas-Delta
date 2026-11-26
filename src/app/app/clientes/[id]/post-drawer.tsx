@@ -60,30 +60,31 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`Post ${post.number}: ${post.title}`}>
       <button type="button" className="absolute inset-0 bg-[var(--overlay)]" aria-label="Fechar" onClick={close} />
-      <div className="relative flex h-full w-full max-w-5xl flex-col overflow-hidden border-l border-border bg-bg shadow-pop">
-        <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+      <div className="relative flex h-full w-full max-w-5xl flex-col overflow-hidden border-l border-border bg-bg shadow-pop max-sm:border-l-0">
+        {/* Full screen on phones: keep the bar below the clock/notch of the installed app. */}
+        <header className="flex items-start justify-between gap-2 border-b border-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:gap-3 sm:px-5 sm:py-4">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-ink">Post {String(post.number).padStart(2, "0")} <span className="font-mono text-subtle">#{post.code}</span></p>
             {canEdit ? (
               <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== post.title && save({ title: title.trim() })}
-                aria-label="Título" className="mt-0.5 w-full bg-transparent text-xl font-bold tracking-tight outline-none focus:underline focus:decoration-border-strong" />
-            ) : <h2 className="mt-0.5 text-xl font-bold tracking-tight">{post.title}</h2>}
+                aria-label="Título" className="mt-0.5 w-full min-w-0 bg-transparent text-lg font-bold tracking-tight outline-none focus:underline focus:decoration-border-strong sm:text-xl" />
+            ) : <h2 className="mt-0.5 break-words text-lg font-bold tracking-tight sm:text-xl">{post.title}</h2>}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {prevHref ? <Link href={prevHref} scroll={false} aria-label="Post anterior" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"><ChevronLeft className="size-4" /></Link> : null}
-            {nextHref ? <Link href={nextHref} scroll={false} aria-label="Próximo post" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"><ChevronRight className="size-4" /></Link> : null}
-            <Link href={`/app/conteudos/${post.id}`} aria-label="Abrir página completa" title="Abrir página completa" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"><ExternalLink className="size-4" /></Link>
-            <button type="button" onClick={close} aria-label="Fechar" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"><X className="size-4" /></button>
+          <div className="-mr-1.5 flex shrink-0 items-center sm:mr-0 sm:gap-1">
+            {prevHref ? <Link href={prevHref} scroll={false} aria-label="Post anterior" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-10"><ChevronLeft className="size-4" /></Link> : null}
+            {nextHref ? <Link href={nextHref} scroll={false} aria-label="Próximo post" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-10"><ChevronRight className="size-4" /></Link> : null}
+            <Link href={`/app/conteudos/${post.id}`} aria-label="Abrir página completa" title="Abrir página completa" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-10"><ExternalLink className="size-4" /></Link>
+            <button type="button" onClick={close} aria-label="Fechar" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-10"><X className="size-4" /></button>
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_300px] lg:overflow-hidden">
+        <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,1fr)_300px] lg:overflow-hidden">
           {/* Left: what is being made */}
-          <div className="space-y-6 p-5 lg:overflow-y-auto">
+          <div className="min-w-0 space-y-6 p-4 sm:p-5 lg:overflow-y-auto">
             <Block title="Mídia e legenda">
               <ContentViewer deliverables={viewer} aspect={post.aspect} />
               <details className="group mt-3 rounded-lg border border-border bg-surface">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-[13px] font-medium [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-3 px-4 py-2.5 text-[13px] font-medium pointer-coarse:py-3 [&::-webkit-details-marker]:hidden">
                   Enviar ou substituir arquivos <span className="text-xs text-muted group-open:hidden">imagens, vídeo (link do Drive), legenda</span>
                 </summary>
                 <div className="border-t border-border">
@@ -120,7 +121,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
           </div>
 
           {/* Right: who, when, where */}
-          <aside className="space-y-5 border-t border-border bg-surface/50 p-5 lg:overflow-y-auto lg:border-l lg:border-t-0">
+          <aside className="space-y-5 border-t border-border bg-surface/50 p-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-5 lg:overflow-y-auto lg:border-l lg:border-t-0">
             <Field label="Status">
               {manual && canEdit ? (
                 <Select value={post.work} disabled={pending} onChange={(e) => run(() => setPostStatus(post.id, post.clientId, e.target.value as WorkStatus))}>
@@ -166,8 +167,8 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
                   const on = post.assignees.includes(m.id);
                   return (
                     <li key={m.id}>
-                      <label className={cn("flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[13px] hover:bg-surface-2", !canEdit && "cursor-default")}>
-                        <input type="checkbox" className="size-3.5 accent-[var(--fg)]" checked={on} disabled={!canEdit || pending}
+                      <label className={cn("flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[13px] hover:bg-surface-2 pointer-coarse:py-2 pointer-coarse:text-sm", !canEdit && "cursor-default")}>
+                        <input type="checkbox" className="size-3.5 accent-[var(--fg)] pointer-coarse:size-4" checked={on} disabled={!canEdit || pending}
                           onChange={() => run(() => setAssignees(post.id, on ? post.assignees.filter((x) => x !== m.id) : [...post.assignees, m.id]))} />
                         <Avatar name={m.name} src={m.avatar} size={20} />
                         <span className="truncate">{m.name}</span>

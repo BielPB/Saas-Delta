@@ -22,6 +22,8 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  // Installed app on iPhone (status bar "black-translucent"): draw under the notch and pad with env(safe-area-inset-*).
+  viewportFit: "cover",
 };
 
 // Applies the saved theme before paint (no flash). Preference only, never data.
@@ -33,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-dvh">
+      <body className="min-h-dvh overflow-x-clip">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

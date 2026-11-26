@@ -64,7 +64,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   return (
     <dialog ref={ref} onClose={close} onClick={(e) => { if (e.target === ref.current) close(); }}
       aria-label="Busca global"
-      className="mx-auto mt-[12vh] w-[calc(100%-2rem)] max-w-xl rounded-lg border border-border bg-surface p-0 text-fg shadow-pop">
+      className="mx-auto mt-[calc(0.75rem+env(safe-area-inset-top))] w-[calc(100%-1.5rem)] max-w-xl sm:mt-[12vh] rounded-lg border border-border bg-surface p-0 text-fg shadow-pop">
       <div className="flex items-center gap-2 border-b border-border px-3">
         <Search className="size-4 text-subtle" aria-hidden />
         <input autoFocus value={q} onChange={(e) => onQuery(e.target.value)} placeholder="Buscar por nome, código (#12), cliente…"
@@ -78,7 +78,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-subtle" />
         {loading && <Loader2 className="size-4 animate-spin text-subtle" aria-hidden />}
       </div>
-      <div id="df-search-results" role="listbox" className="max-h-[50vh] overflow-y-auto p-1.5">
+      <div id="df-search-results" role="listbox" className="max-h-[50dvh] overflow-y-auto p-1.5">
         {q.trim().length >= 2 && !loading && hits.length === 0 && (
           <p className="px-3 py-6 text-center text-sm text-muted">Nada encontrado para “{q}”.</p>
         )}
@@ -93,11 +93,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               return (
                 <button key={h.id} id={`hit-${h.id}`} role="option" aria-selected={i === active} type="button"
                   onMouseEnter={() => setActive(i)} onClick={() => go(h)}
-                  className={cn("flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm [&_svg]:size-4 [&_svg]:text-subtle",
+                  className={cn("flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm pointer-coarse:py-3 [&_svg]:size-4 [&_svg]:text-subtle",
                     i === active && "bg-surface-2")}>
                   {kindIcon[h.kind]}
                   <span className="min-w-0 flex-1 truncate">{h.title}</span>
-                  {h.subtitle && <span className="truncate text-xs text-muted">{h.subtitle}</span>}
+                  {h.subtitle && <span className="max-w-[40%] truncate text-xs text-muted">{h.subtitle}</span>}
                 </button>
               );
             })}

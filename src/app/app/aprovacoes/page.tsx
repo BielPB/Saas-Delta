@@ -27,17 +27,21 @@ export default async function ApprovalsPage() {
             action={<ButtonLink href="/app/aprovacoes/novo" variant="primary">Gerar primeiro link</ButtonLink>} />
         ) : (
           <Table>
-            <thead><tr><th>Lote</th><th>Cliente</th><th>Conteúdos</th><th>Link</th><th>Status</th><th className="hidden md:table-cell">Criado</th></tr></thead>
+            <thead><tr><th>Lote</th><th className="hidden sm:table-cell">Cliente</th><th className="hidden sm:table-cell">Conteúdos</th><th className="hidden lg:table-cell">Link</th><th>Status</th><th className="hidden md:table-cell">Criado</th></tr></thead>
             <tbody>
               {(batches ?? []).map((b) => {
                 const links = (b.approval_links as unknown as Array<{ expires_at: string | null; revoked_at: string | null; last_accessed_at: string | null }>) ?? [];
                 const live = links.find((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date()));
                 return (
                   <tr key={b.id as string}>
-                    <td><Link href={`/app/aprovacoes/${b.id}`} className="font-medium hover:underline">{b.name as string}</Link></td>
-                    <td className="text-muted">{(b.clients as unknown as { name: string })?.name}</td>
-                    <td className="tabular">{(b.approval_batch_items as unknown[]).length}</td>
-                    <td>{live ? <span className="text-xs text-muted">{live.last_accessed_at ? `aberto ${relative(live.last_accessed_at)}` : "não aberto"} · expira {formatDateTime(live.expires_at)}</span> : <Badge>Sem link ativo</Badge>}</td>
+                    <td>
+                      <Link href={`/app/aprovacoes/${b.id}`} className="font-medium hover:underline">{b.name as string}</Link>
+                      {/* Phones: client and count move under the batch name (their columns are hidden). */}
+                      <span className="block text-xs text-muted sm:hidden">{(b.clients as unknown as { name: string })?.name} · {(b.approval_batch_items as unknown[]).length} conteúdo(s)</span>
+                    </td>
+                    <td className="hidden text-muted sm:table-cell">{(b.clients as unknown as { name: string })?.name}</td>
+                    <td className="tabular hidden sm:table-cell">{(b.approval_batch_items as unknown[]).length}</td>
+                    <td className="hidden lg:table-cell">{live ? <span className="text-xs text-muted">{live.last_accessed_at ? `aberto ${relative(live.last_accessed_at)}` : "não aberto"} · expira {formatDateTime(live.expires_at)}</span> : <Badge>Sem link ativo</Badge>}</td>
                     <td>{b.status === "submitted" ? <Badge tone="success">Avaliação finalizada</Badge> : <Badge tone="info">Aguardando cliente</Badge>}</td>
                     <td className="hidden text-muted md:table-cell">{relative(b.created_at as string)}</td>
                   </tr>

@@ -58,10 +58,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <PageHeader title="Tarefas da equipe" description="Tarefas avulsas (reunião, gravação, captação…) e etapas de produção. Use “Nova tarefa” para atribuir algo a alguém."
         actions={ctx.can("tasks.manage") && <NewTaskButton clients={clients} posts={await openPostsLite(ctx.workspace.id)} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Situação" className="flex rounded-lg border border-border bg-surface p-0.5">
+        <nav aria-label="Situação" className="flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5">
           {tabs.map((t) => (
             <Link key={t.label} href={`/app/tarefas${qs(base, t.patch)}`} aria-current={t.on ? "page" : undefined}
-              className={cn("rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg", t.on && "bg-surface-3 font-medium text-fg")}>{t.label}</Link>
+              className={cn("shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2", t.on && "bg-surface-3 font-medium text-fg")}>{t.label}</Link>
           ))}
         </nav>
         <TaskFilters clients={clients.map((c) => ({ id: c.id, name: c.name }))} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />

@@ -57,7 +57,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <nav aria-label="Situação dos clientes" className="flex rounded-lg border border-border bg-surface p-0.5">
           {([["active", "Ativos", "/app/clientes"], ["inactive", "Inativos", "/app/clientes?status=inactive"], ["archived", "Arquivados", "/app/clientes?status=archived"]] as const).map(([k, label, href]) => (
             <Link key={k} href={href} aria-current={status === k ? "page" : undefined}
-              className={cn("rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg", status === k && "bg-surface-3 font-medium text-fg")}>{label}</Link>
+              className={cn("rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2", status === k && "bg-surface-3 font-medium text-fg")}>{label}</Link>
           ))}
         </nav>
       </div>
@@ -92,7 +92,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted">{line}</p>
                 </div>
-                <div className="w-48 shrink-0">
+                <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
                   {target > 0 ? (
                     <>
                       <p className="mb-1 flex justify-between text-xs"><span className="text-muted">Aprovados no mês</span><span className="tabular font-medium">{approved} de {target}</span></p>

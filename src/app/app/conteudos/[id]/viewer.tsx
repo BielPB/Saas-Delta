@@ -55,7 +55,7 @@ function Stage({ asset, aspect }: { asset: ViewerAsset; aspect: string }) {
         // eslint-disable-next-line @next/next/no-img-element -- signed private URL, must not enter a shared optimizer cache
         <img src={asset.url} alt={asset.name} className="size-full object-contain" />
       )}
-      <Button size="icon-sm" variant="secondary" className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" onClick={fullscreen} aria-label="Tela cheia"><Maximize2 /></Button>
+      <Button size="icon-sm" variant="secondary" className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-90" onClick={fullscreen} aria-label="Tela cheia"><Maximize2 /></Button>
     </div>
   );
 }
@@ -79,7 +79,7 @@ export function ContentViewer({ deliverables, aspect }: { deliverables: ViewerDe
       <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
         {deliverables.map((x) => (
           <button key={x.id} type="button" onClick={() => select(x.id)} aria-pressed={sel === x.id}
-            className={cn("flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2", sel === x.id && "bg-surface-2 font-medium text-fg")}>
+            className={cn("flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2 pointer-coarse:h-10", sel === x.id && "bg-surface-2 font-medium text-fg")}>
             {x.title}
             {x.versions.length > 0 && <span className="tabular text-[11px] text-subtle">V{x.versions[0].number}</span>}
             <span className="size-1.5 rounded-full" style={{ background: `var(--tone-${versionStatus[x.approval].tone}-fg)` }} aria-label={versionStatus[x.approval].label} />

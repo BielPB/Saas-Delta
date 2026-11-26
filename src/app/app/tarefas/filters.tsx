@@ -16,9 +16,9 @@ export function TaskFilters({ clients, members }: { clients: Array<{ id: string;
     router.push(`/app/tarefas${s ? `?${s}` : ""}`);
   };
   const who = sp.get("situacao") === "sem_responsavel" ? "__none" : sp.get("responsavel") ?? "";
-  const cls = "h-8 rounded-md border border-border bg-surface px-2 text-[13px] text-fg";
+  const cls = "h-8 min-w-0 rounded-md border border-border bg-surface px-2 text-[13px] text-fg pointer-coarse:h-10 max-sm:flex-1";
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 max-sm:w-full">
       <select aria-label="Cliente" className={cls} value={sp.get("cliente") ?? ""} onChange={(e) => go({ cliente: e.target.value || null })}>
         <option value="">Todos os clientes</option>
         {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

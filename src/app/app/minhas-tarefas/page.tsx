@@ -104,7 +104,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Minhas demandas</p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
+          <h1 className="mt-0.5 break-words text-xl font-bold tracking-tight sm:text-2xl">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {canViewOthers && (
@@ -125,7 +125,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       <nav aria-label="Filtro por prazo" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {counters.map((c) => (
           <Link key={c.key} href={link({ f: c.key === "todas" ? undefined : c.key, cliente: undefined })} aria-current={f === c.key ? "true" : undefined}
-            className={cn("rounded-xl border bg-surface px-4 py-3 transition-colors hover:border-border-strong",
+            className={cn("min-w-0 rounded-xl border bg-surface px-3 py-2.5 transition-colors hover:border-border-strong sm:px-4 sm:py-3",
               f === c.key ? "border-accent-ink/70 ring-1 ring-accent-ink/30" : "border-border")}>
             <p className={cn("tabular text-2xl font-bold", c.danger && c.n > 0 && "text-[var(--tone-danger-fg)]")}>{c.n}</p>
             <p className="text-xs text-muted">{c.label}</p>
@@ -134,19 +134,20 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       </nav>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          <Link href={link({ cliente: undefined })} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !sp.cliente ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
+        {/* Phones: client chips scroll sideways in one row instead of piling up. */}
+        <div className="flex gap-1.5 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap">
+          <Link href={link({ cliente: undefined })} className={cn("shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium pointer-coarse:py-1.5", !sp.cliente ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
             Todos os clientes <span className="tabular opacity-70">{byFilter.length}</span>
           </Link>
           {[...clientCounts.entries()].sort((a, b) => b[1].n - a[1].n).map(([id, c]) => (
-            <Link key={id} href={link({ cliente: id })} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", sp.cliente === id ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
+            <Link key={id} href={link({ cliente: id })} className={cn("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium pointer-coarse:py-1.5", sp.cliente === id ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
               <span className="size-2 rounded-full" style={{ background: `hsl(${clientHue(c.name)} 60% 55%)` }} aria-hidden />{c.name} <span className="tabular opacity-70">{c.n}</span>
             </Link>
           ))}
         </div>
         <nav aria-label="Agrupar" className="flex rounded-lg border border-border bg-surface p-0.5 text-xs">
-          <Link href={link({ ordem: undefined })} aria-current={!byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted", !byDeadline && "bg-surface-3 font-medium text-fg")}>Por etapa</Link>
-          <Link href={link({ ordem: "prazo" })} aria-current={byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted", byDeadline && "bg-surface-3 font-medium text-fg")}>Por prazo</Link>
+          <Link href={link({ ordem: undefined })} aria-current={!byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted pointer-coarse:py-2", !byDeadline && "bg-surface-3 font-medium text-fg")}>Por etapa</Link>
+          <Link href={link({ ordem: "prazo" })} aria-current={byDeadline ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-muted pointer-coarse:py-2", byDeadline && "bg-surface-3 font-medium text-fg")}>Por prazo</Link>
         </nav>
       </div>
 
@@ -172,9 +173,9 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
                         <span className="h-9 w-1 shrink-0 rounded-r-full" style={{ background: `hsl(${hue} 60% 55%)` }} aria-hidden />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] font-semibold">{r.title}</span>
-                          <span className="flex items-center gap-2 text-xs text-muted">
-                            <span style={{ color: `hsl(${hue} 60% 62%)` }}>{r.clients?.name}</span>
-                            <span className="rounded border border-border px-1.5 text-[10.5px] uppercase tracking-wide">{r.content_formats?.name}</span>
+                          <span className="flex min-w-0 items-center gap-2 text-xs text-muted">
+                            <span className="truncate" style={{ color: `hsl(${hue} 60% 62%)` }}>{r.clients?.name}</span>
+                            <span className="shrink-0 rounded border border-border px-1.5 text-[10.5px] uppercase tracking-wide">{r.content_formats?.name}</span>
                             {byDeadline && <StatusPill s={postStatus(r)} />}
                           </span>
                         </span>

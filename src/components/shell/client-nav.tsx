@@ -58,7 +58,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
           </Link>
         )}
       </div>
-      <label className="mx-1 mb-2 flex h-8 items-center gap-2 rounded-md border border-border bg-bg px-2 text-[13px] text-muted focus-within:border-border-strong">
+      <label className="mx-1 mb-2 flex h-8 items-center gap-2 pointer-coarse:h-10 rounded-md border border-border bg-bg px-2 text-[13px] text-muted focus-within:border-border-strong">
         <Search className="size-3.5 shrink-0" aria-hidden />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente…" aria-label="Buscar cliente"
           className="min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-subtle" />
@@ -84,15 +84,16 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
                       <li key={c.id} className={cn("group relative flex items-center rounded-md", on ? "bg-surface-2" : "hover:bg-surface-2")}>
                         {on && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
                         <Link href={`/app/clientes/${c.id}`} aria-current={on ? "page" : undefined}
-                          className={cn("flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px]", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
+                          className={cn("flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
                           <ClientAvatar name={c.name} size={22} src={c.logo} />
                           <span className="truncate">{c.name}</span>
-                          {c.open > 0 && <span className="tabular ml-auto text-[11px] text-subtle group-hover:hidden">{c.open}</span>}
+                          {c.open > 0 && <span className="tabular ml-auto text-[11px] text-subtle group-hover:hidden pointer-coarse:group-hover:inline">{c.open}</span>}
                         </Link>
                         {canManage && (
-                          <div className="hidden pr-1 group-hover:block group-focus-within:block">
+                          // No hover on touch screens: the "…" stays visible there.
+                          <div className="hidden pr-1 group-hover:block group-focus-within:block pointer-coarse:block">
                             <Menu label={`Opções de ${c.name}`} trigger={(p) => (
-                              <button type="button" {...p} className="flex size-6 items-center justify-center rounded text-muted hover:text-fg"><MoreHorizontal className="size-3.5" /></button>
+                              <button type="button" {...p} className="flex size-6 items-center justify-center rounded text-muted hover:text-fg pointer-coarse:size-9"><MoreHorizontal className="size-3.5" /></button>
                             )}>
                               {(close) => (
                                 <>

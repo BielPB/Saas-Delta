@@ -49,11 +49,12 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
         <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted"><CalendarDays className="size-3.5" aria-hidden /> Agenda</h2>
         <span className="text-[11px] text-subtle">{failed ? "Não foi possível ler o Google Agenda agora" : "Google Agenda"}</span>
       </header>
-      <ol className="grid grid-cols-2 divide-border sm:grid-cols-4 lg:grid-cols-7 lg:divide-x">
+      {/* Phones: the 7 days scroll sideways in one strip (was 4 tall rows). */}
+      <ol className="flex snap-x divide-x divide-border overflow-x-auto overscroll-x-contain sm:grid sm:grid-cols-4 sm:divide-x-0 sm:overflow-visible lg:grid-cols-7 lg:divide-x">
         {days.map((d, i) => {
           const list = byDay(d);
           return (
-            <li key={i} className={cn("min-h-24 px-2.5 py-2", i === 0 && "bg-accent-soft/40")}>
+            <li key={i} className={cn("min-h-24 w-[42%] shrink-0 snap-start px-2.5 py-2 sm:w-auto", i === 0 && "bg-accent-soft/40")}>
               <p className="mb-1.5 flex items-baseline gap-1.5">
                 <span className={cn("text-[11px] font-semibold uppercase", i === 0 ? "text-accent-ink" : "text-muted")}>{label(d, i)}</span>
                 <span className="tabular text-xs text-subtle">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", timeZone: tz }).format(d)}</span>

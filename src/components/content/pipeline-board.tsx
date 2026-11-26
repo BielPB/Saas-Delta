@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { ArrowRightLeft, Check } from "lucide-react";
 import type { ApprovalStatus, ContentStage, DeliverableKind } from "@/lib/domain";
 import { boardColumns, columnToWork } from "@/lib/board";
 import { NewPostButton, type NewPostOptions } from "./new-post-button";
@@ -42,7 +42,11 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
   const onDrop = (to: string) => {
     const item = items.find((x) => x.id === drag);
     setDrag(null); setOver(null);
-    if (!item || colOf(item) === to) return;
+    if (item) move(item, to);
+  };
+  /** Same move, from drag and drop or from the "Mover" menu (touch screens have no drag). */
+  const move = (item: BoardItem, to: string) => {
+    if (colOf(item) === to) return;
     if (!item.movable || !item.clientId) { toast.info("Este conteúdo segue as etapas de tarefas: ele avança quando as tarefas são concluídas."); return; }
     if (colOf(item) === "ready") { toast.info("Este post já está com o cliente ou aprovado."); return; }
     start(async () => {
@@ -56,13 +60,14 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
 
   return (
     <>
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" aria-label="Pipeline de produção">
+      {/* Phones: one column per screen with a peek of the next, snapping as you swipe. */}
+      <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-4 sm:-mx-6 sm:snap-none sm:px-6 lg:-mx-8 lg:px-8" aria-label="Pipeline de produção">
         {boardColumns.map((col) => {
           const list = items.filter((i) => colOf(i) === col.key);
           return (
             <section key={col.key} aria-label={`${col.label}: ${list.length}`} aria-busy={pending}
               onDragOver={(e) => { if (drag) { e.preventDefault(); setOver(col.key); } }} onDragLeave={() => setOver(null)} onDrop={() => onDrop(col.key)}
-              className={cn("flex w-[19rem] shrink-0 flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
+              className={cn("flex w-[min(19rem,calc(100vw-3.5rem))] shrink-0 snap-start flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
               <header className={cn(
                 "flex items-center justify-between rounded-xl border-2 px-4 py-2.5",
                 col.ready ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 text-fg",
@@ -83,12 +88,27 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                   <li key={i.id} draggable={Boolean(i.movable)} onDragStart={() => setDrag(i.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
                     className={cn("rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong", i.movable && "cursor-grab active:cursor-grabbing", drag === i.id && "opacity-50")}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold">{i.format ?? "Conteúdo"}</span>
-                      <span className="tabular text-xs text-muted">
-                        {col.ready && readyNote(i) ? readyNote(i) : i.planned ? formatDate(i.planned) : ""}
+                      <span className="truncate rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold">{i.format ?? "Conteúdo"}</span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        <span className="tabular text-xs text-muted">
+                          {col.ready && readyNote(i) ? readyNote(i) : i.planned ? formatDate(i.planned) : ""}
+                        </span>
+                        {i.movable && i.clientId && !col.ready && (
+                          // Native picker: opens as the phone's own sheet and is never clipped by the scrolling board.
+                          <label className="relative -mr-2 hidden size-9 items-center justify-center rounded-md text-muted pointer-coarse:inline-flex">
+                            <ArrowRightLeft className="size-4" aria-hidden />
+                            <select aria-label={`Mover ${i.title}`} value="" disabled={pending} className="absolute inset-0 cursor-pointer opacity-0"
+                              onChange={(e) => { if (e.target.value) move(i, e.target.value); }}>
+                              <option value="">Mover para…</option>
+                              {boardColumns.filter((c) => c.key !== col.key && (!c.ready || canSubmit)).map((c) => (
+                                <option key={c.key} value={c.key}>{c.ready ? "Pronto (liberar para o cliente)" : c.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
                       </span>
                     </div>
-                    <Link href={i.href ?? `/app/conteudos/${i.id}`} draggable={false} className="mt-3 block text-[17px] font-bold leading-snug tracking-tight hover:underline">
+                    <Link href={i.href ?? `/app/conteudos/${i.id}`} draggable={false} className="mt-3 block break-words text-base font-bold leading-snug tracking-tight hover:underline sm:text-[17px]">
                       {i.title}
                     </Link>
 
@@ -127,7 +147,9 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                 ))}
                 {list.length === 0 && (
                   <li className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-subtle">
-                    {col.ready ? "Posts liberados para o cliente aparecem aqui." : drag ? "Solte aqui" : <>Nenhum post nesta etapa.<br />Arraste um card para cá{create ? " ou use o +" : ""}.</>}
+                    {col.ready ? "Posts liberados para o cliente aparecem aqui." : drag ? "Solte aqui" : <>Nenhum post nesta etapa.<br />
+                      <span className="pointer-coarse:hidden">Arraste um card para cá{create ? " ou use o +" : ""}.</span>
+                      <span className="hidden pointer-coarse:inline">Use o botão de mover no card{create ? " ou o +" : ""}.</span></>}
                   </li>
                 )}
               </ul>

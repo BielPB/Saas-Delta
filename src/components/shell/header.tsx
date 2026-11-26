@@ -61,11 +61,12 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:px-4">
+    // Installed app on iPhone: the bar sits below the clock/notch (safe-area padding on top).
+    <header className="sticky top-0 z-40 flex h-[calc(3rem+env(safe-area-inset-top))] items-center gap-1.5 border-b border-border bg-surface/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:gap-2 sm:px-4">
       {menuButton}
       {workspaces.length > 1 ? (
         <Menu label="Trocar workspace" align="start" trigger={(p) => (
-          <Button variant="ghost" size="sm" {...p} className="max-w-48 font-medium text-fg">
+          <Button variant="ghost" size="sm" {...p} className="min-w-0 max-w-[9.5rem] font-medium text-fg sm:max-w-48">
             <span className="truncate">{workspace.name}</span><ChevronsUpDown className="text-subtle" />
           </Button>
         )}>
@@ -76,13 +77,13 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
           ))}
         </Menu>
       ) : (
-        <span className="truncate px-1 text-[13px] font-medium">{workspace.name}</span>
+        <span className="min-w-0 max-w-[9.5rem] truncate px-1 text-[13px] font-medium sm:max-w-48">{workspace.name}</span>
       )}
 
       <div className="flex-1" />
 
       <button type="button" onClick={() => setSearchOpen(true)}
-        className="flex h-8 w-9 items-center justify-center gap-2 rounded-md border border-border bg-surface-2 px-2 text-[13px] text-subtle transition-colors hover:border-border-strong hover:text-muted sm:w-64 sm:justify-start"
+        className="flex h-8 w-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface-2 px-2 text-[13px] text-subtle transition-colors hover:border-border-strong hover:text-muted pointer-coarse:size-9 sm:w-64 sm:justify-start"
         aria-label="Buscar (Ctrl K)">
         <Search className="size-4 shrink-0" aria-hidden />
         <span className="hidden flex-1 text-left sm:inline">Buscar clientes, conteúdos, tarefas…</span>
@@ -90,7 +91,7 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
       </button>
 
       <Link href="/app/notificacoes" aria-label={`Notificações${unread ? `, ${unread} não lidas` : ""}`}
-        className="relative inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg">
+        className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-9">
         <Bell className="size-4" />
         {unread > 0 && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-accent ring-2 ring-surface" aria-hidden />}
       </Link>
@@ -100,7 +101,7 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
       </Button>
 
       <Menu label="Menu da conta" trigger={(p) => (
-        <button type="button" {...p} className="rounded-full focus-visible:outline-2"><Avatar name={user.name} src={user.avatar} size={28} /></button>
+        <button type="button" {...p} className="flex shrink-0 items-center justify-center rounded-full focus-visible:outline-2 pointer-coarse:size-9"><Avatar name={user.name} src={user.avatar} size={28} /></button>
       )}>
         {(close) => (
           <>

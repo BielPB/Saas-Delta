@@ -108,9 +108,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
-          <Link href={`/app?mes=${shiftMonth(ym, -1)}`} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronLeft className="size-4" /></Link>
+          <Link href={`/app?mes=${shiftMonth(ym, -1)}`} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronLeft className="size-4" /></Link>
           <span className="min-w-28 text-center text-[13px] font-semibold">{MonthName} {ym.slice(0, 4)}</span>
-          <Link href={`/app?mes=${shiftMonth(ym, 1)}`} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg"><ChevronRight className="size-4" /></Link>
+          <Link href={`/app?mes=${shiftMonth(ym, 1)}`} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronRight className="size-4" /></Link>
         </nav>
       </div>
 
@@ -129,25 +129,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Panel>
       )}
 
-      <section aria-label="Meta do mês" className="mb-4 flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-border bg-surface p-6">
-        <div className="min-w-0 flex-1 basis-72">
+      {/* Phones: text and ring side by side (smaller ring) instead of the ring alone on a second row. */}
+      <section aria-label="Meta do mês" className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 sm:flex-wrap sm:gap-6 sm:p-6">
+        <div className="min-w-0 flex-1 sm:basis-72">
           <p className="text-sm text-muted">{hello}{first ? `, ${first}` : ""}</p>
-          <h1 className="mt-1 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          <h1 className="mt-1 text-[1.6rem] font-bold leading-tight tracking-tight sm:text-4xl">
             {target ? <>{MonthName} está em <span className="text-accent-ink">{pct}% da meta</span>.</> : <>{MonthName} ainda sem meta definida.</>}
           </h1>
           <p className="mt-1 text-sm text-muted">{cheer}</p>
           {target > 0 && <p className="mt-1 text-xs text-subtle">Posts aprovados pelos clientes no mês ÷ soma das metas dos clientes.</p>}
           {missing.length > 0 && <a href="#falta" className="mt-4 inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-medium hover:bg-surface-2">Ver o que falta ({missing.reduce((n, m) => n + m.left, 0)})</a>}
         </div>
-        <div className="relative size-36 shrink-0" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
+        <div className="relative size-24 shrink-0 self-start sm:size-36 sm:self-center" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
           <svg viewBox="0 0 120 120" className="size-full -rotate-90">
             <circle cx="60" cy="60" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="9" />
             <circle cx="60" cy="60" r={R} fill="none" stroke="var(--accent-ink)" strokeWidth="9" strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, target ? delivered / target : 0))} />
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="tabular text-3xl font-bold">{pct}%</span>
-            <span className="tabular text-xs text-muted">{delivered} de {target}</span>
+            <span className="tabular text-xl font-bold sm:text-3xl">{pct}%</span>
+            <span className="tabular text-[11px] text-muted sm:text-xs">{delivered} de {target}</span>
           </span>
         </div>
       </section>
@@ -159,24 +160,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           { label: "Aprovados", value: delivered, sub: target ? `${pct}% da meta` : "pelos clientes no mês", accent: true, href: "/app/clientes" },
           { label: "Travados", value: stuck, sub: stuck ? "ajustes, aprovações paradas e atrasos" : "tudo fluindo", danger: stuck > 0, href: "#atencao" },
         ].map((k) => (
-          <Link key={k.label} href={k.href} className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+          <Link key={k.label} href={k.href} className="min-w-0 rounded-xl border border-border bg-surface p-3 transition-colors hover:border-border-strong sm:p-4">
             <p className="text-xs text-muted">{k.label}</p>
-            <p className={cn("tabular mt-1 text-3xl font-bold", k.accent && "text-accent-ink", k.danger && "text-[var(--tone-danger-fg)]")}>{k.value}</p>
+            <p className={cn("tabular mt-1 text-2xl font-bold sm:text-3xl", k.accent && "text-accent-ink", k.danger && "text-[var(--tone-danger-fg)]")}>{k.value}</p>
             <p className="mt-0.5 text-xs text-muted">{k.sub}</p>
           </Link>
         ))}
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <Panel title={<span>Ritmo da equipe <span className="ml-1 font-normal text-muted">posts aprovados por dia</span></span>}
+        <Panel className="min-w-0" title={<span>Ritmo da equipe <span className="ml-1 font-normal text-muted">posts aprovados por dia</span></span>}
           actions={<span className="tabular text-xs text-muted">{firstApproval.size} no mês</span>}>
-          <ColumnChart label="Posts aprovados por dia" height={160}
+          <ColumnChart label="Posts aprovados por dia" height={140}
             data={perDay.map((v, i) => ({ label: String(i + 1), value: v, detail: `${i + 1} de ${monthName}: ${v} aprovado(s)` }))} />
         </Panel>
         <Panel title="Top membros" actions={
           <nav aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
-            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", byGoal && "bg-accent text-accent-fg")} title="% da meta individual de cada pessoa">Meta individual</Link>
-            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted", !byGoal && "bg-accent text-accent-fg")} title="Quantidade de posts aprovados">Geral</Link>
+            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5", byGoal && "bg-accent text-accent-fg")} title="% da meta individual de cada pessoa">Meta individual</Link>
+            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5", !byGoal && "bg-accent text-accent-fg")} title="Quantidade de posts aprovados">Geral</Link>
           </nav>}>
           {ranking.length === 0 ? (
             <p className="text-[13px] text-muted">{byGoal ? <>Defina a meta mensal de cada pessoa em <Link href="/app/colaboradores" className="underline">Equipe</Link> para ver o ranking por meta.</> : "Aparece quando os posts com responsável ou editor forem aprovados."}</p>

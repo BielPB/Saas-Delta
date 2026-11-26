@@ -51,7 +51,7 @@ export default async function ContentsPage({ searchParams }: { searchParams: Pro
       <div className="mb-3 flex items-center gap-1 overflow-x-auto" role="tablist" aria-label="Modo de visualização">
         {views.map((v) => (
           <Link key={v.key} role="tab" aria-selected={view === v.key} href={`/app/conteudos${qs(base, { visao: v.key === "lista" ? undefined : v.key })}`}
-            className={cn("flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2 hover:text-fg [&_svg]:size-4",
+            className={cn("flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:h-10 [&_svg]:size-4",
               view === v.key && "bg-surface-2 font-medium text-fg")}>
             {v.icon}{v.label}
           </Link>

@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck, ChevronLeft, ChevronRight, Copy, ImageIcon, Loader2, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, Input } from "@/components/ui/form";
@@ -43,6 +43,15 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   const [pending, start] = useTransition();
   const toast = useToast();
   const router = useRouter();
+
+  // Keeps the current step visible in the sideways-scrolling row (phones). Scrolls only the row, never the page.
+  const stepsRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const ol = stepsRef.current;
+    const cur = ol?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!ol || !cur || ol.scrollWidth <= ol.clientWidth) return;
+    ol.scrollLeft += cur.getBoundingClientRect().left - ol.getBoundingClientRect().left - (ol.clientWidth - cur.clientWidth) / 2;
+  }, [idx, feed]);
 
   const total = data.items.length;
   const item = data.items[Math.min(idx, total - 1)];
@@ -213,9 +222,11 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         </main>
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="mx-auto flex max-w-2xl gap-2 px-4 py-3">
-            <Button className="h-11 flex-1 rounded-full" onClick={() => openItem(Math.max(0, data.items.findIndex((i) => stateOf(i) === "pending")))}>Avaliar uma a uma</Button>
-            <Button variant="primary" className="h-11 flex-1 rounded-full font-bold" disabled={pending} onClick={finalize}>
-              {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar avaliação
+            <Button className="h-11 min-w-0 flex-1 rounded-full px-3 pointer-coarse:h-12" onClick={() => openItem(Math.max(0, data.items.findIndex((i) => stateOf(i) === "pending")))}>
+              <span className="sm:hidden">Avaliar 1 a 1</span><span className="hidden sm:inline">Avaliar uma a uma</span>
+            </Button>
+            <Button variant="primary" className="h-11 min-w-0 flex-1 rounded-full px-3 font-bold pointer-coarse:h-12" disabled={pending} onClick={finalize}>
+              {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar<span className="hidden sm:inline"> avaliação</span>
             </Button>
           </div>
         </div>
@@ -246,7 +257,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   const lastRejection = ds.flatMap((d) => d.history.map((h) => ({ ...h, kind: d.kind }))).filter((h) => h.decision === "rejected").sort((a, b) => b.version - a.version)[0];
 
   return (
-    <div className="min-h-dvh bg-bg pb-10">
+    <div className="min-h-dvh bg-bg pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 sm:px-8">
           <Brand data={data} media={media} />
@@ -266,14 +277,15 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Conteúdo {idx + 1} de {total}{item.service ? ` · ${item.service}` : ""}</p>
-            <h1 className="mt-1 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
+            <h1 className="mt-1 break-words text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
           </div>
-          <ol className="flex flex-wrap gap-2" aria-label="Conteúdos do lote">
+          {/* Phones: the numbered steps scroll sideways in one row (20 posts used to fill half the screen). */}
+          <ol ref={stepsRef} className="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap" aria-label="Conteúdos do lote">
             {data.items.map((it, n) => {
               const st = stateOf(it);
               const current = n === idx;
               return (
-                <li key={it.content_id}>
+                <li key={it.content_id} className="shrink-0">
                   <button type="button" onClick={() => go(n)} disabled={pending} aria-current={current ? "step" : undefined}
                     aria-label={`Conteúdo ${n + 1}: ${it.title}${st === "approved" ? " (aprovado)" : st === "rejected" ? " (ajuste solicitado)" : ""}`}
                     className={cn("flex size-11 items-center justify-center rounded-xl border-2 text-sm font-bold transition-colors",
@@ -328,7 +340,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
           ) : (
             <>
               <h2 id="decide" className="text-lg font-bold">Este conteúdo está aprovado?</h2>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-labelledby="decide">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3" role="radiogroup" aria-labelledby="decide">
                 <button type="button" role="radio" aria-checked={choice === "approved"} onClick={() => patch({ choice: "approved" })}
                   className={cn("flex h-14 items-center justify-center gap-2 rounded-xl border-2 text-[15px] font-bold transition-colors",
                     choice === "approved" ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 text-accent-ink hover:bg-accent/10")}>
@@ -395,15 +407,16 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <p className="tabular text-sm text-muted" aria-live="polite">{answered} de {total} respondidos</p>
-            <div className="flex gap-2">
-              <Button className="h-11 rounded-full px-5" disabled={pending || idx === 0} onClick={() => go(idx - 1)}><ChevronLeft /> Anterior</Button>
+            {/* Phones: the two buttons share the full width (the long labels used to overflow the card). */}
+            <div className="flex gap-2 max-sm:w-full">
+              <Button className="h-11 rounded-full px-4 pointer-coarse:h-12 max-sm:flex-1 sm:px-5" disabled={pending || idx === 0} onClick={() => go(idx - 1)}><ChevronLeft /> Anterior</Button>
               {isLast ? (
-                <Button variant="primary" className="h-11 rounded-full px-6 font-bold" disabled={pending} onClick={finalize}>
-                  {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar avaliação
+                <Button variant="primary" className="h-11 rounded-full px-4 font-bold pointer-coarse:h-12 max-sm:flex-[2] sm:px-6" disabled={pending} onClick={finalize}>
+                  {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar<span className="hidden sm:inline"> avaliação</span>
                 </Button>
               ) : (
-                <Button variant="primary" className="h-11 rounded-full px-6 font-bold" disabled={pending} onClick={() => go(idx + 1)}>
-                  {pending && <Loader2 className="animate-spin" />} Próximo conteúdo <ArrowRight />
+                <Button variant="primary" className="h-11 rounded-full px-4 font-bold pointer-coarse:h-12 max-sm:flex-[2] sm:px-6" disabled={pending} onClick={() => go(idx + 1)}>
+                  {pending && <Loader2 className="animate-spin" />} Próximo<span className="hidden sm:inline"> conteúdo</span> <ArrowRight />
                 </Button>
               )}
             </div>

@@ -74,12 +74,12 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           <p className="text-sm text-muted">
             Projetos{client ? <> / <span className={service ? "" : "text-fg"}>{client.name}</span></> : null}
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">{title}</h1>
+          <h1 className="mt-1 break-words text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <nav aria-label="Visão" className="flex rounded-full border border-border bg-surface p-1 text-sm font-semibold">
-            <span aria-current="page" className="rounded-full bg-accent px-4 py-1.5 text-accent-fg">Produção</span>
-            <Link href={`/app/aprovacoes${qs({}, { cliente: f.cliente })}`} className="flex items-center gap-2 rounded-full px-4 py-1.5 text-muted transition-colors hover:text-fg">
+            <span aria-current="page" className="rounded-full bg-accent px-3 py-1.5 text-accent-fg sm:px-4">Produção</span>
+            <Link href={`/app/aprovacoes${qs({}, { cliente: f.cliente })}`} className="flex items-center gap-2 rounded-full px-3 py-1.5 text-muted transition-colors hover:text-fg sm:px-4">
               Aprovação
               <span className={cn("tabular flex size-5 items-center justify-center rounded-full text-[11px] font-bold",
                 inApproval > 0 ? "bg-accent text-accent-fg" : "bg-surface-3 text-muted")}>{inApproval}</span>
@@ -89,9 +89,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      <section aria-label="Progresso" className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface px-5 py-3.5">
-        <p className="flex items-baseline gap-2 whitespace-nowrap">
-          <span className="tabular text-3xl font-bold text-accent-ink">{ready}</span>
+      <section aria-label="Progresso" className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface px-4 py-3 sm:mt-5 sm:px-5 sm:py-3.5">
+        <p className="flex items-baseline gap-2">
+          <span className="tabular text-2xl font-bold text-accent-ink sm:text-3xl">{ready}</span>
           <span className="text-muted">de {total} já saíram da produção</span>
         </p>
         <div className="h-2.5 min-w-40 flex-1 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={ready} aria-label="Posts que já saíram da produção">
@@ -102,7 +102,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         </ul>
       </section>
 
-      <div className="my-5">
+      <div className="my-4 sm:my-5">
         <FilterBar clients={clients} services={services} formats={formats}
           members={members.filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))}
           show={["q", "formato", "aprovacao", "responsavel"]} />

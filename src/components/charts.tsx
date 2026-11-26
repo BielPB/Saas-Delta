@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 /**
  * Minimal single-series charts (magnitude). One hue, thin bars with 4px
  * rounded data-ends anchored to the baseline, 2px gaps, recessive axis,
@@ -23,7 +25,11 @@ export function ColumnChart({ data, label, height = 140 }: {
         ))}
       </div>
       <div className="mt-1.5 flex gap-[2px] border-t border-border pt-1.5" aria-hidden>
-        {data.map((d) => <span key={d.label} className="flex-1 truncate text-center text-[11px] text-subtle">{d.label}</span>)}
+        {/* Many columns on a phone: label every 5th (1, 6, 11…) and the last, instead of 31 squeezed "…". */}
+        {data.map((d, i) => (
+          <span key={d.label} className={cn("flex min-w-0 flex-1 justify-center overflow-visible whitespace-nowrap text-[11px] text-subtle",
+            data.length > 12 && i % 5 !== 0 && i !== data.length - 1 && "max-sm:invisible")}>{d.label}</span>
+        ))}
       </div>
       {/* Tables ignore width/height/overflow, so .sr-only on the table itself still stretches the page: wrap it. */}
       <div className="sr-only">
@@ -47,7 +53,7 @@ export function BarList({ data, label, hrefFor }: {
       {data.map((d) => {
         const row = (
           <>
-            <span className="w-36 shrink-0 truncate text-[13px] text-muted">{d.label}</span>
+            <span className="w-28 shrink-0 truncate text-[13px] text-muted sm:w-36">{d.label}</span>
             <span className="relative h-5 flex-1">
               <span className="absolute inset-y-0.5 left-0 rounded-r-[4px] bg-fg/70 transition-colors group-hover:bg-fg" style={{ width: `${(d.value / max) * 100}%`, minWidth: d.value ? 3 : 0 }} />
             </span>

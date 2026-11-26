@@ -90,7 +90,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
         const link = (
           <Link href={i.href} aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0",
+              "relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:h-10 pointer-coarse:text-sm",
               active && "bg-surface-2 font-medium text-fg",
               compact && "w-8 justify-center px-0",
             )}>
@@ -152,7 +152,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <button className="absolute inset-0 bg-[var(--overlay)]" aria-label="Fechar menu" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overscroll-contain border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
             <div className="flex h-12 items-center justify-between border-b border-border px-3">
               <Logo />
               <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X /></Button>
@@ -169,7 +169,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
           menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 py-5 transition-opacity duration-200 sm:px-6 lg:px-8", navigating && "opacity-60")}>
+        <main id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
           {parent && (
             <button type="button" onClick={goBack}
               className="-ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">

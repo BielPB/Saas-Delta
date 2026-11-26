@@ -45,7 +45,7 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
             const n = f.key === "all" ? posts.length : posts.filter((p) => p.formatKey === f.key).length;
             return (
               <button key={f.key} type="button" onClick={() => setFilter(f.key)} aria-pressed={filter === f.key}
-                className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors pointer-coarse:py-1.5",
                   filter === f.key ? "border-accent bg-accent text-accent-fg" : "border-border text-muted hover:text-fg")}>
                 {f.name} <span className="tabular opacity-70">{n}</span>
               </button>
@@ -85,8 +85,8 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
                     </span>
                   )}
                 </div>
-                <div className="space-y-2 p-3">
-                  <p className="line-clamp-2 min-h-[2.5em] text-[13px] font-semibold leading-tight">{p.title}</p>
+                <div className="space-y-2 p-2.5 sm:p-3">
+                  <p className="line-clamp-2 min-h-[2.5em] break-words text-[13px] font-semibold leading-tight">{p.title}</p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{p.format}</span>
                     <StatusPill s={p.status} />

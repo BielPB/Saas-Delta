@@ -37,19 +37,25 @@ export function Dialog({
       className={cn(
         "m-auto w-[calc(100%-2rem)] rounded-lg border border-border bg-surface p-0 text-fg shadow-pop backdrop:backdrop-blur-[1px]",
         size === "sm" && "max-w-sm", size === "md" && "max-w-lg", size === "lg" && "max-w-2xl",
+        // Phones: bottom sheet (full width, anchored to the bottom, thumb-reachable buttons).
+        "max-sm:mb-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0",
       )}
     >
       {open && (
-        <div className="flex max-h-[85vh] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
-            <div>
+        <div className="flex max-h-[85dvh] flex-col">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
+            <div className="min-w-0">
               <h2 id={titleId} className="text-[15px] font-semibold">{title}</h2>
-              {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+              {description && <p className="mt-1 break-words text-sm text-muted">{description}</p>}
             </div>
             <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Fechar"><X /></Button>
           </div>
-          {children && <div className="overflow-y-auto px-5 py-4">{children}</div>}
-          {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>}
+          {children && <div className={cn("overflow-y-auto px-4 py-4 sm:px-5", !footer && "max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]")}>{children}</div>}
+          {footer && (
+            <div className="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5 max-sm:[&>*]:flex-1">
+              {footer}
+            </div>
+          )}
         </div>
       )}
     </dialog>
@@ -73,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx value={push}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end"
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-4 sm:items-end"
            role="region" aria-label="Notificações da ação">
         {items.map((t) => (
           <div key={t.id} role={t.kind === "error" ? "alert" : "status"}
@@ -121,7 +127,7 @@ export function Menu({ trigger, children, align = "end", label }: {
     <div ref={ref} className="relative">
       {trigger({ onClick: () => setOpen((o) => !o), "aria-expanded": open, "aria-haspopup": "menu", "aria-label": label })}
       {open && (
-        <div role="menu" className={cn("absolute z-50 mt-1 min-w-48 rounded-md border border-border bg-surface p-1 shadow-pop",
+        <div role="menu" className={cn("absolute z-50 mt-1 min-w-48 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-surface p-1 shadow-pop",
           align === "end" ? "right-0" : "left-0")}>
           {children(() => setOpen(false))}
         </div>
@@ -133,7 +139,7 @@ export function Menu({ trigger, children, align = "end", label }: {
 export function MenuItem({ children, onSelect, danger, disabled }: { children: ReactNode; onSelect: () => void; danger?: boolean; disabled?: boolean }) {
   return (
     <button role="menuitem" type="button" disabled={disabled} onClick={onSelect}
-      className={cn("flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-surface-2 disabled:opacity-50 [&_svg]:size-4 [&_svg]:text-muted",
+      className={cn("flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-surface-2 pointer-coarse:py-2.5 disabled:opacity-50 [&_svg]:size-4 [&_svg]:text-muted",
         danger && "text-[var(--tone-danger-fg)] [&_svg]:text-current")}>
       {children}
     </button>

@@ -16,11 +16,12 @@ const variants: Record<Variant, string> = {
   danger: "border border-[var(--tone-danger-fg)]/30 bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)] hover:brightness-95",
   subtle: "bg-surface-2 text-fg hover:bg-surface-3",
 };
+// Touch screens get taller targets (finger, not mouse pointer).
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-[13px]",
-  md: "h-9 px-3.5",
-  icon: "size-9",
-  "icon-sm": "size-8",
+  sm: "h-8 px-2.5 text-[13px] pointer-coarse:h-9",
+  md: "h-9 px-3.5 pointer-coarse:h-10",
+  icon: "size-9 pointer-coarse:size-10",
+  "icon-sm": "size-8 pointer-coarse:size-9",
 };
 
 export function buttonClass(variant: Variant = "secondary", size: Size = "md", className?: string) {
