@@ -8,6 +8,7 @@ import { formatDate, formatDateTime, relative } from "@/lib/format";
 import { Avatar, Panel } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import { ColumnChart } from "@/components/charts";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 
 export const metadata: Metadata = { title: "Visão geral" };
 
@@ -175,10 +176,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             data={perDay.map((v, i) => ({ label: String(i + 1), value: v, detail: `${i + 1} de ${monthName}: ${v} aprovado(s)` }))} />
         </Panel>
         <Panel title="Top membros" actions={
-          <nav aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
-            <Link href={`/app?mes=${ym}`} aria-current={byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5", byGoal && "bg-accent text-accent-fg")} title="% da meta individual de cada pessoa">Meta individual</Link>
-            <Link href={`/app?mes=${ym}&ranking=geral`} aria-current={!byGoal ? "page" : undefined} className={cn("rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5", !byGoal && "bg-accent text-accent-fg")} title="Quantidade de posts aprovados">Geral</Link>
-          </nav>}>
+          <ToggleGroup active={byGoal ? "meta" : "geral"} aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
+            <ToggleLink value="meta" href={`/app?mes=${ym}`} scroll={false} className="rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5" activeClassName="bg-accent text-accent-fg" title="% da meta individual de cada pessoa">Meta individual</ToggleLink>
+            <ToggleLink value="geral" href={`/app?mes=${ym}&ranking=geral`} scroll={false} className="rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5" activeClassName="bg-accent text-accent-fg" title="Quantidade de posts aprovados">Geral</ToggleLink>
+          </ToggleGroup>}>
           {ranking.length === 0 ? (
             <p className="text-[13px] text-muted">{byGoal ? <>Defina a meta mensal de cada pessoa em <Link href="/app/colaboradores" className="underline">Equipe</Link> para ver o ranking por meta.</> : "Aparece quando os posts com responsável ou editor forem aprovados."}</p>
           ) : (

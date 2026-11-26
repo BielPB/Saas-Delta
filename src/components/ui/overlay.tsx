@@ -1,7 +1,8 @@
 "use client";
 import {
-  createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { X, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -107,30 +108,71 @@ export function useToast() {
 /* ----------------------------------------------------------------------------
  * Menu — small disclosure menu with outside-click / Esc handling.
  * -------------------------------------------------------------------------- */
+/**
+ * The list is portalled and `position: fixed` next to the trigger, so it floats above
+ * tables, panels and scrolling areas instead of being clipped by them (and opens upward
+ * when there is no room below).
+ */
 export function Menu({ trigger, children, align = "end", label }: {
-  trigger: (props: { onClick: () => void; "aria-expanded": boolean; "aria-haspopup": "menu"; "aria-label"?: string }) => ReactNode;
+  trigger: (props: { onClick: (e: ReactMouseEvent<HTMLElement>) => void; "aria-expanded": boolean; "aria-haspopup": "menu"; "aria-label"?: string }) => ReactNode;
   children: (close: () => void) => ReactNode;
   align?: "start" | "end";
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<CSSProperties | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  // Inside a modal <dialog> the list must live in the dialog (top layer); elsewhere on <body>.
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const toggle = (e: ReactMouseEvent<HTMLElement>) => { setHost(e.currentTarget.closest("dialog") ?? document.body); setOpen((o) => !o); };
+
+  // Measure after render (the list's height decides above/below), before paint: no flicker.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const t = ref.current?.getBoundingClientRect();
+      const h = menu.current?.offsetHeight ?? 0;
+      if (!t) return;
+      const gap = 4, edge = 8;
+      const below = window.innerHeight - t.bottom - edge;
+      const up = h + gap > below && t.top - edge > below;
+      setPos({
+        top: up ? Math.max(edge, t.top - gap - h) : t.bottom + gap,
+        ...(align === "end" ? { right: Math.max(edge, window.innerWidth - t.right) } : { left: Math.max(edge, t.left) }),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open, align]);
+
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const inside = (n: EventTarget | null) => Boolean(n instanceof Node && (ref.current?.contains(n) || menu.current?.contains(n)));
+    const onDoc = (e: PointerEvent) => { if (!inside(e.target)) setOpen(false); };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
+    // The list is pinned to the screen: close it when the page (or a table) scrolls under it.
+    const onScroll = (e: Event) => { if (!inside(e.target)) setOpen(false); };
+    document.addEventListener("pointerdown", onDoc);
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+    };
   }, [open]);
+
   return (
     <div ref={ref} className="relative">
-      {trigger({ onClick: () => setOpen((o) => !o), "aria-expanded": open, "aria-haspopup": "menu", "aria-label": label })}
-      {open && (
-        <div role="menu" className={cn("absolute z-50 mt-1 min-w-48 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-surface p-1 shadow-pop",
-          align === "end" ? "right-0" : "left-0")}>
+      {trigger({ onClick: toggle, "aria-expanded": open, "aria-haspopup": "menu", "aria-label": label })}
+      {open && host && createPortal(
+        <div ref={menu} role="menu" style={pos ?? { top: 0, left: 0, visibility: "hidden" }}
+          className="fixed z-[90] min-w-48 max-w-[calc(100vw-1rem)] rounded-md border border-border bg-surface p-1 text-fg shadow-pop">
           {children(() => setOpen(false))}
-        </div>
+        </div>,
+        host,
       )}
     </div>
   );

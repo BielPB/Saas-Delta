@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { FolderOpen } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assetSelect, listClientsLite, signPaths, type AssetRow } from "@/lib/data";
 import { bytes, relative } from "@/lib/format";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { LibraryUpload } from "./file-actions";
 import { FileList } from "./file-list";
 
@@ -41,10 +41,10 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader title="Arquivos" description="Material bruto fica no Drive (referência); finais e previews ficam no armazenamento privado; textos ficam no banco."
         actions={canUpload && <LibraryUpload workspaceId={ctx.workspace.id} clients={clients} />} />
-      <nav className="mb-3 flex flex-wrap gap-1" aria-label="Seções de arquivos">
-        <Link href={link({ aba: undefined })} aria-current={!unlinkedTab ? "page" : undefined} className="rounded-md px-2.5 py-1 text-[13px] text-muted aria-[current=page]:bg-surface-2 aria-[current=page]:font-medium aria-[current=page]:text-fg">Biblioteca</Link>
-        <Link href={link({ aba: "nao-vinculados" })} aria-current={unlinkedTab ? "page" : undefined} className="rounded-md px-2.5 py-1 text-[13px] text-muted aria-[current=page]:bg-surface-2 aria-[current=page]:font-medium aria-[current=page]:text-fg">Não vinculados</Link>
-      </nav>
+      <ToggleGroup active={unlinkedTab ? "nao-vinculados" : "biblioteca"} className="mb-3 flex flex-wrap gap-1" aria-label="Seções de arquivos">
+        <ToggleLink value="biblioteca" href={link({ aba: undefined })} className="rounded-md px-2.5 py-1 text-[13px] text-muted pointer-coarse:py-2" activeClassName="bg-surface-2 font-medium text-fg">Biblioteca</ToggleLink>
+        <ToggleLink value="nao-vinculados" href={link({ aba: "nao-vinculados" })} className="rounded-md px-2.5 py-1 text-[13px] text-muted pointer-coarse:py-2" activeClassName="bg-surface-2 font-medium text-fg">Não vinculados</ToggleLink>
+      </ToggleGroup>
       <div className="mb-4 flex flex-wrap gap-2">
         <form action="/app/arquivos" className="flex flex-wrap gap-2">
           {sp.aba && <input type="hidden" name="aba" value={sp.aba} />}

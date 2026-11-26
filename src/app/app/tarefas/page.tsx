@@ -5,8 +5,8 @@ import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listClientsLite, listMembers, memberMap, openPostsLite, parseFilters, qs, taskSelect, type TaskRow } from "@/lib/data";
 import { taskStatus } from "@/lib/domain";
-import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/primitives";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { TaskList } from "@/components/tasks/task-list";
 import { NewTaskButton } from "./new-task";
 import { TaskFilters } from "./filters";
@@ -58,12 +58,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <PageHeader title="Tarefas da equipe" description="Tarefas avulsas (reunião, gravação, captação…) e etapas de produção. Use “Nova tarefa” para atribuir algo a alguém."
         actions={ctx.can("tasks.manage") && <NewTaskButton clients={clients} posts={await openPostsLite(ctx.workspace.id)} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Situação" className="flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5">
+        <ToggleGroup active={tabs.find((t) => t.on)?.label ?? ""} aria-label="Situação" className="flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5">
           {tabs.map((t) => (
-            <Link key={t.label} href={`/app/tarefas${qs(base, t.patch)}`} aria-current={t.on ? "page" : undefined}
-              className={cn("shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2", t.on && "bg-surface-3 font-medium text-fg")}>{t.label}</Link>
+            <ToggleLink key={t.label} value={t.label} href={`/app/tarefas${qs(base, t.patch)}`}
+              className="shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2"
+              activeClassName="bg-surface-3 font-medium text-fg">{t.label}</ToggleLink>
           ))}
-        </nav>
+        </ToggleGroup>
         <TaskFilters clients={clients.map((c) => ({ id: c.id, name: c.name }))} members={active.map((m) => ({ id: m.user_id, name: m.full_name }))} />
       </div>
       {situacao === "sem_responsavel" && <p className="mb-2 text-xs text-muted">Mostrando tarefas abertas sem responsável.</p>}

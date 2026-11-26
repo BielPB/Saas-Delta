@@ -4,9 +4,9 @@ import { Archive, CalendarDays, Film, GalleryHorizontal, Kanban, List, Plus, Sta
 import { getContext } from "@/lib/auth";
 import { contentFilters, listClientsLite, listContents, listFormats, listMembers, listServicesLite, parseFilters, qs, thumbnails } from "@/lib/data";
 import { formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { FilterBar } from "@/components/content/filter-bar";
 import { ContentTable, Thumb } from "@/components/content/content-table";
 import { ApprovalBadge, PublicationBadge, ServiceDot, StageBadge } from "@/components/content/badges";
@@ -48,15 +48,15 @@ export default async function ContentsPage({ searchParams }: { searchParams: Pro
           {ctx.can("contents.manage") && <ButtonLink href="/app/conteudos/novo" variant="primary"><Plus /> Novo conteúdo</ButtonLink>}
         </>} />
 
-      <div className="mb-3 flex items-center gap-1 overflow-x-auto" role="tablist" aria-label="Modo de visualização">
+      <ToggleGroup as="div" active={view} role="tablist" aria-label="Modo de visualização" className="mb-3 flex items-center gap-1 overflow-x-auto">
         {views.map((v) => (
-          <Link key={v.key} role="tab" aria-selected={view === v.key} href={`/app/conteudos${qs(base, { visao: v.key === "lista" ? undefined : v.key })}`}
-            className={cn("flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:h-10 [&_svg]:size-4",
-              view === v.key && "bg-surface-2 font-medium text-fg")}>
+          <ToggleLink key={v.key} value={v.key} currentAttr="tab" href={`/app/conteudos${qs(base, { visao: v.key === "lista" ? undefined : v.key })}`}
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:h-10 [&_svg]:size-4"
+            activeClassName="bg-surface-2 font-medium text-fg">
             {v.icon}{v.label}
-          </Link>
+          </ToggleLink>
         ))}
-      </div>
+      </ToggleGroup>
 
       <FilterBar clients={clients} services={services} formats={formats}
         members={members.filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }))}

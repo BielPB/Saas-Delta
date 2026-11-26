@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: { bodySizeLimit: "2mb" }, // files never go through actions: uploads are direct to storage
+    // Browser-side router cache only (per tab, per signed-in person; nothing shared between members):
+    // going back to a tab/filter seen in the last 30 s is instant. Any server action or router.refresh() clears it.
+    staleTimes: { dynamic: 30 },
   },
   async headers() {
     return [

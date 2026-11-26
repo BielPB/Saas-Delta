@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { monthStart } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Clientes" };
@@ -54,12 +55,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-muted">{list.length} cliente(s) {status === "active" ? "ativo(s)" : status === "inactive" ? "inativo(s)" : "arquivado(s)"} · meta e andamento de {monthName}</p>
-        <nav aria-label="Situação dos clientes" className="flex rounded-lg border border-border bg-surface p-0.5">
+        <ToggleGroup active={status} aria-label="Situação dos clientes" className="flex rounded-lg border border-border bg-surface p-0.5">
           {([["active", "Ativos", "/app/clientes"], ["inactive", "Inativos", "/app/clientes?status=inactive"], ["archived", "Arquivados", "/app/clientes?status=archived"]] as const).map(([k, label, href]) => (
-            <Link key={k} href={href} aria-current={status === k ? "page" : undefined}
-              className={cn("rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2", status === k && "bg-surface-3 font-medium text-fg")}>{label}</Link>
+            <ToggleLink key={k} value={k} href={href}
+              className="rounded-md px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg pointer-coarse:py-2"
+              activeClassName="bg-surface-3 font-medium text-fg">{label}</ToggleLink>
           ))}
-        </nav>
+        </ToggleGroup>
       </div>
 
       {list.length === 0 ? (

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/primitives";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { MarkAllRead, NotificationLink } from "./client";
 
 export const metadata: Metadata = { title: "Notificações" };
@@ -22,17 +23,18 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   if (sp.lidas !== "1") q = q.is("read_at", null);
   const { data } = await q;
   const rows = data ?? [];
-  const tab = (label: string, href: string, on: boolean) => (
-    <Link href={href} aria-current={on ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-[13px] text-muted hover:text-fg pointer-coarse:py-2", on && "bg-surface-2 font-medium text-fg")}>{label}</Link>
+  const current = sp.categoria && cats[sp.categoria] ? sp.categoria : sp.lidas === "1" ? "todas" : "nao-lidas";
+  const tab = (key: string, label: string, href: string) => (
+    <ToggleLink key={key} value={key} href={href} className="rounded-md px-2.5 py-1 text-[13px] text-muted hover:text-fg pointer-coarse:py-2" activeClassName="bg-surface-2 font-medium text-fg">{label}</ToggleLink>
   );
   return (
     <>
       <PageHeader title="Notificações" actions={<><MarkAllRead /><Link href="/app/conta?aba=notificacoes" className="text-[13px] text-muted hover:text-fg">Preferências</Link></>} />
-      <div className="mb-3 flex flex-wrap gap-1">
-        {tab("Não lidas", "/app/notificacoes", !sp.lidas && !sp.categoria)}
-        {tab("Todas", "/app/notificacoes?lidas=1", sp.lidas === "1" && !sp.categoria)}
-        {Object.entries(cats).map(([k, v]) => tab(v, `/app/notificacoes?lidas=1&categoria=${k}`, sp.categoria === k))}
-      </div>
+      <ToggleGroup as="div" active={current} className="mb-3 flex flex-wrap gap-1">
+        {tab("nao-lidas", "Não lidas", "/app/notificacoes")}
+        {tab("todas", "Todas", "/app/notificacoes?lidas=1")}
+        {Object.entries(cats).map(([k, v]) => tab(k, v, `/app/notificacoes?lidas=1&categoria=${k}`))}
+      </ToggleGroup>
       <Panel padded={false}>
         {rows.length === 0 ? <EmptyState icon={<Bell />} title="Tudo em dia" description="Você será avisado quando uma tarefa for liberada, um conteúdo for aprovado ou reprovado e quando prazos se aproximarem." /> : (
           <ul className="divide-y divide-border">

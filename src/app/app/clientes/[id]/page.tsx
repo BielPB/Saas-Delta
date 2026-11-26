@@ -14,6 +14,7 @@ import { activityText } from "@/lib/activity";
 import { ButtonLink } from "@/components/ui/button";
 import { Avatar, Badge, EmptyState, Panel, Progress, Table } from "@/components/ui/primitives";
 import { ServiceDot } from "@/components/content/badges";
+import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 import { TaskList } from "@/components/tasks/task-list";
 import { ClientForm } from "../client-form";
 import { ClientStatusActions, ClientTeam, ServicesManager, TargetsManager } from "./client-panels";
@@ -100,16 +101,16 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
 
       {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
 
-      <nav aria-label="Seções do cliente" className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-border px-3 sm:-mx-1 sm:px-1">
+      <ToggleGroup active={tab} aria-label="Seções do cliente" className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-border px-3 sm:-mx-1 sm:px-1">
         {tabs.map((t, i) => (
           <span key={t.key} className="flex shrink-0 items-center">
             {i === 3 && <span className="mx-2 h-4 w-px bg-border" aria-hidden />}
-            <Link href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
-              className={cn("relative -mb-px flex h-9 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg pointer-coarse:h-11",
-                tab === t.key && "border-accent-ink font-semibold text-fg")}>{t.label}</Link>
+            <ToggleLink value={t.key} href={tabHref(t.key)} scroll={false}
+              className="relative -mb-px flex h-9 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg pointer-coarse:h-11"
+              activeClassName="border-accent-ink font-semibold text-fg">{t.label}</ToggleLink>
           </span>
         ))}
-      </nav>
+      </ToggleGroup>
 
       {isGrid && (
         <PostsTab ws={ctx.workspace.id} clientId={id} tab={tab as "posts" | "reels" | "stories"} ym={ym} postId={isUuid(sp.post) ? sp.post! : null}
