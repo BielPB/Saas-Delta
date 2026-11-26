@@ -7,7 +7,9 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const nextRaw = url.searchParams.get("next") ?? "/app";
   const next = /^\/(app|onboarding|redefinir-senha)/.test(nextRaw) ? nextRaw : "/app";
-  if (!code) return NextResponse.redirect(new URL("/entrar?erro=link", url.origin));
+  // No code: invite links put the session in the #fragment, which only the browser can read.
+  // The browser keeps the fragment across this redirect.
+  if (!code) return NextResponse.redirect(new URL(`/auth/concluir?next=${encodeURIComponent(next)}`, url.origin));
 
   const sb = await createClient();
   const { error } = await sb.auth.exchangeCodeForSession(code);

@@ -23,7 +23,7 @@ export async function inviteMember(input: { email: string; roles: string[] }): P
   if (serverEnv().serviceRoleKey) {
     const origin = await appOrigin();
     const { error: mailErr } = await createAdminClient().auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo: `${origin}/auth/callback?next=/app`, data: { invited_to: ctx.workspace.name },
+      redirectTo: `${origin}/auth/concluir?next=/redefinir-senha`, data: { invited_to: ctx.workspace.name },
     });
     if (!mailErr) message = "Convite enviado por e-mail.";
     else if (/already/i.test(mailErr.message)) message = "Esta pessoa já tem conta: ela verá o workspace no próximo login.";
