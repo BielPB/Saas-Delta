@@ -1,11 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, KeyRound, Loader2, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Loader2, Mail, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { generateAccess, inviteMember, removeMember, setMemberTarget, setRoles, setStatus } from "./actions";
+import { generateAccess, inviteMember, removeMember, resendInvite, setMemberTarget, setRoles, setStatus } from "./actions";
 
 type Role = { key: string; name: string; description: string };
 
@@ -75,7 +75,8 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
       <Menu label={`Ações para ${member.name}`} trigger={(p) => <Button size="icon-sm" variant="ghost" {...p}><MoreHorizontal /></Button>}>
         {(close) => (
           <>
-            {member.status === "invited" && <MenuItem onSelect={() => { close(); setAccess("confirm"); }}><KeyRound /> Gerar acesso</MenuItem>}
+            {invited && <MenuItem onSelect={() => { close(); run(() => resendInvite(member.id)); }}><Mail /> Reenviar convite por e-mail</MenuItem>}
+            {invited && <MenuItem onSelect={() => { close(); setAccess("confirm"); }}><KeyRound /> Gerar acesso</MenuItem>}
             <MenuItem onSelect={() => { close(); setEdit(true); }}>Alterar funções</MenuItem>
             {member.status === "active" && <MenuItem danger onSelect={() => { close(); run(() => setStatus(member.id, false)); }}>Desativar acesso</MenuItem>}
             {member.status === "disabled" && <MenuItem onSelect={() => { close(); run(() => setStatus(member.id, true)); }}>Reativar</MenuItem>}

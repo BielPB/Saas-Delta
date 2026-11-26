@@ -8,6 +8,8 @@ import { publicEnv, serverEnv } from "@/lib/env";
  *   2. Reading/writing encrypted Drive credentials.
  *   3. Background jobs and cron.
  *   4. Deleting unlinked library files, only ids already read through RLS by a member with files.manage.
+ *   5. Team invites (invite / resend e-mail, "Gerar acesso"), only for an invite read through RLS
+ *      by a member with members.manage, and never for an account that has already signed in.
  * Never pass user-supplied ids to it without an authorization check first.
  */
 export function createAdminClient() {

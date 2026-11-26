@@ -19,18 +19,61 @@ export async function inviteMember(input: { email: string; roles: string[] }): P
   const sb = await createClient();
   const { error } = await sb.rpc("invite_member", { p_ws: ctx.workspace.id, p_email: parsed.data.email, p_role_keys: parsed.data.roles });
   if (error) return fail(error);
-  let message = "Convite registrado. A pessoa entra no workspace ao criar conta ou entrar com este e-mail.";
-  if (serverEnv().serviceRoleKey) {
-    const origin = await appOrigin();
-    const { error: mailErr } = await createAdminClient().auth.admin.inviteUserByEmail(parsed.data.email, {
-      redirectTo: `${origin}/auth/concluir?next=/redefinir-senha`, data: { invited_to: ctx.workspace.name },
-    });
-    if (!mailErr) message = "Convite enviado por e-mail.";
-    else if (/already/i.test(mailErr.message)) message = "Esta pessoa já tem conta: ela verá o workspace no próximo login.";
-    else message = "Convite registrado. O e-mail ainda não está configurado: use “Gerar acesso” no menu … da pessoa e mande a senha pelo WhatsApp.";
-  }
+  const message = serverEnv().serviceRoleKey
+    ? await sendInviteEmail(parsed.data.email, ctx.workspace.name)
+    : "Convite registrado. A pessoa entra no workspace ao criar conta ou entrar com este e-mail.";
   revalidatePath("/app/colaboradores");
   return { ok: true, message };
+}
+
+const NO_MAIL = "O e-mail não pôde ser enviado agora: use “Gerar acesso” no menu … da pessoa e mande a senha pelo WhatsApp.";
+
+async function findAuthUser(email: string) {
+  const admin = createAdminClient();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return { error: true as const };
+    const u = data.users.find((x) => x.email?.toLowerCase() === email);
+    if (u) return { user: u };
+    if (data.users.length < 1000) break;
+  }
+  return { user: null };
+}
+
+/**
+ * Sends the invite e-mail. Supabase refuses a second invite once the account exists (the first
+ * invite already created it), so for someone who never signed in we send a "set your password"
+ * link instead. Both land on /auth/concluir and then /redefinir-senha.
+ */
+async function sendInviteEmail(email: string, workspaceName: string): Promise<string> {
+  const admin = createAdminClient();
+  const origin = await appOrigin();
+  const redirectTo = `${origin}/auth/concluir?next=/redefinir-senha`;
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { invited_to: workspaceName } });
+  if (!error) return "Convite enviado por e-mail. Peça para a pessoa olhar também o spam.";
+  if (/rate limit|too many/i.test(error.message)) return `Limite de e-mails do Supabase atingido (plano gratuito: poucos por hora). Tente mais tarde ou: ${NO_MAIL}`;
+  if (!/already|registered|exists/i.test(error.message)) return `Convite registrado. ${NO_MAIL}`;
+
+  const found = await findAuthUser(email);
+  if ("error" in found) return `Convite registrado. ${NO_MAIL}`;
+  if (found.user?.last_sign_in_at) return "Esta pessoa já tem conta: ela verá o workspace no próximo login (ou usa “Esqueci minha senha”).";
+  const { error: resetErr } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+  if (!resetErr) return "Convite reenviado por e-mail (chega com o assunto de redefinir senha). Peça para olhar também o spam.";
+  if (/rate limit|too many|seconds/i.test(resetErr.message)) return `Limite de e-mails do Supabase atingido (plano gratuito: poucos por hora). Tente mais tarde ou: ${NO_MAIL}`;
+  return `Convite registrado. ${NO_MAIL}`;
+}
+
+/** "Reenviar convite" for someone still marked as invited. */
+export async function resendInvite(memberId: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!ctx.can("members.manage")) return fail("Você não tem permissão para gerenciar a equipe.");
+  if (!isUuid(memberId)) return fail("Convite inválido.");
+  if (!serverEnv().serviceRoleKey) return fail("Chave de administrador do Supabase não configurada no servidor.");
+  const sb = await createClient();
+  const { data: m } = await sb.from("workspace_members").select("status, user_id, invited_email")
+    .eq("id", memberId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  if (!m || m.status !== "invited" || m.user_id || !m.invited_email) return fail("Este convite já foi aceito ou não existe mais.");
+  return { ok: true, message: await sendInviteEmail(String(m.invited_email).toLowerCase(), ctx.workspace.name) };
 }
 
 /** Readable temporary password, e.g. "k7m3-p9x2-h4tq" (no 0/o/1/l/i to avoid typos). */
@@ -59,13 +102,9 @@ export async function generateAccess(memberId: string): Promise<ActionResult<{ e
   const email = String(m.invited_email).toLowerCase();
 
   const admin = createAdminClient();
-  let existing: { id: string; last_sign_in_at?: string | null } | undefined;
-  for (let page = 1; page <= 20 && !existing; page++) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) return fail("Não foi possível consultar as contas. Tente de novo.");
-    existing = data.users.find((u) => u.email?.toLowerCase() === email);
-    if (data.users.length < 1000) break;
-  }
+  const found = await findAuthUser(email);
+  if ("error" in found) return fail("Não foi possível consultar as contas. Tente de novo.");
+  const existing = found.user ?? undefined;
   if (existing?.last_sign_in_at) {
     return fail("Esta pessoa já tem conta e já entrou no sistema: ela deve usar a senha dela (ou “Esqueci minha senha”).");
   }
