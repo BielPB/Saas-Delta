@@ -96,6 +96,17 @@ export async function setStatus(memberId: string, active: boolean): Promise<Acti
   return { ok: true, message: active ? "Colaborador reativado." : "Colaborador desativado. O acesso foi bloqueado." };
 }
 
+export async function removeMember(memberId: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(memberId)) return fail("Pessoa inválida.");
+  const sb = await createClient();
+  const { error } = await sb.rpc("remove_member", { p_ws: ctx.workspace.id, p_member: memberId });
+  if (error) return fail(error);
+  revalidatePath("/app/colaboradores");
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Removido da equipe." };
+}
+
 export async function setMemberTarget(userId: string, target: number | null): Promise<ActionResult> {
   const ctx = await getContext();
   if (!isUuid(userId)) return fail("Pessoa inválida.");

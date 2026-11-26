@@ -1,11 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, KeyRound, Loader2, MessageCircle, MoreHorizontal, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Loader2, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { generateAccess, inviteMember, setMemberTarget, setRoles, setStatus } from "./actions";
+import { generateAccess, inviteMember, removeMember, setMemberTarget, setRoles, setStatus } from "./actions";
 
 type Role = { key: string; name: string; description: string };
 
@@ -54,6 +54,8 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
   const [edit, setEdit] = useState(false);
   const [sel, setSel] = useState(new Set(member.roles));
   const [access, setAccess] = useState<"confirm" | { email: string; password: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const invited = member.status === "invited";
   const [pending, start] = useTransition();
   const toast = useToast();
   const router = useRouter();
@@ -77,12 +79,31 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
             <MenuItem onSelect={() => { close(); setEdit(true); }}>Alterar funções</MenuItem>
             {member.status === "active" && <MenuItem danger onSelect={() => { close(); run(() => setStatus(member.id, false)); }}>Desativar acesso</MenuItem>}
             {member.status === "disabled" && <MenuItem onSelect={() => { close(); run(() => setStatus(member.id, true)); }}>Reativar</MenuItem>}
+            <MenuItem danger onSelect={() => { close(); setRemoving(true); }}><Trash2 /> {invited ? "Cancelar convite" : "Remover da equipe"}</MenuItem>
           </>
         )}
       </Menu>
       <Dialog open={edit} onClose={() => setEdit(false)} title={`Funções de ${member.name}`}
         footer={<><Button onClick={() => setEdit(false)}>Cancelar</Button><Button variant="primary" disabled={pending || sel.size === 0} onClick={() => run(() => setRoles(member.id, [...sel]))}>Salvar</Button></>}>
         <RolePicker roles={roles} value={sel} onChange={setSel} canGrantOwner={canGrantOwner} />
+      </Dialog>
+
+      <Dialog open={removing} onClose={() => setRemoving(false)} size="sm" title={invited ? `Cancelar o convite de ${member.name}?` : `Remover ${member.name} da equipe?`}
+        footer={<><Button onClick={() => setRemoving(false)}>Voltar</Button>
+          <Button variant="danger" disabled={pending} onClick={() => start(async () => {
+            const r = await removeMember(member.id);
+            if (r.ok) { toast.success(r.message ?? "Removido."); setRemoving(false); router.refresh(); } else toast.error(r.error);
+          })}>{pending ? <Loader2 className="animate-spin" /> : <Trash2 />} {invited ? "Cancelar convite" : "Remover"}</Button></>}>
+        {invited ? (
+          <p className="text-sm text-muted">O link do convite deixa de funcionar. Você pode convidar de novo quando quiser.</p>
+        ) : (
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+            <li>A pessoa perde o acesso ao workspace na hora.</li>
+            <li>As tarefas abertas dela ficam <strong className="font-medium text-fg">sem responsável</strong>, para você redistribuir.</li>
+            <li>O histórico (tarefas concluídas, comentários, aprovações) continua salvo.</li>
+            <li>Se quiser só pausar o acesso, use “Desativar acesso”.</li>
+          </ul>
+        )}
       </Dialog>
 
       <Dialog open={access === "confirm"} onClose={() => setAccess(null)} size="sm" title={`Gerar acesso para ${member.name}?`}
