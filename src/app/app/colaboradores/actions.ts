@@ -83,6 +83,37 @@ function tempPassword() {
 }
 
 /**
+ * "Copiar link de convite": a one-time link the manager sends by WhatsApp. It opens /auth/confirmar,
+ * which spends the token only when the person clicks the button, so link previews (WhatsApp, Gmail,
+ * antivirus) cannot burn it. New people get an "invite" link, people whose account exists but never
+ * signed in get a "recovery" one; both end on "Definir nova senha".
+ */
+export async function inviteLink(memberId: string): Promise<ActionResult<{ email: string; url: string }>> {
+  const ctx = await getContext();
+  if (!ctx.can("members.manage")) return fail("Você não tem permissão para gerenciar a equipe.");
+  if (!isUuid(memberId)) return fail("Convite inválido.");
+  if (!serverEnv().serviceRoleKey) return fail("Chave de administrador do Supabase não configurada no servidor.");
+  const sb = await createClient();
+  const { data: m } = await sb.from("workspace_members").select("status, user_id, invited_email")
+    .eq("id", memberId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  if (!m || m.status !== "invited" || m.user_id || !m.invited_email) return fail("Este convite já foi aceito ou não existe mais.");
+  const email = String(m.invited_email).toLowerCase();
+
+  const found = await findAuthUser(email);
+  if ("error" in found) return fail("Não foi possível consultar as contas. Tente de novo.");
+  if (found.user?.last_sign_in_at) return fail("Esta pessoa já tem conta e já entrou no sistema: ela verá o workspace no próximo login (ou usa “Esqueci minha senha”).");
+  const origin = await appOrigin();
+  const type = found.user ? "recovery" : "invite";
+  const { data, error } = await createAdminClient().auth.admin.generateLink(
+    type === "invite"
+      ? { type, email, options: { redirectTo: `${origin}/redefinir-senha`, data: { invited_to: ctx.workspace.name } } }
+      : { type, email, options: { redirectTo: `${origin}/redefinir-senha` } });
+  const token = data?.properties?.hashed_token;
+  if (error || !token) return fail("Não foi possível gerar o link agora. Tente de novo ou use “Gerar acesso”.");
+  return { ok: true, data: { email, url: `${origin}/auth/confirmar?token_hash=${encodeURIComponent(token)}&type=${type}` } };
+}
+
+/**
  * "Gerar acesso": while e-mail is not configured, the manager creates the invited person's login
  * with a temporary password and sends it by WhatsApp. On first sign-in the invite is accepted
  * (accept_pending_invites). Never touches an account that has already signed in: that would let

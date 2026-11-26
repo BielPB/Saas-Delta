@@ -1,11 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, KeyRound, Loader2, Mail, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Link2, Loader2, Mail, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { generateAccess, inviteMember, removeMember, resendInvite, setMemberTarget, setRoles, setStatus } from "./actions";
+import { generateAccess, inviteLink, inviteMember, removeMember, resendInvite, setMemberTarget, setRoles, setStatus } from "./actions";
 
 type Role = { key: string; name: string; description: string };
 
@@ -55,6 +55,12 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
   const [sel, setSel] = useState(new Set(member.roles));
   const [access, setAccess] = useState<"confirm" | { email: string; password: string } | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
+  const makeLink = () => start(async () => {
+    const r = await inviteLink(member.id);
+    if (r.ok && r.data) setLink(r.data.url); else if (!r.ok) toast.error(r.error);
+  });
+  const linkMessage = link ? `Oi! Você foi convidado para o Delta Flow (${workspaceName}).\n\nAbra este link, clique em “Aceitar convite e entrar” e crie sua senha:\n${link}\n\nO link vale por pouco tempo e só pode ser usado uma vez.` : "";
   const invited = member.status === "invited";
   const [pending, start] = useTransition();
   const toast = useToast();
@@ -75,6 +81,7 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
       <Menu label={`Ações para ${member.name}`} trigger={(p) => <Button size="icon-sm" variant="ghost" {...p}><MoreHorizontal /></Button>}>
         {(close) => (
           <>
+            {invited && <MenuItem onSelect={() => { close(); makeLink(); }}><Link2 /> Link de convite (WhatsApp)</MenuItem>}
             {invited && <MenuItem onSelect={() => { close(); run(() => resendInvite(member.id)); }}><Mail /> Reenviar convite por e-mail</MenuItem>}
             {invited && <MenuItem onSelect={() => { close(); setAccess("confirm"); }}><KeyRound /> Gerar acesso</MenuItem>}
             <MenuItem onSelect={() => { close(); setEdit(true); }}>Alterar funções</MenuItem>
@@ -87,6 +94,23 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
       <Dialog open={edit} onClose={() => setEdit(false)} title={`Funções de ${member.name}`}
         footer={<><Button onClick={() => setEdit(false)}>Cancelar</Button><Button variant="primary" disabled={pending || sel.size === 0} onClick={() => run(() => setRoles(member.id, [...sel]))}>Salvar</Button></>}>
         <RolePicker roles={roles} value={sel} onChange={setSel} canGrantOwner={canGrantOwner} />
+      </Dialog>
+
+      <Dialog open={link !== null} onClose={() => setLink(null)} size="sm" title="Link de convite pronto"
+        description="Mande agora pelo WhatsApp. Gerar outro link (ou reenviar o e-mail) anula este.">
+        {link && (
+          <div className="space-y-3">
+            <p className="break-all rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-xs leading-5">{link}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button className="flex-1" onClick={() => navigator.clipboard.writeText(linkMessage).then(() => toast.success("Mensagem copiada."))}><Copy /> Copiar</Button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(linkMessage)}`} target="_blank" rel="noreferrer noopener"
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-accent-fg pointer-coarse:h-10">
+                <MessageCircle className="size-4" aria-hidden /> Enviar no WhatsApp
+              </a>
+            </div>
+            <p className="text-xs text-muted">A pessoa abre o link, clica em “Aceitar convite e entrar”, cria a senha e já cai na agência.</p>
+          </div>
+        )}
       </Dialog>
 
       <Dialog open={removing} onClose={() => setRemoving(false)} size="sm" title={invited ? `Cancelar o convite de ${member.name}?` : `Remover ${member.name} da equipe?`}
