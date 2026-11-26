@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { after } from "next/server";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ExternalLink } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { integrations } from "@/lib/env";
 import { calendarToken, listEvents, type GEvent } from "@/lib/calendar/google";
 import { syncCalendar } from "@/lib/calendar/sync";
 import { cn } from "@/lib/utils";
+import { formatGroups } from "@/lib/post-status";
 
 /**
  * "Agenda" strip: the next 7 days from the person's Google Agenda.
@@ -38,6 +39,24 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
     events = await listEvents(await calendarToken(conn.id as string), start.toISOString(), new Date(start.getTime() + 7 * 864e5).toISOString());
   } catch { failed = true; }
 
+  // Events Delta Flow created point back to the task / post; other events open in Google Agenda.
+  const { data: links } = await admin.from("calendar_event_links").select("google_event_id, source_type, source_id").eq("connection_id", conn.id as string);
+  const linkByEvent = new Map(((links ?? []) as Array<{ google_event_id: string; source_type: string; source_id: string }>).map((l) => [l.google_event_id, l]));
+  const postIds = [...linkByEvent.values()].filter((l) => l.source_type === "post").map((l) => l.source_id);
+  const { data: posts } = postIds.length
+    ? await admin.from("content_items").select("id, client_id, planned_publish_at, created_at, content_formats(key)").in("id", postIds)
+    : { data: [] };
+  const postHref = new Map(((posts ?? []) as unknown as Array<{ id: string; client_id: string; planned_publish_at: string | null; created_at: string; content_formats: { key: string } | null }>).map((p) => {
+    const g = formatGroups.find((x) => x.formats.includes(p.content_formats?.key ?? ""))?.key ?? "posts";
+    return [p.id, `/app/clientes/${p.client_id}?aba=${g}&mes=${(p.planned_publish_at ?? p.created_at).slice(0, 7)}&post=${p.id}`];
+  }));
+  const target = (e: GEvent, priv: boolean): { href: string; internal: boolean } | null => {
+    const l = linkByEvent.get(e.id);
+    if (l) return l.source_type === "task" ? { href: `/app/tarefas/${l.source_id}`, internal: true } : postHref.has(l.source_id) ? { href: postHref.get(l.source_id)!, internal: true } : { href: `/app/conteudos/${l.source_id}`, internal: true };
+    if (priv || !isSelf || !e.htmlLink) return null; // someone else's own events stay read-only
+    return { href: e.htmlLink, internal: false };
+  };
+
   const dayKey = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(typeof d === "string" ? new Date(d) : d);
   const time = (iso: string) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
   const label = (d: Date, i: number) => (i === 0 ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: tz }).format(d).replace(".", ""));
@@ -60,16 +79,17 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
                 <span className="tabular text-xs text-subtle">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", timeZone: tz }).format(d)}</span>
               </p>
               <ul className="space-y-1">
-                {list.slice(0, 4).map((e) => {
-                  const priv = !isSelf && (e.visibility === "private" || e.visibility === "confidential");
-                  return (
-                    <li key={e.id} className="rounded-md border-l-2 border-accent-ink/60 bg-surface-2 px-1.5 py-1 text-[11.5px] leading-tight" title={priv ? "Ocupado" : e.summary}>
-                      <span className="tabular text-subtle">{e.start.dateTime ? time(e.start.dateTime) : "Dia todo"}</span>
-                      <span className="block truncate">{priv ? "Ocupado" : e.summary ?? "(sem título)"}</span>
-                    </li>
-                  );
-                })}
-                {list.length > 4 && <li className="text-[11px] text-subtle">+{list.length - 4}</li>}
+                {list.slice(0, 4).map((e) => <EventItem key={e.id} e={e} isSelf={isSelf} time={time} target={target} />)}
+                {list.length > 4 && (
+                  <li>
+                    <details className="group">
+                      <summary className="cursor-pointer list-none text-[11px] font-medium text-muted hover:text-fg [&::-webkit-details-marker]:hidden">
+                        <span className="group-open:hidden">+{list.length - 4} mais</span><span className="hidden group-open:inline">mostrar menos</span>
+                      </summary>
+                      <ul className="mt-1 space-y-1">{list.slice(4).map((e) => <EventItem key={e.id} e={e} isSelf={isSelf} time={time} target={target} />)}</ul>
+                    </details>
+                  </li>
+                )}
                 {list.length === 0 && <li className="text-[11px] text-subtle">—</li>}
               </ul>
             </li>
@@ -77,5 +97,34 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
         })}
       </ol>
     </section>
+  );
+}
+
+function EventItem({ e, isSelf, time, target }: {
+  e: GEvent; isSelf: boolean; time: (iso: string) => string;
+  target: (e: GEvent, priv: boolean) => { href: string; internal: boolean } | null;
+}) {
+  const priv = !isSelf && (e.visibility === "private" || e.visibility === "confidential");
+  const t = target(e, priv);
+  const title = priv ? "Ocupado" : e.summary ?? "(sem título)";
+  const body = (
+    <>
+      <span className="flex items-center justify-between gap-1">
+        <span className="tabular text-subtle">{e.start.dateTime ? time(e.start.dateTime) : "Dia todo"}</span>
+        {t && !t.internal && <ExternalLink className="size-3 shrink-0 text-subtle opacity-0 transition-opacity group-hover/ev:opacity-100" aria-hidden />}
+      </span>
+      <span className="block truncate">{title}</span>
+    </>
+  );
+  const cls = cn("group/ev block rounded-md border-l-2 bg-surface-2 px-1.5 py-1 text-[11.5px] leading-tight",
+    t?.internal ? "border-accent-ink" : "border-border-strong",
+    t && "transition-colors hover:bg-surface-3 focus-visible:bg-surface-3");
+  if (!t) return <li className={cls} title={title}>{body}</li>;
+  return (
+    <li>
+      {t.internal
+        ? <Link href={t.href} className={cls} title={`${title} — abrir no Delta Flow`}>{body}</Link>
+        : <a href={t.href} target="_blank" rel="noreferrer noopener" className={cls} title={`${title} — abrir no Google Agenda`}>{body}</a>}
+    </li>
   );
 }
