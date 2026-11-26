@@ -59,7 +59,11 @@ export const getContext = cache(async (): Promise<AppContext> => {
   const list = (memberships ?? []).filter((m) => m.workspaces) as unknown as Array<{
     id: string; workspace_id: string; workspaces: WorkspaceSummary;
   }>;
-  if (list.length === 0) redirect("/onboarding");
+  if (list.length === 0) {
+    // Invited after creating the account (or still signed in from before): accept now, not only at sign-in.
+    const { data: accepted } = await sb.rpc("accept_pending_invites");
+    redirect(Number(accepted) > 0 ? "/app" : "/onboarding");
+  }
 
   const store = await cookies();
   const wanted = store.get(WS_COOKIE)?.value;

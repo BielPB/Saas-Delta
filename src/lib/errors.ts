@@ -39,6 +39,7 @@ export type ActionResult<T = undefined> =
 
 export const fail = (error: unknown, fieldErrors?: Record<string, string>): ActionResult<never> => ({
   ok: false,
-  error: typeof error === "string" && !/[_:]/.test(error) ? error : friendlyError(error),
+  // Plain sentences are shown as-is; error codes ("permission_denied: x", "slug_taken") are translated.
+  error: typeof error === "string" && !/^[a-z0-9]+(?:_[a-z0-9]+)*(?::|\s*$)/.test(error) ? error : friendlyError(error),
   fieldErrors,
 });
