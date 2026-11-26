@@ -1,20 +1,49 @@
 # Instruções para agentes de código (Delta Flow)
 
-Leia antes de alterar: BUSINESS_RULES.md, SECURITY.md, AGENTS.md (Next 16 tem APIs diferentes; consulte `node_modules/next/dist/docs`).
+Leia antes de alterar: BUSINESS_RULES.md, SECURITY.md, AGENTS.md (Next 16 tem APIs diferentes; consulte `node_modules/next/dist/docs`). Estado do produto: IMPLEMENTATION_STATUS.md. Banco: DATABASE_SCHEMA.md. Infra: DEPLOYMENT.md.
+
+## Com quem você fala
+- O dono do projeto, Gabriel, **não é desenvolvedor**. Responda sempre em **português do Brasil**, de forma simples, e guie passo a passo o que ele precisar fazer (Supabase, Vercel, Google Cloud, terminal).
+- Ele trabalha às vezes no Mac (`/Users/gabrielmarques/Downloads/delta-flow`), às vezes no Windows (`c:\Users\Biel\Desktop\Saas-Delta`). O GitHub é a ponte: no início da sessão, confira se a pasta está em dia (`git status`, `git pull`); no fim, garanta que nada ficou sem enviar.
+- Ele manda prints. Quando algo quebra em produção, peça a linha vermelha da aba **Logs** da Vercel.
+- **Custo zero por enquanto**: Supabase Free, Vercel Hobby. Não proponha serviços pagos sem avisar.
+- **Nunca peça chaves/segredos no chat.** Ele cola direto no `.env.local` ou na Vercel. Não tente ler o `.env.local`.
+
+## Infraestrutura
+- GitHub: `BielPB/Saas-Delta`, branch `main`.
+- Produção: https://saasdelta.vercel.app (Vercel Hobby, região `gru1`). **Todo push na `main` publica no ar.** Trabalho pela metade vai para outra branch.
+- Supabase Free, projeto em São Paulo, ref `dbwqgkwcskzujbxntgsq` (vincular com `npx supabase link --project-ref dbwqgkwcskzujbxntgsq` se a pasta ainda não estiver vinculada).
+- Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`. Ainda não: `RESEND_API_KEY`, `EMAIL_FROM`.
+- Google Cloud em modo **Teste** (usuários de teste; autorização expira a cada 7 dias). Redirect: `https://saasdelta.vercel.app/api/calendar/callback`.
+- Cron diário `/api/cron/deadlines` (8h de Brasília), protegido por `CRON_SECRET`.
+
+## Fluxo de trabalho
+- Commits terminam com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Pode dar `git push` na `main` em correções e pedidos do Gabriel.
+- **Migrations** (`supabase/migrations/`): ao criar uma nova, faça o commit **sem push**, peça para o Gabriel rodar `npx supabase db push --remote` na pasta do projeto (conferir que o Target é o projeto de São Paulo e que só aparece a migration nova) e só depois faça o push. O código nunca vai ao ar antes da migration.
 
 ## Regras inegociáveis
 - Regras de estado vivem no Postgres (`supabase/migrations/*_workflow.sql`). Não reimplemente transições no front; chame a RPC.
 - Nunca edite uma migration já aplicada: crie uma nova.
-- Toda tabela nova de tenant: `workspace_id`, `UNIQUE (workspace_id, id)`, FKs compostas, RLS habilitada com políticas explícitas, grants revisados (anon não acessa tabelas).
+- Toda tabela nova de tenant: `workspace_id`, `UNIQUE (workspace_id, id)`, FKs compostas, RLS habilitada com políticas explícitas, grants revisados (anon não acessa tabelas). Projetos novos do Supabase **não dão GRANT automático**: toda tabela nova precisa de `grant` explícito (ver migration 0012).
 - Colunas de status só mudam via função que chama `private.allow_state_change()`.
 - O cliente service role (`src/lib/supabase/admin.ts`) só é usado após checagem de permissão do usuário, e nunca com IDs vindos do cliente sem essa checagem.
-- Mídia privada: URL assinada curta, `<img>`/`<video>` simples, nunca `next/image`. Service worker sem cache.
+- **Server Components não podem importar funções/valores comuns de arquivos `"use client"`** (vira referência vazia, "x is not a function"; já derrubou produção 2 vezes). Helpers compartilhados vão em `src/lib/`. O teste `tests/unit/client-boundary.test.ts` barra isso.
+- Mídia privada: URL assinada curta, `<img>`/`<video>` simples, nunca `next/image`. Service worker sem cache. Upload direto limitado a 50 MB (Supabase Free); vídeos grandes vão por link do Google Drive.
 - Nada de dados fictícios fora de `supabase/seed.sql` (local) e dos testes.
 - Contagens de indicadores são de conteúdos, não de entregáveis.
 - UI em pt-BR; fuso padrão America/Fortaleza; use `fromLocalInput`/`toLocalInput`.
 
 ## Antes de concluir qualquer mudança
-`npm run typecheck && npm run lint && npm test && npm run build`. Não ignore erros de TypeScript nem testes falhando. Atualize IMPLEMENTATION_STATUS.md.
+`npm run typecheck && npm run lint && npm run test:unit && npm run build`. (`npm test` inclui testes de banco que exigem Supabase local.) Não ignore erros de TypeScript nem testes falhando. Atualize IMPLEMENTATION_STATUS.md (e BUSINESS_RULES.md / DATABASE_SCHEMA.md quando a regra ou o banco mudar).
 
 ## Convenções
 Rotas em pt-BR em `src/app/app/*`. Server Actions em `actions.ts` ao lado da página, retornando `ActionResult`. Erros do banco passam por `friendlyError`. Filtros vivem na URL. Componentes base em `src/components/ui`; tokens semânticos em `globals.css` (nunca hex solto em componente; Lime só para ação primária/destaque).
+
+## Pendências (em ordem sugerida)
+1. **E-mail com Resend** (convites, recuperar senha, avisos). Bloqueio: domínio próprio. Plano: verificar domínio no Resend → SMTP do Supabase Auth (smtp.resend.com:465, usuário `resend`) → mover o envio de avisos (hoje num worker que só roda local) para o Supabase (pg_cron + pg_net). Enquanto isso, a equipe entra por convite em Equipe + cadastro com o mesmo e-mail.
+2. **Piloto** com 1–2 pessoas da equipe num cliente real (adicionar o Gmail delas em Usuários de teste do Google).
+3. Domínio próprio também destrava links do cliente com o endereço da agência e verificação do app no Google.
+4. Pequenos: remover o campo "Pasta do Drive (ID)" do cadastro de subdivisão; conteúdos antigos criados com template continuam no fluxo de tarefas encadeadas (não arrastam no pipeline).
+5. Fora do escopo por enquanto: métricas de redes sociais, IA, financeiro, "Programar todos".
+
+Mantenha esta lista em dia quando uma pendência for resolvida ou surgir outra.
