@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { ChevronDown, ChevronRight, FolderPlus, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clientHue } from "@/lib/client-color";
 import { Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { createCategory, setClientCategory } from "@/app/app/clientes/actions";
+import { setClientCategory } from "@/app/app/clientes/actions";
 
 export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number; logo: string | null }
 export interface NavCategory { id: string; name: string; position: number }
@@ -40,17 +40,13 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
     const list = categories.map((cat) => ({ id: cat.id, name: cat.name, clients: visible.filter((c) => c.category_id === cat.id) }));
     const loose = visible.filter((c) => !c.category_id || !categories.some((cat) => cat.id === c.category_id));
     if (loose.length) list.unshift({ id: "none", name: "Sem categoria", clients: loose });
-    return needle ? list.filter((g) => g.clients.length > 0) : list;
+    return list.filter((g) => g.clients.length > 0); // empty folders only add noise
   }, [categories, clients, q]);
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => start(async () => {
     const r = await fn();
     if (r.ok) { if (r.message) toast.success(r.message); router.refresh(); } else toast.error(r.error ?? "Erro.");
   });
-  const newCategory = () => {
-    const name = window.prompt("Nome da nova categoria (ex.: Pack Digital)");
-    if (name?.trim()) run(() => createCategory(name));
-  };
 
   return (
     <div>
@@ -69,19 +65,19 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
       </label>
 
       <div className="space-y-1">
+        {groups.length === 0 && <p className="px-2 py-1 text-xs text-subtle">{q ? "Nenhum cliente encontrado." : "Nenhum cliente ainda."}</p>}
         {groups.map((g) => {
-          const isClosed = !q && (closed[g.id] ?? false);
+          const isClosed = !q && groups.length > 1 && (closed[g.id] ?? false);
           return (
             <div key={g.id}>
-              <button type="button" onClick={() => setClosed((s) => ({ ...s, [g.id]: !isClosed }))} aria-expanded={!isClosed}
+              {groups.length > 1 && <button type="button" onClick={() => setClosed((s) => ({ ...s, [g.id]: !isClosed }))} aria-expanded={!isClosed}
                 className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
                 {isClosed ? <ChevronRight className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
                 <span className="truncate">{g.name}</span>
                 <span className="tabular font-normal">{g.clients.length}</span>
-              </button>
+              </button>}
               {!isClosed && (
                 <ul className="space-y-px">
-                  {g.clients.length === 0 && <li className="px-3 py-1 text-xs text-subtle">Nenhum cliente</li>}
                   {g.clients.map((c) => {
                     const on = c.id === activeId;
                     return (
@@ -120,12 +116,6 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
         })}
       </div>
 
-      {canManage && !q && (
-        <button type="button" onClick={newCategory}
-          className="mt-2 flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-subtle hover:bg-surface-2 hover:text-fg">
-          <FolderPlus className="size-3.5" aria-hidden /> Nova categoria
-        </button>
-      )}
     </div>
   );
 }
