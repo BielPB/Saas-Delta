@@ -9,6 +9,7 @@ import type { PortalData, PortalDeliverable } from "@/lib/portal";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LinkEmbed } from "@/components/content/link-embed";
+import { linkThumbnail } from "@/lib/media-link";
 import { bulkApproveAction, finalizeAction, respondAction } from "./actions";
 
 const kindLabel: Record<string, string> = { video: "Vídeo", cover: "Capa", caption: "Legenda", image: "Arte", carousel: "Carrossel", other: "Material" };
@@ -198,18 +199,21 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
               const a0 = vis?.version?.assets?.[0];
               const thumb = a0 && a0.provider === "supabase" ? media[(a0.mime_type?.startsWith("image/") ? a0.thumbnail_path ?? a0.preview_path ?? a0.path : a0.thumbnail_path) ?? ""] : undefined;
               const isVideo = it.deliverables.some((d) => d.kind === "video");
+              const linkThumb = !thumb ? linkThumbnail(vis?.version?.external_url) : null;
+              const videoSrc = !thumb && !linkThumb && a0?.provider === "supabase" && a0.mime_type?.startsWith("video/") ? media[a0.preview_path ?? a0.path ?? ""] : undefined;
               return (
                 <li key={it.content_id} className="relative aspect-[4/5] bg-surface-2">
                   <button type="button" onClick={() => openItem(n)} className="block size-full text-left" aria-label={`${it.title}${st === "approved" ? " (aprovado)" : st === "rejected" ? " (ajuste pedido)" : ""}`}>
-                    {thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- signed private URL
-                      <img src={thumb} alt="" className="size-full object-cover" loading="lazy" />
-                    ) : (
-                      <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-subtle">
-                        {isVideo ? <Play className="size-6" aria-hidden /> : <ImageIcon className="size-6" aria-hidden />}
-                        <span className="line-clamp-3 text-[11px]">{it.title}</span>
-                      </span>
+                    <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-subtle">
+                      {isVideo ? <Play className="size-6" aria-hidden /> : <ImageIcon className="size-6" aria-hidden />}
+                      <span className="line-clamp-3 text-[11px]">{it.title}</span>
+                    </span>
+                    {(thumb || linkThumb) && (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed private URL or Drive/YouTube thumbnail
+                      <img src={(thumb || linkThumb)!} alt="" referrerPolicy="no-referrer" loading="lazy" className="absolute inset-0 size-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }} />
                     )}
+                    {videoSrc && <video src={`${videoSrc}#t=0.5`} muted playsInline preload="metadata" aria-hidden className="absolute inset-0 size-full object-cover" />}
                     {isVideo && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-hidden />}
                     {st === "approved" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-accent text-accent-fg shadow"><Check className="size-3.5" strokeWidth={3} aria-hidden /></span>}
                     {st === "rejected" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--tone-danger-fg)] text-white shadow"><X className="size-3.5" strokeWidth={3} aria-hidden /></span>}

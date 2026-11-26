@@ -2,15 +2,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, ImageIcon, Loader2, MessageCircle, Play, Send, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Loader2, MessageCircle, Play, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, useToast } from "@/components/ui/overlay";
 import type { PostStatusKey } from "@/lib/post-status";
 import { cn } from "@/lib/utils";
 import { reorderFeed, resetFeedOrder, sendFeedForApproval } from "./post-actions";
-import { StatusPill } from "./post-grid";
+import { MediaPreview, StatusPill } from "./post-grid";
 
-export interface FeedTile { id: string; title: string; thumb: string | null; link: boolean; video: boolean; status: PostStatusKey; ready: boolean; missing: boolean; blocked: string | null; href: string }
+export interface FeedTile { id: string; title: string; thumb: string | null; link: boolean; video: boolean; videoSrc?: string | null; status: PostStatusKey; ready: boolean; missing: boolean; blocked: string | null; href: string }
 
 /** Instagram-like 3-column preview of the month (newest first), with one button to send it to the client. */
 export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, monthLabel, canSend, activeLink, customOrder }: {
@@ -111,15 +111,7 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
               className={cn("relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl",
                 custom && "cursor-grab active:cursor-grabbing", drag === t.id && "opacity-40", drag && drag !== t.id && "ring-2 ring-inset ring-transparent hover:ring-accent-ink/50")}>
               <Link href={t.href} scroll={false} draggable={false} className="group block size-full" title={t.title}>
-                {t.thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- signed private URL
-                  <img src={t.thumb} alt={t.title} className="size-full object-cover" loading="lazy" />
-                ) : (
-                  <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-subtle">
-                    {t.link ? <Play className="size-6" aria-hidden /> : <ImageIcon className="size-6" aria-hidden />}
-                    <span className="line-clamp-2 text-[11px]">{t.title}</span>
-                  </span>
-                )}
+                <MediaPreview thumb={t.thumb} video={t.videoSrc ?? null} link={t.link} />
                 {t.video && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-label="Vídeo" />}
                 <span className="absolute inset-x-1.5 bottom-1.5 flex justify-start opacity-90 transition-opacity group-hover:opacity-100">
                   {t.missing && !["ready", "scheduled", "published"].includes(t.status)

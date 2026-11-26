@@ -188,7 +188,7 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
     const k = keyOf.get(r.format_id) ?? "";
     const g = formatGroups.find((x) => x.formats.includes(k))?.key ?? "posts";
     const t = thumbs.get(r.id);
-    return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, video: g === "reels", status: postStatus(r), ready: !blockedReason(r.id), missing: Boolean(blockedReason(r.id)), blocked: blockedReason(r.id),
+    return { id: r.id, title: r.title, thumb: t?.url ?? null, link: t?.link ?? false, videoSrc: t?.video ?? null, video: g === "reels", status: postStatus(r), ready: !blockedReason(r.id), missing: Boolean(blockedReason(r.id)), blocked: blockedReason(r.id),
       href: `/app/clientes/${clientId}?aba=${g}&mes=${ym}&post=${r.id}` };
   });
   const { data: batches } = await sb.from("approval_batches").select("id, status, approval_links(expires_at, revoked_at, last_accessed_at), approval_batch_items(content_id)")
@@ -238,7 +238,7 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
     const t = thumbs.get(r.id);
     return {
       id: r.id, number: i + 1, title: r.title, format: r.content_formats?.name ?? "Post", formatKey: fmtByKey.get(r.format_id)?.key ?? "",
-      status: postStatus(r), thumb: t?.url ?? null, link: t?.link ?? false, people, comments: commentsBy.get(r.id) ?? 0,
+      status: postStatus(r), thumb: t?.url ?? null, link: t?.link ?? false, video: t?.video ?? null, people, comments: commentsBy.get(r.id) ?? 0,
       date: r.planned_publish_at ? dateFmt.format(new Date(r.planned_publish_at)) : null,
     };
   });

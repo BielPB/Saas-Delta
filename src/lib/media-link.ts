@@ -37,3 +37,16 @@ export function parseMediaLink(raw: string | null | undefined): MediaLink | null
   }
   return { kind: "other", open };
 }
+
+/**
+ * Still image for a pasted video link, for cards and feed tiles.
+ * Drive serves it only for files shared as "Anyone with the link" (same rule as the player);
+ * callers must hide the <img> on error.
+ */
+export function linkThumbnail(raw: string | null | undefined): string | null {
+  const l = parseMediaLink(raw);
+  if (!l) return null;
+  if (l.kind === "drive") return `https://drive.google.com/thumbnail?id=${encodeURIComponent(l.id)}&sz=w800`;
+  if (l.kind === "youtube") return `https://i.ytimg.com/vi/${encodeURIComponent(l.id)}/hqdefault.jpg`;
+  return null;
+}

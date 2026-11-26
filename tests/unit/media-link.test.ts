@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMediaLink } from "@/lib/media-link";
+import { linkThumbnail, parseMediaLink } from "@/lib/media-link";
 
 describe("parseMediaLink", () => {
   it("reconhece links de arquivo do Google Drive e monta o player", () => {
@@ -27,5 +27,12 @@ describe("parseMediaLink", () => {
     expect(parseMediaLink("javascript:alert(1)")).toBeNull();
     expect(parseMediaLink("não é link")).toBeNull();
     expect(parseMediaLink("https://exemplo.com/video.mp4")?.kind).toBe("other");
+  });
+  it("gera miniatura para Drive e YouTube, e nada para pasta ou outros sites", () => {
+    expect(linkThumbnail("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view")).toBe("https://drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOp&sz=w800");
+    expect(linkThumbnail("https://youtu.be/dQw4w9WgXcQ")).toBe("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+    expect(linkThumbnail("https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp")).toBeNull();
+    expect(linkThumbnail("https://exemplo.com/video.mp4")).toBeNull();
+    expect(linkThumbnail(null)).toBeNull();
   });
 });

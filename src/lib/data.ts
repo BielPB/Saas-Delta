@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   ApprovalStatus, ContentStage, DeliverableKind, Priority, ProductionStatus, PublicationStatus, TaskKind, TaskStatus, VersionStatus,
 } from "@/lib/domain";
+import { linkThumbnail } from "@/lib/media-link";
 import { isUuid } from "@/lib/utils";
 
 export const BUCKET = "workspace-files";
@@ -242,7 +243,8 @@ export async function clientNav(ws: string) {
  * cover / art / carousel (or a video poster). Drive links are flagged so the card can show a play badge.
  */
 export async function postThumbs(contentIds: string[]) {
-  const out = new Map<string, { url: string | null; link: boolean }>();
+  /** url: still image (art, cover, video poster or link thumbnail); video: signed video to show its first frame; link: media is an external link. */
+  const out = new Map<string, { url: string | null; link: boolean; video: string | null }>();
   if (!contentIds.length) return out;
   const sb = await createClient();
   const { data: ds } = await sb.from("deliverables").select("content_id, kind, current_version_id").in("content_id", contentIds).not("current_version_id", "is", null);
@@ -257,20 +259,29 @@ export async function postThumbs(contentIds: string[]) {
   const versionIds = [...best.values()].map((b) => b.version);
   if (!versionIds.length) return out;
   const [{ data: assets }, { data: versions }] = await Promise.all([
-    sb.from("deliverable_version_assets").select("version_id, position, file_assets(storage_path, thumbnail_path, mime_type)").in("version_id", versionIds).order("position"),
+    sb.from("deliverable_version_assets").select("version_id, position, file_assets(storage_path, preview_path, thumbnail_path, mime_type)").in("version_id", versionIds).order("position"),
     sb.from("deliverable_versions").select("id, external_url").in("id", versionIds),
   ]);
-  const firstAsset = new Map<string, string>();
-  for (const a of (assets ?? []) as unknown as Array<{ version_id: string; file_assets: { storage_path: string | null; thumbnail_path: string | null; mime_type: string | null } | null }>) {
-    if (firstAsset.has(a.version_id) || !a.file_assets) continue;
-    const p = a.file_assets.mime_type?.startsWith("image/") ? a.file_assets.thumbnail_path ?? a.file_assets.storage_path : a.file_assets.thumbnail_path;
-    if (p) firstAsset.set(a.version_id, p);
+  const still = new Map<string, string>();
+  const moving = new Map<string, string>();
+  for (const a of (assets ?? []) as unknown as Array<{ version_id: string; file_assets: { storage_path: string | null; preview_path: string | null; thumbnail_path: string | null; mime_type: string | null } | null }>) {
+    if (still.has(a.version_id) || moving.has(a.version_id) || !a.file_assets) continue;
+    const f = a.file_assets;
+    if (f.mime_type?.startsWith("image/")) { const p = f.thumbnail_path ?? f.storage_path; if (p) still.set(a.version_id, p); }
+    else if (f.thumbnail_path) still.set(a.version_id, f.thumbnail_path);
+    else if (f.mime_type?.startsWith("video/") && (f.preview_path ?? f.storage_path)) moving.set(a.version_id, (f.preview_path ?? f.storage_path)!);
   }
   const ext = new Map(((versions ?? []) as Array<{ id: string; external_url: string | null }>).map((v) => [v.id, v.external_url]));
-  const signed = await signPaths([...firstAsset.values()]);
+  const signed = await signPaths([...still.values(), ...moving.values()]);
   for (const [content, b] of best) {
-    const p = firstAsset.get(b.version);
-    out.set(content, { url: p ? signed.get(p) ?? null : null, link: !p && Boolean(ext.get(b.version)) });
+    const p = still.get(b.version);
+    const v = moving.get(b.version);
+    const link = ext.get(b.version) ?? null;
+    out.set(content, {
+      url: p ? signed.get(p) ?? null : !v && link ? linkThumbnail(link) : null,
+      video: v ? signed.get(v) ?? null : null,
+      link: !p && !v && Boolean(link),
+    });
   }
   return out;
 }
