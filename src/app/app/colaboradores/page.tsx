@@ -24,7 +24,7 @@ export default async function MembersPage() {
   return (
     <>
       <PageHeader title="Colaboradores" description={`${members.filter((m) => m.status === "active").length} ativo(s). Uma pessoa pode acumular funções.`}
-        actions={canManage && <InviteButton roles={roleList} canGrantOwner={ctx.roles.includes("owner")} />} />
+        actions={canManage && <InviteButton roles={roleList} canGrantOwner={ctx.roles.includes("owner")} workspaceName={ctx.workspace.name} />} />
       <Panel padded={false}>
         <Table>
           <thead><tr><th>Pessoa</th><th className="hidden sm:table-cell">Funções</th><th className="hidden md:table-cell">Carga</th><th className="text-right"><span title="Posts aprovados por mês em que a pessoa é responsável ou editora. Usada no ranking do painel.">Meta</span></th><th className="hidden sm:table-cell">Status</th>{canManage && <th className="w-10"><span className="sr-only">Ações</span></th>}</tr></thead>

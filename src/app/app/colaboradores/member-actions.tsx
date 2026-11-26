@@ -1,11 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, KeyRound, Link2, Loader2, Mail, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Link2, Loader2, MessageCircle, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { generateAccess, inviteLink, inviteMember, removeMember, resendInvite, setMemberTarget, setRoles, setStatus } from "./actions";
+import { generateAccess, inviteLink, inviteMember, removeMember, setMemberTarget, setRoles, setStatus } from "./actions";
 
 type Role = { key: string; name: string; description: string };
 
@@ -24,8 +24,30 @@ function RolePicker({ roles, value, onChange, canGrantOwner }: { roles: Role[]; 
   );
 }
 
-export function InviteButton({ roles, canGrantOwner }: { roles: Role[]; canGrantOwner: boolean }) {
+/** The one-time invite link, ready to go out by WhatsApp. */
+function InviteLinkDialog({ link, workspaceName, onClose }: { link: string | null; workspaceName: string; onClose: () => void }) {
+  const toast = useToast();
+  const message = link ? `Oi! Você foi convidado para o Delta Flow (${workspaceName}).\n\nAbra este link, clique em “Aceitar convite e entrar” e crie sua senha:\n${link}\n\nO link vale por 1 hora e só pode ser usado uma vez.` : "";
+  return (
+    <Dialog open={link !== null} onClose={onClose} size="sm" title="Envie o convite pelo WhatsApp"
+      description="O link vale por 1 hora e só funciona uma vez. Gerar outro anula este.">
+      {link && (
+        <div className="space-y-3">
+          <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer noopener"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-accent-fg hover:brightness-95">
+            <MessageCircle className="size-4" aria-hidden /> Enviar no WhatsApp
+          </a>
+          <Button className="w-full" onClick={() => navigator.clipboard.writeText(message).then(() => toast.success("Mensagem copiada."))}><Copy /> Copiar mensagem</Button>
+          <p className="text-xs text-muted">A pessoa abre o link, clica em “Aceitar convite e entrar”, cria a senha e já cai na agência. Se o link vencer, use “Link de convite” no menu … dela.</p>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+export function InviteButton({ roles, canGrantOwner, workspaceName }: { roles: Role[]; canGrantOwner: boolean; workspaceName: string }) {
   const [open, setOpen] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [sel, setSel] = useState(new Set<string>());
   const [pending, start] = useTransition();
@@ -38,14 +60,17 @@ export function InviteButton({ roles, canGrantOwner }: { roles: Role[]; canGrant
         footer={<><Button onClick={() => setOpen(false)}>Cancelar</Button>
           <Button variant="primary" disabled={pending || !email || sel.size === 0} onClick={() => start(async () => {
             const r = await inviteMember({ email, roles: [...sel] });
-            if (r.ok) { toast.success(r.message ?? "Convidado."); setOpen(false); setEmail(""); setSel(new Set()); router.refresh(); } else toast.error(r.error);
-          })}>Enviar convite</Button></>}>
+            if (!r.ok) { toast.error(r.error); return; }
+            setOpen(false); setEmail(""); setSel(new Set()); router.refresh();
+            if (r.data?.url) setLink(r.data.url); else toast.success(r.message ?? "Convidado.");
+          })}>{pending ? <Loader2 className="animate-spin" /> : <MessageCircle />} Gerar convite para WhatsApp</Button></>}>
         <div className="space-y-4">
-          <label className="block text-[13px] font-medium">E-mail<Input className="mt-1.5" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus /></label>
+          <label className="block text-[13px] font-medium">E-mail da pessoa (será o login dela)<Input className="mt-1.5" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus /></label>
           <RolePicker roles={roles} value={sel} onChange={setSel} canGrantOwner={canGrantOwner} />
           <p className="text-xs text-muted">Colaboradores sem “ver todos os clientes” só enxergam os clientes em que forem alocados (aba Configurações de cada cliente).</p>
         </div>
       </Dialog>
+      <InviteLinkDialog link={link} workspaceName={workspaceName} onClose={() => setLink(null)} />
     </>
   );
 }
@@ -58,9 +83,8 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
   const [link, setLink] = useState<string | null>(null);
   const makeLink = () => start(async () => {
     const r = await inviteLink(member.id);
-    if (r.ok && r.data) setLink(r.data.url); else if (!r.ok) toast.error(r.error);
+    if (!r.ok) toast.error(r.error); else if (r.data?.url) setLink(r.data.url); else toast.success(r.message ?? "Feito.");
   });
-  const linkMessage = link ? `Oi! Você foi convidado para o Delta Flow (${workspaceName}).\n\nAbra este link, clique em “Aceitar convite e entrar” e crie sua senha:\n${link}\n\nO link vale por pouco tempo e só pode ser usado uma vez.` : "";
   const invited = member.status === "invited";
   const [pending, start] = useTransition();
   const toast = useToast();
@@ -82,7 +106,6 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
         {(close) => (
           <>
             {invited && <MenuItem onSelect={() => { close(); makeLink(); }}><Link2 /> Link de convite (WhatsApp)</MenuItem>}
-            {invited && <MenuItem onSelect={() => { close(); run(() => resendInvite(member.id)); }}><Mail /> Reenviar convite por e-mail</MenuItem>}
             {invited && <MenuItem onSelect={() => { close(); setAccess("confirm"); }}><KeyRound /> Gerar acesso</MenuItem>}
             <MenuItem onSelect={() => { close(); setEdit(true); }}>Alterar funções</MenuItem>
             {member.status === "active" && <MenuItem danger onSelect={() => { close(); run(() => setStatus(member.id, false)); }}>Desativar acesso</MenuItem>}
@@ -96,22 +119,7 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
         <RolePicker roles={roles} value={sel} onChange={setSel} canGrantOwner={canGrantOwner} />
       </Dialog>
 
-      <Dialog open={link !== null} onClose={() => setLink(null)} size="sm" title="Link de convite pronto"
-        description="Mande agora pelo WhatsApp. Gerar outro link (ou reenviar o e-mail) anula este.">
-        {link && (
-          <div className="space-y-3">
-            <p className="break-all rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-xs leading-5">{link}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button className="flex-1" onClick={() => navigator.clipboard.writeText(linkMessage).then(() => toast.success("Mensagem copiada."))}><Copy /> Copiar</Button>
-              <a href={`https://wa.me/?text=${encodeURIComponent(linkMessage)}`} target="_blank" rel="noreferrer noopener"
-                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-accent-fg pointer-coarse:h-10">
-                <MessageCircle className="size-4" aria-hidden /> Enviar no WhatsApp
-              </a>
-            </div>
-            <p className="text-xs text-muted">A pessoa abre o link, clica em “Aceitar convite e entrar”, cria a senha e já cai na agência.</p>
-          </div>
-        )}
-      </Dialog>
+      <InviteLinkDialog link={link} workspaceName={workspaceName} onClose={() => setLink(null)} />
 
       <Dialog open={removing} onClose={() => setRemoving(false)} size="sm" title={invited ? `Cancelar o convite de ${member.name}?` : `Remover ${member.name} da equipe?`}
         footer={<><Button onClick={() => setRemoving(false)}>Voltar</Button>
@@ -132,7 +140,7 @@ export function MemberRowActions({ member, roles, canGrantOwner, workspaceName }
       </Dialog>
 
       <Dialog open={access === "confirm"} onClose={() => setAccess(null)} size="sm" title={`Gerar acesso para ${member.name}?`}
-        description="Cria o login desta pessoa com uma senha provisória, para você mandar pelo WhatsApp (o envio de convites por e-mail ainda não está configurado)."
+        description="Alternativa ao link de convite: cria o login desta pessoa com uma senha provisória, para você mandar pelo WhatsApp."
         footer={<><Button onClick={() => setAccess(null)}>Cancelar</Button>
           <Button variant="primary" disabled={pending} onClick={generate}>{pending ? <Loader2 className="animate-spin" /> : <KeyRound />} Gerar acesso</Button></>}>
         <p className="text-sm text-muted">Ao entrar pela primeira vez, ela já cai na agência com as funções do convite. Se você gerar de novo, a senha anterior deixa de valer.</p>

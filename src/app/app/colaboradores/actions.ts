@@ -12,21 +12,38 @@ import { isUuid } from "@/lib/utils";
 
 const invite = z.object({ email: z.string().trim().toLowerCase().email("E-mail inválido."), roles: z.array(z.string().regex(/^[a-z0-9_]{2,40}$/)).min(1, "Escolha ao menos uma função.") });
 
-export async function inviteMember(input: { email: string; roles: string[] }): Promise<ActionResult> {
+type InviteLink = { email: string; url: string | null };
+
+/**
+ * Invites are sent by WhatsApp, not e-mail: Supabase's built-in e-mail links are spent by whoever
+ * opens them first (scanners, previews) and its templates can't be changed without custom SMTP.
+ * The manager gets a one-time link to /auth/confirmar, which spends the token only when the
+ * person clicks the button. url is null when the person already has an account in use.
+ */
+export async function inviteMember(input: { email: string; roles: string[] }): Promise<ActionResult<InviteLink>> {
   const ctx = await getContext();
   const parsed = invite.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0].message);
   const sb = await createClient();
   const { error } = await sb.rpc("invite_member", { p_ws: ctx.workspace.id, p_email: parsed.data.email, p_role_keys: parsed.data.roles });
   if (error) return fail(error);
-  const message = serverEnv().serviceRoleKey
-    ? await sendInviteEmail(parsed.data.email, ctx.workspace.name)
-    : "Convite registrado. A pessoa entra no workspace ao criar conta ou entrar com este e-mail.";
   revalidatePath("/app/colaboradores");
-  return { ok: true, message };
+  if (!serverEnv().serviceRoleKey) return { ok: true, message: "Convite registrado. A pessoa entra no workspace ao criar conta com este e-mail.", data: { email: parsed.data.email, url: null } };
+  return makeInviteLink(parsed.data.email, ctx.workspace.name);
 }
 
-const NO_MAIL = "O e-mail não pôde ser enviado agora: use “Gerar acesso” no menu … da pessoa e mande a senha pelo WhatsApp.";
+/** "Link de convite (WhatsApp)" again for someone still marked as invited (a new link cancels the old one). */
+export async function inviteLink(memberId: string): Promise<ActionResult<InviteLink>> {
+  const ctx = await getContext();
+  if (!ctx.can("members.manage")) return fail("Você não tem permissão para gerenciar a equipe.");
+  if (!isUuid(memberId)) return fail("Convite inválido.");
+  if (!serverEnv().serviceRoleKey) return fail("Chave de administrador do Supabase não configurada no servidor.");
+  const sb = await createClient();
+  const { data: m } = await sb.from("workspace_members").select("status, user_id, invited_email")
+    .eq("id", memberId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  if (!m || m.status !== "invited" || m.user_id || !m.invited_email) return fail("Este convite já foi aceito ou não existe mais.");
+  return makeInviteLink(String(m.invited_email).toLowerCase(), ctx.workspace.name);
+}
 
 async function findAuthUser(email: string) {
   const admin = createAdminClient();
@@ -40,77 +57,28 @@ async function findAuthUser(email: string) {
   return { user: null };
 }
 
-/**
- * Sends the invite e-mail. Supabase refuses a second invite once the account exists (the first
- * invite already created it), so for someone who never signed in we send a "set your password"
- * link instead. Both land on /auth/concluir and then /redefinir-senha.
- */
-async function sendInviteEmail(email: string, workspaceName: string): Promise<string> {
-  const admin = createAdminClient();
-  const origin = await appOrigin();
-  const redirectTo = `${origin}/auth/concluir?next=/redefinir-senha`;
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { invited_to: workspaceName } });
-  if (!error) return "Convite enviado por e-mail. Peça para a pessoa olhar também o spam.";
-  if (/rate limit|too many/i.test(error.message)) return `Limite de e-mails do Supabase atingido (plano gratuito: poucos por hora). Tente mais tarde ou: ${NO_MAIL}`;
-  if (!/already|registered|exists/i.test(error.message)) return `Convite registrado. ${NO_MAIL}`;
-
+/** New people get an "invite" link; accounts that exist but never signed in get a "recovery" one. Both end on "Definir nova senha". */
+async function makeInviteLink(email: string, workspaceName: string): Promise<ActionResult<InviteLink>> {
   const found = await findAuthUser(email);
-  if ("error" in found) return `Convite registrado. ${NO_MAIL}`;
-  if (found.user?.last_sign_in_at) return "Esta pessoa já tem conta: ela verá o workspace no próximo login (ou usa “Esqueci minha senha”).";
-  const { error: resetErr } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
-  if (!resetErr) return "Convite reenviado por e-mail (chega com o assunto de redefinir senha). Peça para olhar também o spam.";
-  if (/rate limit|too many|seconds/i.test(resetErr.message)) return `Limite de e-mails do Supabase atingido (plano gratuito: poucos por hora). Tente mais tarde ou: ${NO_MAIL}`;
-  return `Convite registrado. ${NO_MAIL}`;
-}
-
-/** "Reenviar convite" for someone still marked as invited. */
-export async function resendInvite(memberId: string): Promise<ActionResult> {
-  const ctx = await getContext();
-  if (!ctx.can("members.manage")) return fail("Você não tem permissão para gerenciar a equipe.");
-  if (!isUuid(memberId)) return fail("Convite inválido.");
-  if (!serverEnv().serviceRoleKey) return fail("Chave de administrador do Supabase não configurada no servidor.");
-  const sb = await createClient();
-  const { data: m } = await sb.from("workspace_members").select("status, user_id, invited_email")
-    .eq("id", memberId).eq("workspace_id", ctx.workspace.id).maybeSingle();
-  if (!m || m.status !== "invited" || m.user_id || !m.invited_email) return fail("Este convite já foi aceito ou não existe mais.");
-  return { ok: true, message: await sendInviteEmail(String(m.invited_email).toLowerCase(), ctx.workspace.name) };
+  if ("error" in found) return fail("Convite registrado, mas não foi possível gerar o link agora. Use “Link de convite” no menu … da pessoa.");
+  if (found.user?.last_sign_in_at) {
+    return { ok: true, message: "Esta pessoa já tem conta: ela verá o workspace no próximo login.", data: { email, url: null } };
+  }
+  const origin = await appOrigin();
+  const type = found.user ? "recovery" : "invite";
+  const { data, error } = await createAdminClient().auth.admin.generateLink(
+    type === "invite"
+      ? { type, email, options: { redirectTo: `${origin}/redefinir-senha`, data: { invited_to: workspaceName } } }
+      : { type, email, options: { redirectTo: `${origin}/redefinir-senha` } });
+  const token = data?.properties?.hashed_token;
+  if (error || !token) return fail("Convite registrado, mas não foi possível gerar o link agora. Use “Link de convite” no menu … da pessoa.");
+  return { ok: true, message: "Link de convite pronto.", data: { email, url: `${origin}/auth/confirmar?token_hash=${encodeURIComponent(token)}&type=${type}` } };
 }
 
 /** Readable temporary password, e.g. "k7m3-p9x2-h4tq" (no 0/o/1/l/i to avoid typos). */
 function tempPassword() {
   const abc = "abcdefghjkmnpqrstuvwxyz23456789";
   return Array.from({ length: 3 }, () => Array.from({ length: 4 }, () => abc[randomInt(abc.length)]).join("")).join("-");
-}
-
-/**
- * "Copiar link de convite": a one-time link the manager sends by WhatsApp. It opens /auth/confirmar,
- * which spends the token only when the person clicks the button, so link previews (WhatsApp, Gmail,
- * antivirus) cannot burn it. New people get an "invite" link, people whose account exists but never
- * signed in get a "recovery" one; both end on "Definir nova senha".
- */
-export async function inviteLink(memberId: string): Promise<ActionResult<{ email: string; url: string }>> {
-  const ctx = await getContext();
-  if (!ctx.can("members.manage")) return fail("Você não tem permissão para gerenciar a equipe.");
-  if (!isUuid(memberId)) return fail("Convite inválido.");
-  if (!serverEnv().serviceRoleKey) return fail("Chave de administrador do Supabase não configurada no servidor.");
-  const sb = await createClient();
-  const { data: m } = await sb.from("workspace_members").select("status, user_id, invited_email")
-    .eq("id", memberId).eq("workspace_id", ctx.workspace.id).maybeSingle();
-  if (!m || m.status !== "invited" || m.user_id || !m.invited_email) return fail("Este convite já foi aceito ou não existe mais.");
-  const email = String(m.invited_email).toLowerCase();
-
-  const found = await findAuthUser(email);
-  if ("error" in found) return fail("Não foi possível consultar as contas. Tente de novo.");
-  if (found.user?.last_sign_in_at) return fail("Esta pessoa já tem conta e já entrou no sistema: ela verá o workspace no próximo login (ou usa “Esqueci minha senha”).");
-  const origin = await appOrigin();
-  const type = found.user ? "recovery" : "invite";
-  const { data, error } = await createAdminClient().auth.admin.generateLink(
-    type === "invite"
-      ? { type, email, options: { redirectTo: `${origin}/redefinir-senha`, data: { invited_to: ctx.workspace.name } } }
-      : { type, email, options: { redirectTo: `${origin}/redefinir-senha` } });
-  const token = data?.properties?.hashed_token;
-  if (error || !token) return fail("Não foi possível gerar o link agora. Tente de novo ou use “Gerar acesso”.");
-  return { ok: true, data: { email, url: `${origin}/auth/confirmar?token_hash=${encodeURIComponent(token)}&type=${type}` } };
 }
 
 /**
