@@ -41,9 +41,14 @@ Rotas em pt-BR em `src/app/app/*`. Server Actions em `actions.ts` ao lado da pá
 
 ## Pendências (em ordem sugerida)
 1. **E-mail com Resend** (convites, recuperar senha, avisos). Bloqueio: domínio próprio. Plano: verificar domínio no Resend → SMTP do Supabase Auth (smtp.resend.com:465, usuário `resend`) → mover o envio de avisos (hoje num worker que só roda local) para o Supabase (pg_cron + pg_net). Enquanto isso, a equipe entra por convite em Equipe + **“Gerar acesso”** (menu … do convidado): cria o login com senha provisória para mandar pelo WhatsApp (`generateAccess` em `colaboradores/actions.ts`; nunca altera conta que já entrou no sistema). O e-mail embutido do Supabase Free não entrega para endereços de fora da equipe do projeto.
-2. **Piloto** com 1–2 pessoas da equipe num cliente real (adicionar o Gmail delas em Usuários de teste do Google).
-3. Domínio próprio também destrava links do cliente com o endereço da agência e verificação do app no Google.
-4. Pequenos: remover o campo "Pasta do Drive (ID)" do cadastro de subdivisão; conteúdos antigos criados com template continuam no fluxo de tarefas encadeadas (não arrastam no pipeline).
-5. Fora do escopo por enquanto: métricas de redes sociais, IA, financeiro, "Programar todos".
+   Sem e-mail, **“Esqueci minha senha” também não chega**: um membro ativo que esquece a senha fica sem saída (o “Gerar acesso” só vale para convidados). Domínio .com.br ≈ R$ 40/ano é o único gasto recomendado.
+2. **Trocar senha obrigatória no primeiro login** depois do “Gerar acesso” (hoje só é sugerido). Mudança pequena, sugerida em 2026-11-26.
+3. **Backup semanal gratuito** do banco (o Supabase Free não oferece backup para baixar). Ideia: GitHub Action agendada com `pg_dump`, guardando o arquivo fora do repositório público. Sugerido em 2026-11-26.
+4. **Piloto** com 1–2 pessoas da equipe num cliente real (adicionar o Gmail delas em Usuários de teste do Google). Fazer o roteiro completo (post → etapas → aprovação no celular → reprovar → corrigir → aprovar → publicar) e conferir as telas num celular de verdade: nada foi testado em aparelho real nem com cliente real.
+5. Domínio próprio também destrava links do cliente com o endereço da agência e verificação do app no Google.
+6. Pequenos: remover o campo "Pasta do Drive (ID)" do cadastro de subdivisão; conteúdos antigos criados com template continuam no fluxo de tarefas encadeadas (não arrastam no pipeline).
+7. Funções faltando: envio do Web Push pelo worker, MFA, exportar PDF/Excel.
+8. Riscos de custo zero para acompanhar: Storage grátis tem 1 GB no total (vídeos grandes já vão por link do Drive, imagens enchem aos poucos); a Vercel Hobby é para uso não comercial.
+9. Fora do escopo por enquanto: métricas de redes sociais, IA, financeiro, "Programar todos".
 
 Mantenha esta lista em dia quando uma pendência for resolvida ou surgir outra.
