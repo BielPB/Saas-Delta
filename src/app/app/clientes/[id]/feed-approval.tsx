@@ -111,7 +111,7 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
               className={cn("relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl",
                 custom && "cursor-grab active:cursor-grabbing", drag === t.id && "opacity-40", drag && drag !== t.id && "ring-2 ring-inset ring-transparent hover:ring-accent-ink/50")}>
               <Link href={t.href} scroll={false} draggable={false} className="group block size-full" title={t.title}>
-                <MediaPreview thumb={t.thumb} video={t.videoSrc ?? null} link={t.link} />
+                <MediaPreview thumb={t.thumb} video={t.videoSrc ?? null} link={t.link} isVideo={t.video} />
                 {t.video && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-label="Vídeo" />}
                 <span className="absolute inset-x-1.5 bottom-1.5 flex justify-start opacity-90 transition-opacity group-hover:opacity-100">
                   {t.missing && !["ready", "scheduled", "published"].includes(t.status)

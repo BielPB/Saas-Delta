@@ -69,7 +69,7 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
               <Link href={hrefFor[p.id]} scroll={false}
                 className="group block overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-border-strong">
                 <div className="relative aspect-[4/5] bg-surface-2">
-                  <MediaPreview thumb={p.thumb} video={p.video ?? null} link={p.link} />
+                  <MediaPreview thumb={p.thumb} video={p.video ?? null} link={p.link} isVideo={!["static_post", "carousel"].includes(p.formatKey)} />
                   <span className="tabular absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-bold text-white">{String(p.number).padStart(2, "0")}</span>
                   {p.comments > 0 && (
                     <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] text-white">
@@ -154,24 +154,35 @@ function NewPostDialog({ clientId, formats, services, defaultDate, onClose, href
  * frame of an uploaded video. A Drive file that is not shared publicly has no thumbnail: then the
  * placeholder underneath shows through.
  */
-export function MediaPreview({ thumb, video, link, className }: { thumb: string | null; video: string | null; link: boolean; className?: string }) {
+export function MediaPreview({ thumb, video, link, isVideo: videoFormat, className }: {
+  thumb: string | null; video: string | null; link: boolean;
+  /** Format decides it (Reels/Stories = video, Post/Carrossel = image); falls back to the media type. */
+  isVideo?: boolean; className?: string;
+}) {
   const [broken, setBroken] = useState(false);
-  const isVideo = link || Boolean(video);
+  const isVideo = videoFormat ?? (Boolean(video) || link);
+  const showImage = Boolean(thumb) && !broken;
+  const showVideo = !thumb && Boolean(video);
   return (
-    <span className={cn("absolute inset-0 block", className)}>
-      <span className="flex size-full flex-col items-center justify-center gap-1.5 text-subtle">
-        {isVideo ? <Play className="size-7" aria-hidden /> : <ImageIcon className="size-7" aria-hidden />}
-        <span className="px-2 text-center text-[11px]">{link ? (broken ? "Vídeo no Drive (sem prévia: compartilhe o arquivo)" : "Vídeo no Drive") : isVideo ? "Vídeo" : "Sem mídia ainda"}</span>
-      </span>
-      {thumb && !broken && (
-        // eslint-disable-next-line @next/next/no-img-element -- signed private URL or Drive/YouTube thumbnail
-        <img src={thumb} alt="" onError={() => setBroken(true)} referrerPolicy="no-referrer"
-          className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" loading="lazy" />
+    <span className={cn("absolute inset-0 block bg-surface-2", className)}>
+      {!showImage && !showVideo && (
+        <span className="flex size-full flex-col items-center justify-center gap-1.5 text-subtle">
+          {isVideo ? <Play className="size-7" aria-hidden /> : <ImageIcon className="size-7" aria-hidden />}
+          <span className="px-2 text-center text-[11px]">
+            {link ? `${isVideo ? "Vídeo" : "Arte"} no Drive${broken ? " (sem prévia: compartilhe o arquivo)" : ""}` : "Sem mídia ainda"}
+          </span>
+        </span>
       )}
-      {!thumb && video && (
+      {showImage && (
+        // eslint-disable-next-line @next/next/no-img-element -- signed private URL or Drive/YouTube thumbnail
+        <img src={thumb!} alt="" onError={() => setBroken(true)} referrerPolicy="no-referrer" loading="lazy"
+          className={cn("absolute inset-0 size-full transition-transform duration-300 group-hover:scale-[1.02]",
+            isVideo ? "object-cover" : "object-contain p-1")} />
+      )}
+      {showVideo && (
         <video src={`${video}#t=0.5`} muted playsInline preload="metadata" aria-hidden className="absolute inset-0 size-full object-cover" />
       )}
-      {isVideo && (thumb || video) && !broken && (
+      {isVideo && (showImage || showVideo) && (
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="flex size-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm"><Play className="ml-0.5 size-5 fill-white" aria-hidden /></span>
         </span>
