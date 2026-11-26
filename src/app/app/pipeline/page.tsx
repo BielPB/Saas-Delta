@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import {
   contentFilters, listClientsLite, listContents, listFormats, listMembers, listServicesLite, parseFilters, pipelineExtras, qs, thumbnails,
@@ -8,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { FilterBar } from "@/components/content/filter-bar";
 import { PipelineBoard } from "@/components/content/pipeline-board";
+import { NewPostButton } from "@/components/content/new-post-button";
 import { columnOf } from "@/lib/board";
 import { formatGroups } from "@/lib/post-status";
 
@@ -60,7 +60,12 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     return { done: withKind.filter((i) => i.deliverables.some((d) => d.kind === k && d.done)).length, total: withKind.length };
   };
   const stats = [["video", "vídeos"], ["cover", "capas"], ["caption", "legendas"]].map(([k, label]) => ({ label, ...kindStat(k) })).filter((s) => s.total > 0);
-  const newHref = `/app/conteudos/novo${qs({}, { cliente: f.cliente })}`;
+  const createOptions = {
+    clients: clients.map((c) => ({ id: c.id, name: c.name })),
+    formats: formats.filter((x) => x.active).map((x) => ({ id: x.id, name: x.name })),
+    services: services.filter((x) => x.active).map((x) => ({ id: x.id, name: x.name, client_id: x.client_id })),
+    defaultClient: client?.id,
+  };
 
   return (
     <>
@@ -80,11 +85,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                 inApproval > 0 ? "bg-accent text-accent-fg" : "bg-surface-3 text-muted")}>{inApproval}</span>
             </Link>
           </nav>
-          {ctx.can("contents.manage") && (
-            <Link href={newHref} className="inline-flex h-9 items-center gap-2 rounded-full bg-accent px-4 text-[13px] font-semibold text-accent-fg transition-opacity hover:opacity-90">
-              <Plus className="size-4" strokeWidth={2.5} aria-hidden /> Novo conteúdo
-            </Link>
-          )}
+          {ctx.can("contents.manage") && <NewPostButton options={createOptions} />}
         </div>
       </div>
 
@@ -107,7 +108,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           show={["q", "formato", "aprovacao", "responsavel"]} />
       </div>
 
-      <PipelineBoard canPublish={ctx.can("publications.manage")} canSubmit={ctx.can("approvals.manage") || ctx.can("tasks.manage")} items={items} />
+      <PipelineBoard canPublish={ctx.can("publications.manage")} canSubmit={ctx.can("approvals.manage") || ctx.can("tasks.manage")} items={items}
+        create={ctx.can("contents.manage") ? createOptions : undefined} />
     </>
   );
 }

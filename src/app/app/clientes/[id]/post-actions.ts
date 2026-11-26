@@ -16,7 +16,7 @@ const refresh = (clientId?: string, contentId?: string) => {
 };
 
 /** Quick create from the client grid: no task template (simple workflow), only the format's deliverables. */
-export async function createPost(input: { clientId: string; formatId: string; title: string; plannedAt?: string | null; serviceId?: string | null }): Promise<ActionResult<{ id: string }>> {
+export async function createPost(input: { clientId: string; formatId: string; title: string; plannedAt?: string | null; serviceId?: string | null; stage?: WorkStatus }): Promise<ActionResult<{ id: string }>> {
   const ctx = await getContext();
   if (!isUuid(input.clientId) || !isUuid(input.formatId)) return fail("Escolha o formato.");
   const title = input.title.trim().slice(0, 200);
@@ -31,6 +31,9 @@ export async function createPost(input: { clientId: string; formatId: string; ti
     p_assignees: {},
   });
   if (error) return fail(error);
+  if (input.stage && input.stage !== "script" && isWorkStatus(input.stage)) {
+    await sb.rpc("set_work_status", { p_content: data as string, p_status: input.stage }); // starts directly in Gravação, Edição…
+  }
   refresh(input.clientId);
   return { ok: true, data: { id: data as string }, message: "Post criado." };
 }

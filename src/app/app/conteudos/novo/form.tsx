@@ -22,7 +22,7 @@ export function NewContentForm({ clients, services, formats, templates, members,
   const [client, setClient] = useState(defaultClient ?? "");
   const [format, setFormat] = useState(formats[0]?.id ?? "");
   const forFormat = templates.filter((t) => t.format_id === format);
-  const [template, setTemplate] = useState(forFormat[0]?.id ?? "");
+  const [template, setTemplate] = useState(""); // default: simple workflow (no task chain)
   const formRef = useRef<HTMLFormElement>(null);
   const toast = useToast();
   const fe = state && !state.ok ? state.fieldErrors : undefined;
@@ -61,7 +61,7 @@ export function NewContentForm({ clients, services, formats, templates, members,
           )}
         </Field>
         <Field label="Formato" error={fe?.format_id} required>
-          {(p) => <Select {...p} name="format_id" value={format} onChange={(e) => { setFormat(e.target.value); setTemplate(templates.find((t) => t.format_id === e.target.value)?.id ?? ""); }}>{formats.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select>}
+          {(p) => <Select {...p} name="format_id" value={format} onChange={(e) => { setFormat(e.target.value); setTemplate(""); }}>{formats.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select>}
         </Field>
         <Field label="Template de produção" hint={tpl?.description ?? (template ? undefined : `Sem template: cria só os entregáveis (${fmt?.required_kinds.map((k) => deliverableKind[k]).join(", ")}).`)}>
           {(p) => (

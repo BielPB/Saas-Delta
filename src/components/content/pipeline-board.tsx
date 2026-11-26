@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import type { ApprovalStatus, ContentStage, DeliverableKind } from "@/lib/domain";
 import { boardColumns, columnToWork } from "@/lib/board";
+import { NewPostButton, type NewPostOptions } from "./new-post-button";
 import { useToast } from "@/components/ui/overlay";
 import { setPostStatus, submitPost } from "@/app/app/clientes/[id]/post-actions";
 import { formatDate } from "@/lib/format";
@@ -28,7 +29,7 @@ const readyNote = (i: BoardItem) =>
   i.stage === "client_approval" ? "Na aprovação" : i.stage === "adjustments" ? "Em ajustes" : i.stage === "ready" ? "Pronto para publicar"
     : i.stage === "scheduled" ? "Agendado" : i.stage === "published" ? "Publicado" : "";
 
-export function PipelineBoard({ items, canPublish, canSubmit = false }: { items: BoardItem[]; canPublish: boolean; canSubmit?: boolean }) {
+export function PipelineBoard({ items, canPublish, canSubmit = false, create }: { items: BoardItem[]; canPublish: boolean; canSubmit?: boolean; create?: NewPostOptions }) {
   const [dialog, setDialog] = useState<{ mode: "schedule" | "confirm"; item: BoardItem } | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -70,8 +71,11 @@ export function PipelineBoard({ items, canPublish, canSubmit = false }: { items:
                   <h3 className="text-[15px] font-extrabold uppercase leading-tight tracking-wide">{col.label}</h3>
                   <p className={cn("truncate text-xs", col.ready ? "text-accent-fg/80" : "text-muted")}>{col.hint}</p>
                 </div>
-                <span className={cn("tabular flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
-                  col.ready ? "border-accent-fg/60" : "border-accent-ink/70")}>{list.length}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {create && !col.ready && <NewPostButton options={create} stage={columnToWork[col.key]} iconOnly />}
+                  <span className={cn("tabular flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
+                    col.ready ? "border-accent-fg/60" : "border-accent-ink/70")}>{list.length}</span>
+                </span>
               </header>
 
               <ul className="flex min-h-24 flex-col gap-3">
@@ -110,7 +114,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false }: { items:
                           <span className="truncate">{i.assignee.name.split(" ")[0]}</span>
                         </span>
                       ) : <span className="text-xs text-subtle">Sem responsável</span>}
-                      {["client_approval", "adjustments"].includes(i.stage) && <ApprovalBadge s={i.approval} />}
+                      {colOf(i) === "ready" && ["client_approval", "adjustments"].includes(i.stage) && <ApprovalBadge s={i.approval} />}
                     </div>
 
                     {(i.stage === "ready" || i.stage === "scheduled") && canPublish && (
@@ -122,7 +126,9 @@ export function PipelineBoard({ items, canPublish, canSubmit = false }: { items:
                   </li>
                 ))}
                 {list.length === 0 && (
-                  <li className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-subtle">Nenhum conteúdo</li>
+                  <li className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-subtle">
+                    {col.ready ? "Posts liberados para o cliente aparecem aqui." : drag ? "Solte aqui" : <>Nenhum post nesta etapa.<br />Arraste um card para cá{create ? " ou use o +" : ""}.</>}
+                  </li>
                 )}
               </ul>
             </section>
