@@ -35,7 +35,7 @@ export function OnboardingBar({ clientId, items, canEdit }: { clientId: string; 
       {open && (
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-3">
           {list.map((i) => (
-            <span key={i.id} className={cn("group inline-flex items-center rounded-full border text-xs", i.done ? "border-accent bg-accent/15" : "border-border")}>
+            <span key={i.id} className={cn("group inline-flex items-center rounded-full border text-xs", i.done ? "border-accent-ink/50 bg-accent-soft" : "border-border")}>
               <button type="button" disabled={!canEdit} onClick={() => persist(list.map((x) => (x.id === i.id ? { ...x, done: !x.done } : x)))}
                 aria-pressed={i.done} className={cn("inline-flex items-center gap-1.5 py-1 pl-2.5 pr-2", i.done ? "text-fg line-through decoration-muted" : "text-muted hover:text-fg")}>
                 <span className={cn("flex size-3.5 items-center justify-center rounded-full border", i.done ? "border-accent bg-accent text-accent-fg" : "border-border-strong")}>

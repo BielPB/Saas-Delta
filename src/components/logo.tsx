@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * `compact` mostra só o símbolo, que ocupa ~32% da largura da imagem.
  * No tema claro a logo vira carbono (brightness-0), porque o verde-limão some no fundo branco.
  */
-export function Logo({ compact, className }: { compact?: boolean; className?: string }) {
+export function Logo({ compact, className, onDark }: { compact?: boolean; className?: string; /** Surface is always dark: keep the lime logo in both themes. */ onDark?: boolean }) {
   const img = (
     <Image
       src="/brand/logo.png"
@@ -14,7 +14,7 @@ export function Logo({ compact, className }: { compact?: boolean; className?: st
       width={800}
       height={224}
       priority
-      className="h-7 w-auto max-w-none brightness-0 dark:brightness-100"
+      className={cn("h-7 w-auto max-w-none", !onDark && "brightness-0 dark:brightness-100")}
     />
   );
   return (

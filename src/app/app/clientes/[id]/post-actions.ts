@@ -119,9 +119,31 @@ export async function sendFeedForApproval(clientId: string, ym: string, contentI
   const { data: res, error: e } = await sb.rpc("send_month_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`, p_content_ids: ready });
   if (e) return fail(e);
   const out = res as { existing: boolean; added: number; token?: string; pin?: string | null };
+  await sb.rpc("reflow_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01` }); // link follows the feed order
   refresh(clientId);
   return { ok: true, data: {
     url: out.token ? `${await appOrigin()}/aprovacao/${out.token}` : null, existing: out.existing, pin: out.pin ?? null,
     sent: out.existing ? out.added : ready.length, skipped: ids.length - ready.length,
   } };
+}
+
+/** Custom order of the month's feed preview (ids from top-left); the month's link follows it. */
+export async function reorderFeed(clientId: string, ym: string, ids: string[]): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
+  const sb = await createClient();
+  const { error } = await sb.rpc("reorder_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`, p_ids: ids.filter(isUuid).slice(0, 300) });
+  if (error) return fail(error);
+  refresh(clientId);
+  return { ok: true };
+}
+
+export async function resetFeedOrder(clientId: string, ym: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
+  const sb = await createClient();
+  const { error } = await sb.rpc("reset_feed_order", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01` });
+  if (error) return fail(error);
+  refresh(clientId);
+  return { ok: true, message: "Ordem por data de publicação." };
 }

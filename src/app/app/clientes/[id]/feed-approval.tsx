@@ -7,17 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Dialog, useToast } from "@/components/ui/overlay";
 import type { PostStatusKey } from "@/lib/post-status";
 import { cn } from "@/lib/utils";
-import { sendFeedForApproval } from "./post-actions";
+import { reorderFeed, resetFeedOrder, sendFeedForApproval } from "./post-actions";
 import { StatusPill } from "./post-grid";
 
 export interface FeedTile { id: string; title: string; thumb: string | null; link: boolean; video: boolean; status: PostStatusKey; ready: boolean; missing: boolean; blocked: string | null; href: string }
 
 /** Instagram-like 3-column preview of the month (newest first), with one button to send it to the client. */
-export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canSend, activeLink }: {
+export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, monthLabel, canSend, activeLink, customOrder }: {
   tiles: FeedTile[]; clientId: string; clientName: string; ym: string; monthLabel: string; canSend: boolean;
   /** The month's link the client already has ("Mês ativo no link"). */
   activeLink: { expires: string | null; lastAccess: string | null; posts: number } | null;
+  customOrder: boolean;
 }) {
+  const [order, setOrder] = useState<string[] | null>(null); // optimistic order while dragging
+  const [custom, setCustom] = useState(customOrder);
+  const [drag, setDrag] = useState<string | null>(null);
+  const byId = new Map(initialTiles.map((t) => [t.id, t]));
+  const tiles = order ? order.map((id) => byId.get(id)).filter((t): t is FeedTile => Boolean(t)) : initialTiles;
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<{ url: string | null; existing: boolean; pin: string | null; sent: number; skipped: number } | null>(null);
   const [pending, start] = useTransition();
@@ -27,6 +33,25 @@ export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canS
   const willGo = open.filter((t) => !t.missing).length;
   const notReady = open.filter((t) => t.missing).length;
   const approved = tiles.filter((t) => ["ready", "scheduled", "published"].includes(t.status)).length;
+
+  const saveOrder = (ids: string[]) => start(async () => {
+    setOrder(ids);
+    const r = await reorderFeed(clientId, ym, ids);
+    if (!r.ok) { toast.error(r.error); setOrder(null); return; }
+    router.refresh();
+  });
+  const setMode = (next: boolean) => {
+    setCustom(next);
+    if (next) saveOrder(tiles.map((t) => t.id));
+    else start(async () => { const r = await resetFeedOrder(clientId, ym); if (!r.ok) toast.error(r.error); setOrder(null); router.refresh(); });
+  };
+  const dropOn = (targetId: string) => {
+    if (!drag || drag === targetId) return;
+    const ids = tiles.map((t) => t.id).filter((id) => id !== drag);
+    ids.splice(ids.indexOf(targetId), 0, drag);
+    setDrag(null);
+    saveOrder(ids);
+  };
 
   const send = () => start(async () => {
     const r = await sendFeedForApproval(clientId, ym, open.map((t) => t.id));
@@ -49,18 +74,30 @@ export function FeedApproval({ tiles, clientId, clientName, ym, monthLabel, canS
             ) : <span className="text-muted">Nenhum link de {monthLabel} ainda. O primeiro envio cria o link do mês.</span>}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        {tiles.length > 1 && (
+          <nav aria-label="Ordem do feed" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
+            <button type="button" onClick={() => custom && setMode(false)} aria-pressed={!custom} className={cn("rounded-full px-2.5 py-1 text-muted", !custom && "bg-surface-3 text-fg")}>Por data</button>
+            <button type="button" onClick={() => !custom && setMode(true)} aria-pressed={custom} className={cn("rounded-full px-2.5 py-1 text-muted", custom && "bg-surface-3 text-fg")}>Personalizada</button>
+          </nav>
+        )}
         {canSend && (
           <Button variant="primary" disabled={willGo === 0} onClick={() => setConfirm(true)}><Send /> {activeLink ? "Adicionar ao link do mês" : "Enviar para aprovação"}{willGo ? ` (${willGo})` : ""}</Button>
         )}
+        </div>
       </div>
 
+      {custom && tiles.length > 1 && <p className="mb-2 text-center text-xs text-muted">Arraste as publicações para montar o feed. O link do cliente segue esta ordem.</p>}
       {tiles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-4 py-14 text-center text-sm text-muted">Nenhum post ou reels neste mês.</div>
       ) : (
         <ul className="mx-auto grid max-w-2xl grid-cols-3 gap-0.5">
           {tiles.map((t) => (
-            <li key={t.id} className="relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl">
-              <Link href={t.href} scroll={false} className="group block size-full" title={t.title}>
+            <li key={t.id} draggable={custom} onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)}
+              onDragOver={(e) => { if (custom && drag) e.preventDefault(); }} onDrop={() => dropOn(t.id)}
+              className={cn("relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl",
+                custom && "cursor-grab active:cursor-grabbing", drag === t.id && "opacity-40", drag && drag !== t.id && "ring-2 ring-inset ring-transparent hover:ring-accent-ink/50")}>
+              <Link href={t.href} scroll={false} draggable={false} className="group block size-full" title={t.title}>
                 {t.thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element -- signed private URL
                   <img src={t.thumb} alt={t.title} className="size-full object-cover" loading="lazy" />

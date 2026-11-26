@@ -106,7 +106,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
             {i === 3 && <span className="mx-2 h-4 w-px bg-border" aria-hidden />}
             <Link href={tabHref(t.key)} aria-current={tab === t.key ? "page" : undefined}
               className={cn("relative -mb-px flex h-9 items-center border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg",
-                tab === t.key && "border-accent font-semibold text-fg")}>{t.label}</Link>
+                tab === t.key && "border-accent-ink font-semibold text-fg")}>{t.label}</Link>
           </span>
         ))}
       </nav>
@@ -164,11 +164,15 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
   const feedGroups = formatGroups.filter((g) => g.key !== "stories");
   const fmt = formats.filter((f) => feedGroups.some((g) => g.formats.includes(f.key)));
   const m0 = `${ym}-01T00:00:00Z`; const m1 = `${shiftMonth(ym, 1)}-01T00:00:00Z`;
-  const { data } = fmt.length ? await sb.from("content_items").select("id, title, format_id, stage, approval_status, publication_status, work_status, planned_publish_at, created_at")
+  const { data } = fmt.length ? await sb.from("content_items").select("id, title, format_id, stage, approval_status, publication_status, work_status, planned_publish_at, created_at, feed_position")
     .eq("workspace_id", ws).eq("client_id", clientId).is("archived_at", null).neq("publication_status", "cancelled").in("format_id", fmt.map((f) => f.id))
     .or(`and(planned_publish_at.gte.${m0},planned_publish_at.lt.${m1}),and(planned_publish_at.is.null,created_at.gte.${m0},created_at.lt.${m1})`)
     .order("planned_publish_at", { ascending: false, nullsFirst: true }).limit(200) : { data: [] };
-  const rows = (data ?? []) as Array<{ id: string; title: string; format_id: string; stage: ContentRow["stage"]; approval_status: ContentRow["approval_status"]; publication_status: ContentRow["publication_status"]; work_status: string; planned_publish_at: string | null; created_at: string }>;
+  const rows = ((data ?? []) as Array<{ id: string; title: string; format_id: string; stage: ContentRow["stage"]; approval_status: ContentRow["approval_status"]; publication_status: ContentRow["publication_status"]; work_status: string; planned_publish_at: string | null; created_at: string; feed_position: number | null }>)
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => (a.r.feed_position ?? Number.MAX_SAFE_INTEGER) - (b.r.feed_position ?? Number.MAX_SAFE_INTEGER) || a.i - b.i)
+    .map((x) => x.r);
+  const customOrder = rows.some((r) => r.feed_position !== null);
   const ids = rows.map((r) => r.id);
   const [thumbs, blockers] = await Promise.all([postThumbs(ids), postBlockers(ids)]);
   const blockedReason = (id: string) => {
@@ -191,7 +195,7 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
   type B = { approval_links: Array<{ expires_at: string | null; revoked_at: string | null; last_accessed_at: string | null }>; approval_batch_items: Array<{ content_id: string }> };
   const live = ((batches ?? []) as unknown as B[]).map((b) => ({ b, l: b.approval_links.find((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) })).find((x) => x.l);
   const activeLink = live ? { expires: live.l!.expires_at, lastAccess: live.l!.last_accessed_at, posts: live.b.approval_batch_items.length } : null;
-  return <FeedApproval tiles={tiles} clientId={clientId} clientName={clientName} ym={ym} monthLabel={monthLabel(ym)} canSend={canSend} activeLink={activeLink} />;
+  return <FeedApproval tiles={tiles} clientId={clientId} clientName={clientName} ym={ym} monthLabel={monthLabel(ym)} canSend={canSend} activeLink={activeLink} customOrder={customOrder} />;
 }
 
 /** Posts / Reels / Stories of the month as a grid; ?post=<id> opens the side panel. */

@@ -10,6 +10,24 @@ Nenhuma coluna de status é gravada diretamente: o gatilho `guard_*` rejeita UPD
 - **Tarefas** produzem entregáveis e podem depender de outras tarefas (DAG, ciclos rejeitados).
 - **Entregável interno**: roteiro e material bruto (nunca vão ao cliente). **Voltado ao cliente**: vídeo, capa, legenda, arte, carrossel.
 
+## Fluxo simples (posts criados pela grade do cliente) — padrão desde a migration 0013
+Posts criados em **Cliente → Posts/Reels/Stories** nascem **sem template de tarefas**: só os entregáveis do formato.
+- **Status manual = coluna do pipeline** (`content_items.work_status`, 0016): `script` Roteiro → `capture` Gravação → `editing` Edição → `finishing` Finalização. Muda por: arrastar o card no pipeline, seletor no painel do post, ou conclusão de tarefa com etapa (abaixo). Pode mudar quem gerencia conteúdos, os responsáveis, o editor ou quem tem tarefa aberta no post (`set_work_status`).
+- **Dali em diante o status é derivado** (aprovação/publicação): Com o cliente, Em ajuste, Pronto para publicar, Agendado, Publicado (`src/lib/post-status.ts`). Coluna **Pronto** do quadro = esses estados (`src/lib/board.ts`).
+- **Liberar para aprovação** (`submit_for_approval`, 0013): exige todos os entregáveis obrigatórios com versão; cada ajuste pedido pelo cliente precisa de versão **mais nova** que a reprovada (resolve a solicitação e conclui a tarefa de ajuste); libera as versões atuais para o portal. Substitui a tarefa “Revisão interna” dos templates. Soltar o card em **Pronto** chama a mesma função.
+- **Tarefa com etapa avança o post** (0017): tarefa geral ligada a um post com `step_key` ∈ {script, capture, editing, finishing}; ao concluir, o post vai para a etapa seguinte — nunca volta, nunca passa de Finalização, só no fluxo simples (`template_id` nulo).
+- **Link do mês** (`send_month_feed`, 0015): um link de aprovação por cliente e mês; reenviar adiciona os posts novos ao mesmo link. A ordem do link segue o preview do feed (`feed_position`, 0019; `reorder_feed`/`reset_feed_order`).
+- **Aprovação por imagem**: num item com várias imagens o cliente marca quais precisam de ajuste; a decisão continua sendo da versão inteira e a observação chega como “Imagens 2 e 3: …”.
+- Conteúdos antigos criados por template continuam no fluxo de tarefas encadeadas descrito abaixo.
+
+## Metas (todas contam posts aprovados por mês)
+| Meta | Onde | Precedência |
+|---|---|---|
+| Do cliente | `clients.monthly_target` (Configurações do cliente) | padrão de todo mês |
+| De um mês específico | `monthly_targets` (aba Subdivisões) | substitui a do cliente naquele mês |
+| Da subdivisão | `client_services.monthly_target` | parte da meta do cliente |
+| Individual | `workspace_members.monthly_target` (Equipe) | ranking “Meta individual”: posts aprovados no mês em que a pessoa é responsável ou editora |
+
 ## Três dimensões de status (derivadas)
 
 ### Produção

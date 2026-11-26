@@ -18,7 +18,15 @@ Tudo em contas da Delta (código no GitHub privado, Supabase, Vercel, Google Clo
 3. Credencial "Aplicativo da Web", redirect `https://app.deltaflow.com.br/api/drive/callback`.
 4. Gere a chave de cifra: `openssl rand -base64 32` → `DRIVE_TOKEN_ENCRYPTION_KEY` (guarde em cofre; perdê-la exige reconectar o Drive).
 
+## 2b. Google Agenda (por pessoa)
+1. No mesmo projeto do Google Cloud, ative a **Google Calendar API**.
+2. Google Auth Platform → **Acesso a dados**: adicione o escopo `https://www.googleapis.com/auth/calendar.events`.
+3. **Público-alvo**: Externo. Em **Teste**, adicione o Gmail de cada pessoa em *Usuários de teste* (máx. 100; autorização expira a cada 7 dias até o app ser verificado).
+4. **Clientes** → cliente Web → URI de redirecionamento: `https://<seu-domínio>/api/calendar/callback` (Minha conta mostra o valor exato).
+5. Usa `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` (a mesma chave cifra os tokens do Drive e da Agenda).
+
 ## 3. Vercel
+Variáveis: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (endereço público, sem barra final), `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_MAX_UPLOAD_MB` (50 no Supabase Free; vídeos grandes vão por link do Google Drive), `RESEND_API_KEY` e `EMAIL_FROM` (quando houver domínio). Variáveis `NEXT_PUBLIC_*` só valem após novo deploy.
 1. Importe o repositório; defina as variáveis do `.env.example` (Production e Preview separados).
 2. `CRON_SECRET` com `openssl rand -hex 32`; o `vercel.json` agenda `/api/cron/deadlines` uma vez por dia, às 8h (limite do plano Hobby; no Pro pode voltar a ser de hora em hora). Região das funções: `gru1` (São Paulo), junto do Supabase.
 3. Domínio `app.deltaflow.com.br`.

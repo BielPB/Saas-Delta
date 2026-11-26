@@ -63,6 +63,20 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | E2E autenticado com Playwright contra Supabase | ⏳ não executável neste ambiente |
 | Medição de performance do portal em 4G | ⏳ |
 
+## Interface v2 (redesenho)
+| Item | Status |
+|---|---|
+| Menu: atalhos, clientes por categoria (só categorias com clientes), “Mais” recolhido; botão Voltar | 🟢 |
+| Cliente: foto/logo, seletor de mês, Posts/Reels/Stories em grade, painel lateral do post, onboarding, ficha, duplicar mês, baixar em alta qualidade (ZIP no navegador) | 🟢 |
+| Status do post = coluna do pipeline; arrastar no quadro; soltar em Pronto libera ao cliente | 🟢 |
+| Tarefas ligadas a posts, com etapa que avança o post ao concluir | 🟢 |
+| Aprovação em Preview de feed (ordem por data ou personalizada), link do mês, PIN automático, aprovação por imagem | 🟢 |
+| Minhas demandas, Dashboard da meta, Calendário com miniaturas, ranking por meta individual | 🟢 |
+| Google Agenda por pessoa (leitura em Minhas demandas + eventos de prazos/publicações) | 🟢 testado com 1 conta |
+| Vídeos por link do Google Drive (player no portal) | 🟢 |
+| E-mail (Resend) | ⏳ depende de domínio próprio |
+| Métricas de redes sociais, IA, financeiro | ⏳ fora do escopo atual |
+
 ## Primeiro roteiro em staging (recomendado antes de liberar à equipe)
 1. `db push`, criar conta, workspace, 2 clientes, 3 colaboradores com funções diferentes.
 2. Criar Reels por template; como copywriter/filmmaker/editor concluir etapas com upload real (inclui interromper a rede no meio de um upload de 1 GB).

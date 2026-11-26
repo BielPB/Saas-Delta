@@ -17,7 +17,7 @@ const order = (k: string) => ({ video: 0, carousel: 1, image: 1, cover: 2, capti
 
 type Summary = { approved_contents: number; adjustment_contents: number; pending_items: number; total_contents: number; received_at: string };
 type Choice = "approved" | "rejected";
-interface Draft { choice?: Choice; comment: string; flagged: string[] }
+interface Draft { choice?: Choice; comment: string; flagged: string[]; images?: Record<string, number[]> }
 
 function subscribeStorage(cb: () => void) {
   window.addEventListener("storage", cb);
@@ -78,8 +78,13 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
     for (const x of decidable) {
       const flagged = d.flagged.includes(x.deliverable_id);
       if (flagged) {
-        if (x.version!.status === "rejected" && x.decision?.comment === d.comment.trim()) continue;
-        const r = await sendOne(x.version!.id, "rejected", d.comment.trim());
+        // "Imagens 2 e 3: …" when the client pointed at specific images of a multi-image item.
+        const picked = [...(d.images?.[x.deliverable_id] ?? [])].sort((a, b) => a - b);
+        const text = picked.length && (x.version!.assets?.length ?? 0) > 1
+          ? `${picked.length === 1 ? "Imagem" : "Imagens"} ${picked.length === 1 ? picked[0] : `${picked.slice(0, -1).join(", ")} e ${picked[picked.length - 1]}`}: ${d.comment.trim()}`
+          : d.comment.trim();
+        if (x.version!.status === "rejected" && x.decision?.comment === text) continue;
+        const r = await sendOne(x.version!.id, "rejected", text);
         if (!r.ok) { toast.error(r.error); if (r.code === "stale" || r.code === "session_invalid") router.refresh(); return false; }
       } else if (x.version!.status === "pending") {
         const r = await sendOne(x.version!.id, "approved", null);
@@ -150,8 +155,8 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   if (!item) return <main className="mx-auto min-h-dvh max-w-xl px-5 py-10"><Brand data={data} media={media} /><p className="mt-8 text-sm text-muted">Nenhum conteúdo neste lote.</p></main>;
 
   if (feed) {
-    const tiles = data.items.map((it, n) => ({ it, n }))
-      .sort((a, b) => (b.it.planned_publish_at ?? "9999") > (a.it.planned_publish_at ?? "9999") ? 1 : -1);
+    // Same order the agency arranged in the feed preview (the link keeps it in item positions).
+    const tiles = data.items.map((it, n) => ({ it, n }));
     const approvedN = data.items.filter((i) => stateOf(i) === "approved").length;
     const rejectedN = data.items.filter((i) => stateOf(i) === "rejected").length;
     const clientLogo = data.client.logo_path ? media[data.client.logo_path] : null;
@@ -165,7 +170,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         </header>
         <main className="mx-auto max-w-2xl px-4 py-6">
           <div className="mb-5 flex items-center gap-4">
-            <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-surface-2 text-xl font-bold">
+            <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-accent-ink bg-surface-2 text-xl font-bold">
               {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
               {clientLogo ? <img src={clientLogo} alt="" className="size-full object-cover" /> : data.client.name.charAt(0).toUpperCase()}
             </span>
@@ -272,7 +277,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
                   <button type="button" onClick={() => go(n)} disabled={pending} aria-current={current ? "step" : undefined}
                     aria-label={`Conteúdo ${n + 1}: ${it.title}${st === "approved" ? " (aprovado)" : st === "rejected" ? " (ajuste solicitado)" : ""}`}
                     className={cn("flex size-11 items-center justify-center rounded-xl border-2 text-sm font-bold transition-colors",
-                      current ? "border-accent bg-accent/10 text-accent-ink" : st === "approved" ? "border-transparent bg-accent text-accent-fg"
+                      current ? "border-accent-ink bg-accent-soft text-accent-ink" : st === "approved" ? "border-transparent bg-accent text-accent-fg"
                         : st === "rejected" ? "border-[var(--tone-danger-fg)] text-[var(--tone-danger-fg)]" : "border-dashed border-border-strong text-muted hover:text-fg")}>
                     {!current && st === "approved" ? <Check className="size-4" strokeWidth={3} /> : n + 1}
                   </button>
@@ -336,7 +341,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
                 </button>
               </div>
 
-              {choice === "rejected" && decidable.length > 1 && (
+              {choice === "rejected" && (decidable.length > 1 || decidable.some((d) => (d.version?.assets?.length ?? 0) > 1)) && (
                 <fieldset className="mt-4">
                   <legend className="text-[13px] font-semibold">O que precisa de ajuste?</legend>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -352,6 +357,30 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
                       );
                     })}
                   </div>
+                  {decidable.filter((d) => flagged.includes(d.deliverable_id) && (d.version?.assets?.length ?? 0) > 1).map((d) => {
+                    const picked = draft?.images?.[d.deliverable_id] ?? [];
+                    const toggle = (n: number) => patch({ images: { ...(draft?.images ?? {}), [d.deliverable_id]: picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n] } });
+                    return (
+                      <div key={`img-${d.deliverable_id}`} className="mt-3">
+                        <p className="text-[13px] font-semibold">Quais imagens d{d.kind === "carousel" ? "o carrossel" : "a " + (kindLabel[d.kind] ?? d.title).toLowerCase()}? <span className="font-normal text-muted">(opcional)</span></p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {d.version!.assets.map((a, i) => {
+                            const n = i + 1;
+                            const src = a.provider === "supabase" ? media[a.thumbnail_path ?? a.preview_path ?? a.path ?? ""] : undefined;
+                            const on = picked.includes(n);
+                            return (
+                              <button key={a.id ?? i} type="button" onClick={() => toggle(n)} aria-pressed={on} aria-label={`Imagem ${n}`}
+                                className={cn("relative size-16 overflow-hidden rounded-lg border-2", on ? "border-[var(--tone-danger-fg)]" : "border-border opacity-80")}>
+                                {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
+                                {src ? <img src={src} alt="" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center bg-surface-2 text-xs">{n}</span>}
+                                <span className={cn("absolute left-1 top-1 rounded px-1 text-[10px] font-bold", on ? "bg-[var(--tone-danger-fg)] text-white" : "bg-black/60 text-white")}>{n}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                   <p className="mt-1.5 text-xs text-muted">O que você não marcar é aprovado.</p>
                 </fieldset>
               )}
@@ -479,7 +508,7 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
               return (
                 <li key={x.id ?? n}>
                   <button type="button" onClick={() => setI(n)} aria-label={`Ver ${n + 1} de ${assets.length}`} aria-current={n === i}
-                    className={cn("block size-14 overflow-hidden rounded-lg border-2", n === i ? "border-accent" : "border-transparent opacity-70 hover:opacity-100")}>
+                    className={cn("block size-14 overflow-hidden rounded-lg border-2", n === i ? "border-accent-ink" : "border-transparent opacity-70 hover:opacity-100")}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
                     {thumb && !x.mime_type?.startsWith("video/") ? <img src={thumb} alt="" className="size-full object-cover" /> : <span className="flex size-full items-center justify-center bg-surface-2 text-xs font-bold">{n + 1}</span>}
                   </button>

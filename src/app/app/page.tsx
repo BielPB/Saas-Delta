@@ -142,7 +142,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="relative size-36 shrink-0" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
           <svg viewBox="0 0 120 120" className="size-full -rotate-90">
             <circle cx="60" cy="60" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="9" />
-            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--accent)" strokeWidth="9" strokeLinecap="round"
+            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--accent-ink)" strokeWidth="9" strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, target ? delivered / target : 0))} />
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
