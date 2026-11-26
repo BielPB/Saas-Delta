@@ -76,6 +76,7 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | Vídeos por link do Google Drive (player no portal) | 🟢 |
 | Celular: campos com 16px (sem zoom no iPhone), alvos de toque maiores (`pointer-coarse:`), janelas como folha inferior, área segura do iPhone (app instalado), filtros recolhidos, Pipeline com “Mover” por toque, Calendário em miniaturas, Preview do feed com setas, portal do cliente sem estouro | 🟢 build ok · ⏳ conferir em aparelho real |
 | Resposta imediata: filtros de Minhas demandas no navegador; abas e botões que vão ao servidor marcam o clique na hora (`ToggleLink`); cache do navegador de 30 s (`staleTimes`); menus “…” flutuam por cima de tabelas | 🟢 |
+| Equipe: “Gerar acesso” para convidados (senha provisória enviada pelo WhatsApp, enquanto não há e-mail) | 🟢 |
 | E-mail (Resend) | ⏳ depende de domínio próprio |
 | Métricas de redes sociais, IA, financeiro | ⏳ fora do escopo atual |
 

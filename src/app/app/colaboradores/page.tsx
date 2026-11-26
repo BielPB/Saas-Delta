@@ -54,7 +54,7 @@ export default async function MembersPage() {
                   </td>
                   <td className="text-right">{canManage && m.status === "active" && m.user_id ? <MemberTargetInput userId={m.user_id} value={m.monthly_target} /> : <span className="tabular text-muted">{m.monthly_target ?? "—"}</span>}</td>
                   <td className="hidden sm:table-cell">{m.status === "active" ? <Badge tone="success">Ativo</Badge> : m.status === "invited" ? <Badge tone="info">Convidado</Badge> : <Badge>Desativado</Badge>}</td>
-                  {canManage && <td>{m.user_id !== ctx.user.id && <MemberRowActions member={{ id: m.member_id, name: m.full_name, roles: m.roles, status: m.status }} roles={roleList} canGrantOwner={ctx.roles.includes("owner")} />}</td>}
+                  {canManage && <td>{m.user_id !== ctx.user.id && <MemberRowActions member={{ id: m.member_id, name: m.full_name, roles: m.roles, status: m.status }} roles={roleList} canGrantOwner={ctx.roles.includes("owner")} workspaceName={ctx.workspace.name} />}</td>}
                 </tr>
               );
             })}
