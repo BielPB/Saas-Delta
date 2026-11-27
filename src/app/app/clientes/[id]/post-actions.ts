@@ -1,4 +1,5 @@
 "use server";
+import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -69,17 +70,13 @@ export async function setEditor(contentId: string, clientId: string, userId: str
   return { ok: true, message: "Editor atualizado." };
 }
 
-/**
- * "Enviar para aprovação" of the month's feed: releases every post whose files are all in
- * (same rule as the side panel), then creates one approval link with the posts ready for the client.
- */
-export async function sendFeedForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string | null; existing: boolean; pin: string | null; sent: number; skipped: number }>> {
-  const ctx = await getContext();
-  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
-  const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
-  if (!ids.length) return fail("Nenhum post neste mês.");
-  const sb = await createClient();
+type Sb = Awaited<ReturnType<typeof createClient>>;
 
+/**
+ * Releases every post whose files are all in (same rule as the side panel) and returns the ones
+ * the client can answer now, or a message saying why none of them can go.
+ */
+async function releaseForClient(sb: Sb, ids: string[]): Promise<{ ready: string[] } | { error: string }> {
   const readiness = async () => {
     const { data } = await sb.from("deliverables")
       .select("content_id, required, client_facing, current_version_id, deliverable_versions!deliverables_current_version_fk(released_at)")
@@ -116,8 +113,26 @@ export async function sendFeedForApproval(clientId: string, ym: string, contentI
       const parts = [b.adjust.length ? `falta a nova versão de ${b.adjust.join(" e ")} (ajuste pedido pelo cliente)` : "", b.missing.length ? `falta enviar ${b.missing.join(" e ")}` : ""].filter(Boolean);
       return parts.length ? [`#${t.code} ${t.title.replace(/[_:]/g, " ")} — ${parts.join("; ").replace(/[_:]/g, " ")}`] : [];
     });
-    return fail(reasons.length ? `Nada foi enviado. ${reasons.slice(0, 3).join(". ")}.` : "Nenhum post está pronto para o cliente.");
+    return { error: reasons.length ? `Nada foi enviado. ${reasons.slice(0, 3).join(". ")}.` : "Nenhum post está pronto para o cliente." };
   }
+
+  return { ready };
+}
+
+/**
+ * "Enviar para aprovação" of the month's feed: releases every post whose files are all in
+ * (same rule as the side panel), then creates one approval link with the posts ready for the client.
+ */
+export async function sendFeedForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string | null; existing: boolean; pin: string | null; sent: number; skipped: number }>> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
+  const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
+  if (!ids.length) return fail("Nenhum post neste mês.");
+  const sb = await createClient();
+
+  const prep = await releaseForClient(sb, ids);
+  if ("error" in prep) return fail(prep.error);
+  const ready = prep.ready;
 
   const { data: res, error: e } = await sb.rpc("send_month_feed", { p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`, p_content_ids: ready });
   if (e) return fail(e);
@@ -149,4 +164,42 @@ export async function resetFeedOrder(clientId: string, ym: string): Promise<Acti
   if (error) return fail(error);
   refresh(clientId);
   return { ok: true, message: "Ordem por data de publicação." };
+}
+
+/**
+ * "Link dos vídeos": one approval link with only the month's videos, which the portal opens as a
+ * list (every video on one screen, approve or ask for changes right below each one). It is a
+ * separate link from the month's feed link and never merges into it.
+ */
+export async function sendVideosForApproval(clientId: string, ym: string, contentIds: string[]): Promise<ActionResult<{ url: string; pin: string | null; sent: number; skipped: number }>> {
+  const ctx = await getContext();
+  if (!isUuid(clientId) || !/^\d{4}-\d{2}$/.test(ym)) return fail("Seleção inválida.");
+  const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
+  if (!ids.length) return fail("Nenhum vídeo neste mês.");
+  const sb = await createClient();
+  const { data: client } = await sb.from("clients").select("name, is_sensitive").eq("id", clientId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  if (!client) return fail("Cliente não encontrado.");
+
+  const prep = await releaseForClient(sb, ids);
+  if ("error" in prep) return fail(prep.error.replace("Nenhum post está pronto", "Nenhum vídeo está pronto"));
+  const ready = prep.ready;
+
+  const [y, m] = ym.split("-").map(Number);
+  const sensitive = Boolean(client.is_sensitive);
+  const day = 86_400_000;
+  const expires = sensitive ? Date.now() + 30 * day : Math.max(Date.now() + 15 * day, Date.UTC(y, m + 1, 1)); // two months after the month starts
+  const create = (pin: string | null) => sb.rpc("create_approval_batch", {
+    p_ws: ctx.workspace.id, p_client: clientId, p_name: `Vídeos — ${client.name} · ${String(m).padStart(2, "0")}/${y}`,
+    p_content_ids: ready, p_due_at: null, p_expires_at: new Date(expires).toISOString(), p_pin: pin,
+  });
+  let pin: string | null = null;
+  let { data, error } = await create(null);
+  if (error && /pin_required/i.test(error.message)) {
+    pin = String(randomInt(10000)).padStart(4, "0"); // client or workspace requires a PIN
+    ({ data, error } = await create(pin));
+  }
+  if (error) return fail(error);
+  const r = data as { token: string };
+  refresh(clientId);
+  return { ok: true, data: { url: `${await appOrigin()}/aprovacao/${r.token}`, pin, sent: ready.length, skipped: ids.length - ready.length } };
 }

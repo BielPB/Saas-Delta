@@ -20,8 +20,10 @@ export function LinkEmbed({ url, aspect, audience = "team" }: { url: string; asp
       <div>
         <div className="relative mx-auto w-full overflow-hidden rounded-2xl border border-border bg-black"
           style={{ aspectRatio: r, maxHeight: "72vh", maxWidth: `calc(72vh * (${r}))` }}>
-          <iframe src={link.embed} title="Vídeo" className="absolute inset-0 size-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
+          {/* iPhone Safari sizes an iframe to its content: the Drive player came out wider than the frame
+              (black bar on the left, controls cut on the right). 1px + min-width 100% pins it to the frame. */}
+          <iframe src={link.embed} title="Vídeo" className="absolute inset-0 h-full w-px min-w-full border-0" scrolling="no"
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           {link.kind === "drive" && (

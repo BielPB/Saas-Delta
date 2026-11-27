@@ -115,8 +115,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       {isGrid && (
         <PostsTab ws={ctx.workspace.id} clientId={id} tab={tab as "posts" | "reels" | "stories"} ym={ym} postId={isUuid(sp.post) ? sp.post! : null}
           formats={formats} services={((services ?? []) as Array<{ id: string; name: string; active: boolean }>).filter((s) => s.active)}
-          me={ctx.user.id} can={{ create: ctx.can("contents.manage"), manage: ctx.can("contents.manage"), submit: ctx.can("approvals.manage") || ctx.can("tasks.manage"), tasks: ctx.can("tasks.manage") }}
-          baseHref={tabHref(tab)} />
+          me={ctx.user.id} can={{ create: ctx.can("contents.manage"), manage: ctx.can("contents.manage"), submit: ctx.can("approvals.manage") || ctx.can("tasks.manage"), tasks: ctx.can("tasks.manage"), send: ctx.can("approvals.manage") }}
+          baseHref={tabHref(tab)} clientName={client.name as string} />
       )}
       {tab === "visao" && (
         <Overview ws={ctx.workspace.id} client={id} month={month} servicesCount={(services ?? []).length}
@@ -200,10 +200,10 @@ async function FeedTab({ ws, clientId, clientName, ym, formats, canSend }: {
 }
 
 /** Posts / Reels / Stories of the month as a grid; ?post=<id> opens the side panel. */
-async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, can, baseHref }: {
+async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, can, baseHref, clientName }: {
   ws: string; clientId: string; tab: "posts" | "reels" | "stories"; ym: string; postId: string | null;
   formats: Array<{ id: string; key: string; name: string; aspect_ratio: string | null; active: boolean }>;
-  services: Array<{ id: string; name: string }>; me: string; can: { create: boolean; manage: boolean; submit: boolean; tasks: boolean }; baseHref: string;
+  services: Array<{ id: string; name: string }>; me: string; can: { create: boolean; manage: boolean; submit: boolean; tasks: boolean; send: boolean }; baseHref: string; clientName: string;
 }) {
   const sb = await createClient();
   const group = formatGroups.find((g) => g.key === tab)!;
@@ -269,7 +269,8 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
   return (
     <>
       <PostGrid posts={posts} hrefFor={hrefFor} baseHref={baseHref} label={group.label} clientId={clientId}
-        formats={groupFormats.map((f) => ({ id: f.id, name: f.name, key: f.key }))} services={services} canCreate={can.create} defaultDate={defaultDate} />
+        formats={groupFormats.map((f) => ({ id: f.id, name: f.name, key: f.key }))} services={services} canCreate={can.create} defaultDate={defaultDate}
+        video={{ canSend: can.send, clientName, ym }} />
       {drawer}
     </>
   );

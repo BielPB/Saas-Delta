@@ -14,6 +14,7 @@ import { bulkApproveAction, finalizeAction, respondAction } from "./actions";
 
 const kindLabel: Record<string, string> = { video: "Vídeo", cover: "Capa", caption: "Legenda", image: "Arte", carousel: "Carrossel", other: "Material" };
 const ratio = (a: string | null) => (a === "16:9" ? "16 / 9" : a === "1:1" ? "1 / 1" : a === "4:5" ? "4 / 5" : "9 / 16");
+const hasVideo = (it: PortalData["items"][number]) => it.deliverables.some((d) => d.kind === "video");
 const order = (k: string) => ({ video: 0, carousel: 1, image: 1, cover: 2, caption: 3 } as Record<string, number>)[k] ?? 4;
 
 type Summary = { approved_contents: number; adjustment_contents: number; pending_items: number; total_contents: number; received_at: string };
@@ -39,6 +40,11 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   const setAskName = (v: boolean) => { if (!v) setDismissed(true); };
   const [idx, setIdx] = useState(0);
   const [feed, setFeed] = useState(data.items.length > 1);
+  // A link made only of videos ("Link dos vídeos") opens as a list: every video on one screen,
+  // approved or sent back right below each one.
+  const videoCount = data.items.filter(hasVideo).length;
+  const [videos, setVideos] = useState(data.items.length > 1 && videoCount === data.items.length);
+  const [fromVideos, setFromVideos] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [summary, setSummary] = useState<Summary | null>(null);
   const [pending, start] = useTransition();
@@ -73,13 +79,12 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   };
 
   /** Saves the current content's draft (if any). Returns false when it must stay on this content. */
-  const save = async (): Promise<boolean> => {
-    const d = drafts[item.content_id];
+  const submitDraft = async (it: PortalData["items"][number], d: Draft | undefined): Promise<boolean> => {
     if (!d?.choice) return true;
-    const decidable = item.deliverables.filter((x) => x.version?.decidable);
+    const decidable = it.deliverables.filter((x) => x.version?.decidable);
     if (d.choice === "approved") {
       if (decidable.every((x) => x.version!.status === "approved")) return true;
-      const r = await bulkApproveAction(token, { content: item.content_id, reviewer: reviewer || null, key: crypto.randomUUID(), includeRejected: true });
+      const r = await bulkApproveAction(token, { content: it.content_id, reviewer: reviewer || null, key: crypto.randomUUID(), includeRejected: true });
       if (!r.ok) { toast.error(r.error); if (r.code === "session_invalid") router.refresh(); return false; }
       return true;
     }
@@ -103,6 +108,13 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
     }
     return true;
   };
+  const save = () => submitDraft(item, drafts[item.content_id]);
+  /** List of videos: each decision is saved right away. */
+  const decide = async (it: PortalData["items"][number], d: Draft) => {
+    const ok = await submitDraft(it, d);
+    if (ok) router.refresh();
+    return ok;
+  };
 
   const go = (to: number) => start(async () => {
     const hadDraft = Boolean(drafts[item.content_id]?.choice);
@@ -121,10 +133,10 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
     const hadDraft = Boolean(drafts[item.content_id]?.choice);
     if (!(await save())) return;
     if (hadDraft) { setDrafts((p) => { const n = { ...p }; delete n[item.content_id]; return n; }); router.refresh(); }
-    setFeed(true);
+    if (fromVideos) setVideos(true); else setFeed(true);
     window.scrollTo({ top: 0 });
   });
-  const openItem = (n: number) => { setIdx(n); setFeed(false); window.scrollTo({ top: 0 }); };
+  const openItem = (n: number, fromList = false) => { setIdx(n); setFeed(false); setVideos(false); setFromVideos(fromList); window.scrollTo({ top: 0 }); };
 
   const finalize = () => start(async () => {
     if (!(await save())) return;
@@ -164,6 +176,54 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
 
   if (!item) return <main className="mx-auto min-h-dvh max-w-xl px-5 py-10"><Brand data={data} media={media} /><p className="mt-8 text-sm text-muted">Nenhum conteúdo neste lote.</p></main>;
 
+  const nameDialog = (
+    <Dialog open={askName} onClose={() => setAskName(false)} size="sm" title="Como podemos te identificar?" description="Seu nome aparece junto das avaliações para a agência.">
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); try { localStorage.setItem(nameKey, reviewer); } catch {} setAskName(false); }}>
+        <Input autoFocus value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="Seu nome" aria-label="Seu nome" autoComplete="name" />
+        <div className="flex justify-end gap-2"><Button onClick={() => setAskName(false)}>Pular</Button><Button type="submit" variant="primary">Continuar</Button></div>
+      </form>
+    </Dialog>
+  );
+
+  if (videos) {
+    const list = data.items.map((it, n) => ({ it, n })).filter(({ it }) => hasVideo(it));
+    const approvedN = list.filter(({ it }) => stateOf(it) === "approved").length;
+    const rejectedN = list.filter(({ it }) => stateOf(it) === "rejected").length;
+    return (
+      <div className="min-h-dvh bg-bg pb-28">
+        <header className="border-b border-border">
+          <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4">
+            <Brand data={data} media={media} />
+            {data.batch.due_at && <p className="text-sm text-muted">Responda até <strong className="text-accent-ink">{dueLabel(data.batch.due_at)}</strong></p>}
+          </div>
+        </header>
+        <main className="mx-auto max-w-2xl px-4 py-6">
+          <h1 className="text-xl font-bold">{data.client.name}</h1>
+          <p className="text-sm text-muted">{data.batch.name}</p>
+          <p className="tabular mt-1 text-xs text-muted"><strong className="text-fg">{list.length}</strong> vídeos{approvedN ? ` · ${approvedN} aprovados` : ""}{rejectedN ? ` · ${rejectedN} com ajuste` : ""}</p>
+          <p className="mb-4 mt-3 text-sm text-muted">Assista e responda embaixo de cada vídeo. Sua resposta é salva na hora.</p>
+          <ol className="space-y-5">
+            {list.map(({ it, n }, i) => (
+              <VideoRow key={it.content_id} it={it} position={i + 1} total={list.length} media={media} state={stateOf(it)}
+                decide={decide} onDetails={() => openItem(n, true)} />
+            ))}
+          </ol>
+        </main>
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="mx-auto flex max-w-2xl gap-2 px-4 py-3">
+            {list.length < total && (
+              <Button className="h-11 min-w-0 flex-1 rounded-full px-3 pointer-coarse:h-12" onClick={() => { setVideos(false); setFeed(true); window.scrollTo({ top: 0 }); }}>Ver tudo em grade</Button>
+            )}
+            <Button variant="primary" className="h-11 min-w-0 flex-1 rounded-full px-3 font-bold pointer-coarse:h-12" disabled={pending} onClick={finalize}>
+              {pending ? <Loader2 className="animate-spin" /> : <CheckCheck />} Finalizar avaliação
+            </Button>
+          </div>
+        </div>
+        {nameDialog}
+      </div>
+    );
+  }
+
   if (feed) {
     // Same order the agency arranged in the feed preview (the link keeps it in item positions).
     const tiles = data.items.map((it, n) => ({ it, n }));
@@ -190,6 +250,11 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
               <p className="tabular mt-1 text-xs text-muted"><strong className="text-fg">{total}</strong> publicações · <strong className="text-fg">{answered}</strong> respondidas{approvedN ? ` · ${approvedN} aprovadas` : ""}{rejectedN ? ` · ${rejectedN} com ajuste` : ""}</p>
             </div>
           </div>
+          {videoCount > 1 && (
+            <Button variant="primary" className="mb-4 h-12 w-full rounded-full font-bold" onClick={() => { setVideos(true); setFeed(false); window.scrollTo({ top: 0 }); }}>
+              <Play /> Assistir os {videoCount} vídeos em sequência
+            </Button>
+          )}
           <p className="mb-3 text-sm text-muted">Toque em cada publicação para ver em detalhe e aprovar ou pedir ajuste.</p>
           <ul className="grid grid-cols-3 gap-0.5 overflow-hidden rounded-xl border border-border bg-border">
             {tiles.map(({ it, n }) => {
@@ -234,12 +299,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
             </Button>
           </div>
         </div>
-        <Dialog open={askName} onClose={() => setAskName(false)} size="sm" title="Como podemos te identificar?" description="Seu nome aparece junto das avaliações para a agência.">
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); try { localStorage.setItem(nameKey, reviewer); } catch {} setAskName(false); }}>
-            <Input autoFocus value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="Seu nome" aria-label="Seu nome" autoComplete="name" />
-            <div className="flex justify-end gap-2"><Button onClick={() => setAskName(false)}>Pular</Button><Button type="submit" variant="primary">Continuar</Button></div>
-          </form>
-        </Dialog>
+        {nameDialog}
       </div>
     );
   }
@@ -275,7 +335,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         {total > 1 && (
           <button type="button" onClick={backToFeed} disabled={pending}
             className="-ml-1 mb-3 inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] font-medium text-muted hover:bg-surface-2 hover:text-fg">
-            <ChevronLeft className="size-4" aria-hidden /> Ver o feed
+            <ChevronLeft className="size-4" aria-hidden /> {fromVideos ? "Ver todos os vídeos" : "Ver o feed"}
           </button>
         )}
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -320,7 +380,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
             {cover && (
               <div>
                 <SectionLabel>Capa · como aparece no perfil</SectionLabel>
-                <div className="max-w-[17rem]"><MediaCard d={cover} aspect="4:5" media={media} /></div>
+                <div className="mx-auto max-w-[17rem] lg:mx-0"><MediaCard d={cover} aspect="4:5" media={media} crop /></div>
               </div>
             )}
             {caption && (
@@ -432,13 +492,137 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         </p>
       </main>
 
-      <Dialog open={askName} onClose={() => setAskName(false)} size="sm" title="Como podemos te identificar?" description="Seu nome aparece junto das avaliações para a agência.">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); try { localStorage.setItem(nameKey, reviewer); } catch {} setAskName(false); }}>
-          <Input autoFocus value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="Seu nome" aria-label="Seu nome" autoComplete="name" />
-          <div className="flex justify-end gap-2"><Button onClick={() => setAskName(false)}>Pular</Button><Button type="submit" variant="primary">Continuar</Button></div>
-        </form>
-      </Dialog>
+      {nameDialog}
     </div>
+  );
+}
+
+/** One video of the list view: player, cover and caption folded, and the answer right below. */
+function VideoRow({ it, position, total, media, state, decide, onDetails }: {
+  it: PortalData["items"][number]; position: number; total: number; media: Record<string, string>;
+  state: "approved" | "rejected" | "pending" | "none";
+  decide: (it: PortalData["items"][number], d: Draft) => Promise<boolean>; onDetails: () => void;
+}) {
+  const ds = [...it.deliverables].sort((a, b) => order(a.kind) - order(b.kind));
+  const main = ds.find((d) => d.kind === "video");
+  const cover = ds.find((d) => d.kind === "cover");
+  const caption = ds.find((d) => d.kind === "caption");
+  const decidable = ds.filter((d) => d.version?.decidable);
+  const askedFor = decidable.find((d) => d.version!.status === "rejected")?.decision?.comment;
+  const [mode, setMode] = useState<"buttons" | "adjust">("buttons");
+  const [editing, setEditing] = useState(false);
+  const [flagged, setFlagged] = useState<string[]>(() => {
+    const first = decidable.find((d) => d.kind === "video") ?? decidable[0];
+    return first ? [first.deliverable_id] : [];
+  });
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  const decided = state === "approved" || state === "rejected";
+
+  const run = async (d: Draft) => {
+    setBusy(true);
+    const ok = await decide(it, d);
+    setBusy(false);
+    if (ok) { setEditing(false); setMode("buttons"); setComment(""); }
+  };
+
+  return (
+    <li className="rounded-2xl border border-border bg-surface p-3 sm:p-5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Vídeo {position} de {total}{it.service ? ` · ${it.service}` : ""}</p>
+          <h2 className="mt-0.5 break-words text-lg font-bold leading-tight">{it.title}</h2>
+        </div>
+        {state === "approved" && <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-fg"><Check className="size-3.5" strokeWidth={3} aria-hidden /> Aprovado</span>}
+        {state === "rejected" && <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--tone-danger-bg)] px-2.5 py-1 text-xs font-bold text-[var(--tone-danger-fg)]"><X className="size-3.5" strokeWidth={3} aria-hidden /> Ajuste pedido</span>}
+      </div>
+
+      {main && <LazyVideo d={main} aspect={it.aspect_ratio} media={media} />}
+
+      {(cover?.version || caption?.version) && (
+        <details className="mt-3 rounded-xl bg-surface-2 px-3 py-2 text-sm">
+          <summary className="cursor-pointer py-1 font-semibold">Ver {cover?.version && caption?.version ? "capa e legenda" : cover?.version ? "capa" : "legenda"}</summary>
+          <div className="mt-2 space-y-3 pb-1">
+            {cover?.version && <div className="max-w-[12rem]"><MediaCard d={cover} aspect="4:5" media={media} crop /></div>}
+            {caption?.version && <CaptionCard d={caption} />}
+          </div>
+        </details>
+      )}
+
+      <div className="mt-4">
+        {decidable.length === 0 ? (
+          <p className="text-sm text-muted">Uma nova versão está sendo preparada pela agência. Ela aparece neste mesmo link.</p>
+        ) : decided && !editing ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 text-sm text-muted">{state === "approved" ? "Você aprovou este vídeo." : `Você pediu: “${askedFor ?? ""}”`}</p>
+            <Button size="sm" onClick={() => { setEditing(true); setMode("buttons"); }}>Alterar resposta</Button>
+          </div>
+        ) : mode === "adjust" ? (
+          <div className="space-y-3 rounded-xl border border-border p-3">
+            {decidable.length > 1 && (
+              <fieldset>
+                <legend className="text-[13px] font-semibold">O que precisa de ajuste?</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {decidable.map((d) => {
+                    const on = flagged.includes(d.deliverable_id);
+                    return (
+                      <label key={d.deliverable_id} className={cn("inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-semibold",
+                        on ? "border-[var(--tone-danger-fg)] bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]" : "border-border-strong text-muted")}>
+                        <input type="checkbox" className="size-4 accent-[var(--tone-danger-fg)]" checked={on}
+                          onChange={() => setFlagged(on ? flagged.filter((x) => x !== d.deliverable_id) : [...flagged, d.deliverable_id])} />
+                        {kindLabel[d.kind] ?? d.title}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-xs text-muted">O que você não marcar é aprovado.</p>
+              </fieldset>
+            )}
+            <Textarea rows={3} aria-label={`O que ajustar em ${it.title}`} value={comment} onChange={(e) => setComment(e.target.value)} autoFocus
+              placeholder="Ex.: cortar o início, trocar a música, ajustar uma palavra na legenda..." />
+            <div className="flex gap-2">
+              <Button className="h-11 rounded-full px-4" disabled={busy} onClick={() => setMode("buttons")}>Cancelar</Button>
+              <Button variant="primary" className="h-11 flex-1 rounded-full font-bold" disabled={busy || comment.trim().length < 3 || flagged.length === 0}
+                onClick={() => run({ choice: "rejected", comment, flagged })}>
+                {busy && <Loader2 className="animate-spin" />} Enviar ajuste
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" disabled={busy} onClick={() => setMode("adjust")}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-[var(--tone-danger-fg)]/70 text-[15px] font-bold text-[var(--tone-danger-fg)] hover:bg-[var(--tone-danger-bg)] disabled:opacity-60">
+              <X className="size-5" strokeWidth={3} aria-hidden /> Pedir ajuste
+            </button>
+            <button type="button" disabled={busy} onClick={() => run({ choice: "approved", comment: "", flagged: [] })}
+              className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-accent bg-accent text-[15px] font-bold text-accent-fg hover:brightness-95 disabled:opacity-60">
+              {busy ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Check className="size-5" strokeWidth={3} aria-hidden />} Aprovar
+            </button>
+          </div>
+        )}
+        <button type="button" onClick={onDetails} className="mt-2 text-xs font-medium text-muted underline-offset-2 hover:text-fg hover:underline">Ver em detalhe</button>
+      </div>
+    </li>
+  );
+}
+
+/** Drive/YouTube video in the list: a still frame first, the player only after a tap (keeps a long list fast). */
+function LazyVideo({ d, aspect, media }: { d: PortalDeliverable; aspect: string | null; media: Record<string, string> }) {
+  const [on, setOn] = useState(false);
+  const url = d.version?.external_url;
+  if (!d.version || d.version.assets.length || !url) return <MediaCard d={d} aspect={aspect} media={media} />;
+  const thumb = linkThumbnail(url);
+  if (on || !thumb) return <LinkEmbed url={url} aspect={aspect} audience="client" />;
+  const r = ratio(aspect);
+  return (
+    <button type="button" onClick={() => setOn(true)} aria-label="Assistir o vídeo"
+      className="relative mx-auto block w-full overflow-hidden rounded-2xl border border-border bg-black" style={{ aspectRatio: r, maxHeight: "72vh", maxWidth: `calc(72vh * (${r}))` }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Drive/YouTube thumbnail */}
+      <img src={thumb} alt="" referrerPolicy="no-referrer" loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      <span className="absolute inset-0 flex items-center justify-center">
+        <span className="flex size-16 items-center justify-center rounded-full bg-black/60"><Play className="ml-1 size-7 fill-white text-white" aria-hidden /></span>
+      </span>
+    </button>
   );
 }
 
@@ -484,7 +668,8 @@ function Pending({ d }: { d: PortalDeliverable }) {
   return <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted">{kindLabel[d.kind] ?? d.title}: em produção, ainda não disponível para avaliação.</p>;
 }
 
-function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: string | null; media: Record<string, string>; badge?: string }) {
+/** crop: shows the image as the profile grid does (fills the frame), e.g. a 9:16 cover seen as 4:5. */
+function MediaCard({ d, aspect, media, badge, crop }: { d: PortalDeliverable; aspect: string | null; media: Record<string, string>; badge?: string; crop?: boolean }) {
   const [i, setI] = useState(0);
   const assets = d.version?.assets ?? [];
   if (!d.version) return <Pending d={d} />;
@@ -495,7 +680,7 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
   }
   const a = assets[Math.min(i, assets.length - 1)];
   const url = a.provider === "supabase" ? media[a.preview_path ?? a.path ?? ""] : undefined;
-  const r = a.width && a.height ? `${a.width} / ${a.height}` : ratio(d.kind === "cover" ? "4:5" : aspect);
+  const r = !crop && a.width && a.height ? `${a.width} / ${a.height}` : ratio(d.kind === "cover" ? "4:5" : aspect);
   const isVideo = a.mime_type?.startsWith("video/");
   return (
     <div>
@@ -509,7 +694,7 @@ function MediaCard({ d, aspect, media, badge }: { d: PortalDeliverable; aspect: 
           <video src={url} poster={a.thumbnail_path ? media[a.thumbnail_path] : undefined} controls playsInline preload="metadata" className="size-full object-contain" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- signed private URL
-          <img src={url} alt={`${kindLabel[d.kind]} ${i + 1}`} className="size-full object-contain" />
+          <img src={url} alt={`${kindLabel[d.kind]} ${i + 1}`} className={cn("size-full", crop ? "object-cover" : "object-contain")} />
         )}
       </div>
       {assets.length > 1 && (

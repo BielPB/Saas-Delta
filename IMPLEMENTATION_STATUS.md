@@ -79,6 +79,8 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | Equipe: “Gerar acesso” para convidados (senha provisória enviada pelo WhatsApp, enquanto não há e-mail) | 🟢 |
 | Recuperar senha: o link funciona em qualquer aparelho/navegador (pedido sem PKCE); erros de nova senha explicados (igual à atual, fraca, sessão expirada) | 🟢 ⏳ conferir com e-mail real |
 | Menu de clientes: renomear categoria (menu … no título da categoria; “Sem categoria” não é uma pasta real) | 🟢 |
+| “Link dos vídeos” (abas de vídeo do cliente) e lista de vídeos no portal (todos na mesma tela, aprovar/pedir ajuste embaixo de cada um; miniatura primeiro, player só no toque) | 🟢 ⏳ conferir no celular com link real |
+| Portal no iPhone: player do Drive preso à moldura (antes saía mais largo, com faixa preta e controles cortados); capa recortada como no perfil e centralizada | 🟢 ⏳ conferir no iPhone |
 | “Vários vídeos por link” (abas de vídeo do cliente): cola o link de uma pasta do Drive (ou vários links), escolhe a subdivisão de cada vídeo e cria um post por vídeo com o link já anexado. Lê a pasta pública sem chave; se não for pública, usa a conta do Drive conectada em Integrações | 🟢 ⏳ conferir com pasta real |
 | E-mail (Resend) | ⏳ depende de domínio próprio |
 | Métricas de redes sociais, IA, financeiro | ⏳ fora do escopo atual |

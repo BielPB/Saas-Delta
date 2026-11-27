@@ -11,6 +11,7 @@ import { postStatusMeta, type PostStatusKey } from "@/lib/post-status";
 import { cn } from "@/lib/utils";
 import { createPost } from "./post-actions";
 import { BulkVideoDialog } from "./bulk-video-dialog";
+import { VideoApprovalButton } from "./video-approval";
 
 /** Formats whose main file is a video: they can be created in bulk from a Drive folder link. */
 const VIDEO_FORMATS = new Set(["reels", "stories", "institutional", "ad", "paid_creative", "youtube"]);
@@ -31,10 +32,12 @@ export function StatusPill({ s, className }: { s: PostStatusKey; className?: str
   return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold", toneCls[m.tone], className)}>{m.label}</span>;
 }
 
-export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, services, canCreate, defaultDate }: {
+export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, services, canCreate, defaultDate, video }: {
   posts: GridPost[]; hrefFor: Record<string, string>; baseHref: string; label: string; clientId: string;
   formats: Array<{ id: string; name: string; key: string }>; services: Array<{ id: string; name: string }>;
   canCreate: boolean; defaultDate: string;
+  /** "Link dos vídeos" (needs approvals.manage). */
+  video?: { canSend: boolean; clientName: string; ym: string };
 }) {
   const [filter, setFilter] = useState<string>("all");
   const [creating, setCreating] = useState(false);
@@ -42,6 +45,8 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
   const videoFormats = formats.filter((f) => VIDEO_FORMATS.has(f.key));
   const present = formats.filter((f) => posts.some((p) => p.formatKey === f.key));
   const shown = filter === "all" ? posts : posts.filter((p) => p.formatKey === filter);
+  const openVideos = posts.filter((p) => VIDEO_FORMATS.has(p.formatKey) && !["ready", "scheduled", "published", "cancelled"].includes(p.status)).map((p) => p.id);
+  const canSendVideos = Boolean(video?.canSend) && openVideos.length > 0;
 
   return (
     <section aria-label={label}>
@@ -58,10 +63,11 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
             );
           })}
         </div>
-        {canCreate && (
+        {(canCreate || canSendVideos) && (
           <div className="flex flex-wrap items-center gap-2">
-            {videoFormats.length > 0 && <Button size="sm" onClick={() => setBulk(true)}><Link2 /> Vários vídeos por link</Button>}
-            <Button size="sm" variant="primary" onClick={() => setCreating(true)}><Plus /> Novo {label === "Stories" ? "story" : label === "Reels" ? "reels" : "post"}</Button>
+            {canSendVideos && <VideoApprovalButton clientId={clientId} clientName={video!.clientName} ym={video!.ym} contentIds={openVideos} />}
+            {canCreate && videoFormats.length > 0 && <Button size="sm" onClick={() => setBulk(true)}><Link2 /> Vários vídeos por link</Button>}
+            {canCreate && <Button size="sm" variant="primary" onClick={() => setCreating(true)}><Plus /> Novo {label === "Stories" ? "story" : label === "Reels" ? "reels" : "post"}</Button>}
           </div>
         )}
       </div>
