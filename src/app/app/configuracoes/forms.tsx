@@ -33,9 +33,11 @@ export function AgencyForm({ workspaceId, initial, canEdit }: { workspaceId: str
       <label className="text-[13px] font-medium">Fuso horário
         <Select className="mt-1.5" value={v.timezone} onChange={(e) => setV({ ...v, timezone: e.target.value })}>{TIMEZONES.map((t) => <option key={t}>{t}</option>)}</Select>
       </label>
-      <label className="text-[13px] font-medium">Cor de destaque (portal do cliente)
-        <span className="mt-1.5 flex items-center gap-2"><input type="color" value={v.brand_color} onChange={(e) => setV({ ...v, brand_color: e.target.value.toUpperCase() })} className="h-9 w-12 rounded-md border border-border" aria-label="Cor" />
-          <Input value={v.brand_color} onChange={(e) => setV({ ...v, brand_color: e.target.value })} className="font-mono" /></span>
+      <label className="text-[13px] font-medium">Cor de destaque (sistema e portal do cliente)
+        <span className="mt-1.5 flex items-center gap-2"><input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(v.brand_color) ? v.brand_color : "#C6FF34"} onChange={(e) => setV({ ...v, brand_color: e.target.value.toUpperCase() })} className="h-9 w-12 rounded-md border border-border" aria-label="Cor" />
+          <Input value={v.brand_color} onChange={(e) => setV({ ...v, brand_color: e.target.value })} className="font-mono" placeholder="#C6FF34" maxLength={7} />
+          <button type="button" onClick={() => setV({ ...v, brand_color: "#C6FF34" })} className="shrink-0 text-xs font-medium text-muted hover:text-fg hover:underline">Padrão</button></span>
+        <span className="mt-1 block text-xs font-normal text-muted">Pinta botões, destaques e o portal de aprovação. Clique em Salvar para aplicar.</span>
       </label>
       <div className="text-[13px] font-medium">Logotipo
         <div className="mt-1.5 flex items-center gap-3">
@@ -47,7 +49,7 @@ export function AgencyForm({ workspaceId, initial, canEdit }: { workspaceId: str
           if (path) { setV((x) => ({ ...x, logo_path: path })); setLogo(await signedUrl(path)); }
         }} /></div>}
       </div>
-      {canEdit && <div className="sm:col-span-2"><Button variant="primary" disabled={pending} onClick={() => run(() => saveAgency(v))}>Salvar</Button></div>}
+      {canEdit && <div className="sm:col-span-2"><Button variant="primary" disabled={pending} onClick={() => run(() => saveAgency({ ...v, brand_color: v.brand_color.startsWith("#") ? v.brand_color : `#${v.brand_color}` }))}>Salvar</Button></div>}
     </fieldset>
   );
 }

@@ -3,6 +3,7 @@ import { getContext, type Permission } from "@/lib/auth";
 import { isConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { clientNav } from "@/lib/data";
+import { brandCss } from "@/lib/brand";
 import { SetupRequired } from "@/components/setup-required";
 import { Shell, type NavSection } from "@/components/shell/shell";
 
@@ -50,6 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .filter((s) => s.items.length > 0);
 
   return (
+    <>
+    <style dangerouslySetInnerHTML={{ __html: brandCss(ctx.workspace.brand_color) }} />
     <Shell
       sections={sections}
       clientsNav={clientsNav}
@@ -62,5 +65,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     >
       {children}
     </Shell>
+    </>
   );
 }

@@ -7,7 +7,7 @@ import { fail, type ActionResult } from "@/lib/errors";
 
 const agency = z.object({
   name: z.string().trim().min(2).max(120),
-  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Use uma cor no formato #RRGGBB, por exemplo #5B010B."),
   timezone: z.string().refine((tz) => { try { new Intl.DateTimeFormat("pt-BR", { timeZone: tz }); return true; } catch { return false; } }, "Fuso inválido."),
   logo_path: z.string().max(600).nullable().optional(),
 });

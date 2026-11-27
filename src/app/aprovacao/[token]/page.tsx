@@ -3,6 +3,7 @@ import { isConfigured } from "@/lib/env";
 import { getPortalSession, portalRpc, signPortalMedia, TOKEN_RE, type PortalData } from "@/lib/portal";
 import { PortalApp } from "./portal-app";
 import { PortalGate, Unavailable } from "./gate";
+import { brandCss } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Aprovação de conteúdos",
@@ -25,5 +26,10 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const portal = data as PortalData;
   const urls = await signPortalMedia(portal);
   const media = Object.fromEntries(urls);
-  return <PortalApp token={token} data={portal} media={media} />;
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: brandCss(portal.agency.brand_color) }} />
+      <PortalApp token={token} data={portal} media={media} />
+    </>
+  );
 }
