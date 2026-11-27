@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Activity, ArrowLeft, Bell, ChevronDown, ChevronRight, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
   ListTodo, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Plug, Settings, Stamp, User, Users, X,
@@ -36,6 +36,16 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const search = useSearchParams().toString();
+
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const entry = mainRef.current?.animate([{ opacity: 0.86 }, { opacity: 1 }], {
+      duration: 150,
+      easing: "ease-out",
+    });
+    return () => entry?.cancel();
+  }, [pathname, workspace.id]);
 
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) { setLastPath(pathname); setMobileOpen(false); }
@@ -90,7 +100,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
         const link = (
           <Link href={i.href} aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:h-10 pointer-coarse:text-sm",
+              "df-press relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:h-10 pointer-coarse:text-sm",
               active && "bg-surface-2 font-medium text-fg",
               compact && "w-8 justify-center px-0",
             )}>
@@ -116,7 +126,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
       ) : (
         <div key={sec.title}>
           <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}
-            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
+            className="df-press flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
             {moreOpen ? <ChevronDown className="size-3" aria-hidden /> : <ChevronRight className="size-3" aria-hidden />} {sec.title}
           </button>
           {moreOpen && renderItems(sec.items, false)}
@@ -169,10 +179,10 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
           menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
+        <main ref={mainRef} id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
           {parent && (
             <button type="button" onClick={goBack}
-              className="-ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+              className="df-press -ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">
               <ArrowLeft className="size-4" aria-hidden /> Voltar
             </button>
           )}{children}</main>

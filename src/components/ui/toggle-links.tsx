@@ -35,7 +35,7 @@ export function ToggleLink({ value, className, activeClassName, onClick, current
   const on = shown === value;
   const a11y = currentAttr === "tab" ? { role: "tab", "aria-selected": on } : { "aria-current": on ? currentAttr : undefined };
   return (
-    <Link {...props} {...a11y} className={cn(className, on && activeClassName)}
+    <Link {...props} {...a11y} className={cn("df-press", className, on && activeClassName)}
       onClick={(e: MouseEvent<HTMLAnchorElement>) => {
         onClick?.(e);
         // Ctrl/Cmd-click opens a new tab: the current view does not change.

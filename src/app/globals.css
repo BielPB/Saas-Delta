@@ -129,6 +129,16 @@
 }
 a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
+@media (prefers-reduced-motion: no-preference) {
+  .df-press {
+    transition: scale 110ms ease-out, background-color 150ms, color 150ms, border-color 150ms;
+  }
+
+  .df-press:active:not(:disabled):not([aria-disabled="true"]) {
+    scale: 0.98;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

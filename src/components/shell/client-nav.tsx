@@ -62,7 +62,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between px-2">
-        <Link href="/app/clientes" className="text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">Clientes</Link>
+        <Link href="/app/clientes" className="df-press text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">Clientes</Link>
         {canManage && (
           <Link href="/app/clientes/novo" aria-label="Novo cliente" className="flex size-6 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg">
             <Plus className="size-3.5" />
@@ -84,7 +84,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
               {groups.length > 1 && (
                 <div className="group/cat flex items-center rounded-md">
                   <button type="button" onClick={() => setClosed((s) => ({ ...s, [g.id]: !isClosed }))} aria-expanded={!isClosed}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
+                    className="df-press flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
                     {isClosed ? <ChevronRight className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
                     <span className="truncate">{g.name}</span>
                     <span className="tabular font-normal">{g.clients.length}</span>
@@ -109,7 +109,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
                       <li key={c.id} className={cn("group relative flex items-center rounded-md", on ? "bg-surface-2" : "hover:bg-surface-2")}>
                         {on && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
                         <Link href={`/app/clientes/${c.id}`} aria-current={on ? "page" : undefined}
-                          className={cn("flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
+                          className={cn("df-press flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
                           <ClientAvatar name={c.name} size={22} src={c.logo} />
                           <span className="truncate">{c.name}</span>
                           {c.open > 0 && <span className="tabular ml-auto text-[11px] text-subtle group-hover:hidden pointer-coarse:group-hover:inline">{c.open}</span>}
