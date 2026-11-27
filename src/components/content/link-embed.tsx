@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, FolderOpen } from "lucide-react";
 import { linkThumbnail, parseMediaLink } from "@/lib/media-link";
 
@@ -32,8 +32,7 @@ export function LinkEmbed({ url, aspect, audience = "team", preload = "metadata"
         <div className="relative mx-auto w-full overflow-hidden rounded-2xl border border-border bg-black"
           style={{ aspectRatio: r, maxHeight: "72vh", maxWidth: `calc(72vh * (${r}))` }}>
           {native ? (
-            <video key={link.direct} src={link.direct} poster={linkThumbnail(url) ?? undefined} controls playsInline preload={preload}
-              className="absolute inset-0 size-full object-contain" onError={() => setDriveFallback(true)} />
+            <DriveVideo key={link.direct} src={link.direct} poster={linkThumbnail(url)} preload={preload} onFail={() => setDriveFallback(true)} />
           ) : (
             <iframe src={link.embed} title="Vídeo" className="absolute inset-0 h-full w-px min-w-full border-0" scrolling="no"
               allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
@@ -65,5 +64,35 @@ export function LinkEmbed({ url, aspect, audience = "team", preload = "metadata"
         <ExternalLink className="size-4" aria-hidden /> Abrir {link.kind === "drive-folder" ? "pasta" : "link"}
       </a>
     </div>
+  );
+}
+
+/**
+ * Plays a Drive file with the browser's own player. Two details make Drive files playable:
+ * - crossOrigin: Drive answers "Cross-Origin-Resource-Policy: same-site", which blocks a plain <video>
+ *   on another site; a CORS request is allowed (Drive sends "Access-Control-Allow-Origin: *").
+ * - <source type>: Drive labels every file "application/octet-stream". Safari takes the type from the
+ *   <source> tag, so iPhone videos (.mov, often HEVC) are read as video. Browsers that don't play
+ *   QuickTime skip to the second source; if nothing plays, onFail switches to Drive's player.
+ */
+function DriveVideo({ src, poster, preload, onFail }: { src: string; poster: string | null; preload: "metadata" | "none"; onFail: () => void }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const failRef = useRef(onFail);
+  useEffect(() => { failRef.current = onFail; });
+  useEffect(() => {
+    const v = ref.current;
+    const last = v?.querySelector("source:last-of-type");
+    if (!v || !last) return;
+    const fail = () => failRef.current();
+    last.addEventListener("error", fail); // with <source> children, errors fire on the source, not the video
+    v.addEventListener("error", fail);
+    return () => { last.removeEventListener("error", fail); v.removeEventListener("error", fail); };
+  }, []);
+  return (
+    <video ref={ref} crossOrigin="anonymous" poster={poster ?? undefined} controls playsInline preload={preload}
+      className="absolute inset-0 size-full object-contain">
+      <source src={src} type="video/quicktime" />
+      <source src={src} type="video/mp4" />
+    </video>
   );
 }
