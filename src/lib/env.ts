@@ -55,3 +55,17 @@ export const integrations = {
     return Boolean(e.googleClientId && e.googleClientSecret && e.driveTokenKey && e.serviceRoleKey);
   },
 };
+
+/**
+ * Google API key for playing Drive videos (Drive API, files.get alt=media). Read at request time on
+ * the server (dynamic name, so the build never freezes it): the key works as soon as it is set on
+ * Vercel and a deployment runs, without depending on build-time inlining of NEXT_PUBLIC_ vars.
+ */
+export function googleApiKey(): string {
+  const names = ["NEXT_PUBLIC_GOOGLE_API_KEY", "GOOGLE_API_KEY"];
+  for (const n of names) {
+    const v = clean(process.env[n]);
+    if (v) return v;
+  }
+  return "";
+}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { isConfigured } from "@/lib/env";
+import { googleApiKey, isConfigured } from "@/lib/env";
+import { DriveKeyProvider } from "@/components/content/link-embed";
 import { getPortalSession, portalRpc, signPortalMedia, TOKEN_RE, type PortalData } from "@/lib/portal";
 import { PortalApp } from "./portal-app";
 import { PortalGate, Unavailable } from "./gate";
@@ -29,7 +30,9 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: brandCss(portal.agency.brand_color) }} />
-      <PortalApp token={token} data={portal} media={media} />
+      <DriveKeyProvider value={googleApiKey()}>
+        <PortalApp token={token} data={portal} media={media} />
+      </DriveKeyProvider>
     </>
   );
 }

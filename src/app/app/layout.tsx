@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getContext, type Permission } from "@/lib/auth";
-import { isConfigured } from "@/lib/env";
+import { googleApiKey, isConfigured } from "@/lib/env";
+import { DriveKeyProvider } from "@/components/content/link-embed";
 import { createClient } from "@/lib/supabase/server";
 import { clientNav } from "@/lib/data";
 import { brandCss } from "@/lib/brand";
@@ -63,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       workspace={{ id: ctx.workspace.id, name: ctx.workspace.name }}
       workspaces={ctx.workspaces.map((w) => ({ id: w.id, name: w.name }))}
     >
-      {children}
+      <DriveKeyProvider value={googleApiKey()}>{children}</DriveKeyProvider>
     </Shell>
     </>
   );
