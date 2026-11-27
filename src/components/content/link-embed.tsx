@@ -1,11 +1,21 @@
+"use client";
+import { useState } from "react";
 import { ExternalLink, FolderOpen } from "lucide-react";
-import { parseMediaLink } from "@/lib/media-link";
+import { linkThumbnail, parseMediaLink } from "@/lib/media-link";
 
 const ratioOf = (a: string | null | undefined) => (a === "16:9" ? "16 / 9" : a === "1:1" ? "1 / 1" : a === "4:5" ? "4 / 5" : "9 / 16");
 
-/** Shows a Drive / YouTube / Vimeo link inline, or a clear "open" card for anything else (folders, other sites). */
-export function LinkEmbed({ url, aspect, audience = "team" }: { url: string; aspect?: string | null; audience?: "team" | "client" }) {
+/**
+ * Shows a Drive / YouTube / Vimeo link inline, or a clear "open" card for anything else (folders, other sites).
+ * Drive files play in the browser's own player (the file comes straight from Drive): Drive's embedded
+ * player came out cut on iPhone for vertical videos. If the browser can't play the file (not shared,
+ * a format it doesn't read), it falls back to Drive's player.
+ */
+export function LinkEmbed({ url, aspect, audience = "team", preload = "metadata" }: {
+  url: string; aspect?: string | null; audience?: "team" | "client"; preload?: "metadata" | "none";
+}) {
   const link = parseMediaLink(url);
+  const [driveFallback, setDriveFallback] = useState(false);
   if (!link) return null;
   const openBtn = (
     <a href={link.open} target="_blank" rel="noreferrer noopener"
@@ -16,14 +26,18 @@ export function LinkEmbed({ url, aspect, audience = "team" }: { url: string; asp
 
   if (link.kind === "drive" || link.kind === "youtube" || link.kind === "vimeo") {
     const r = ratioOf(aspect);
+    const native = link.kind === "drive" && !driveFallback;
     return (
       <div>
         <div className="relative mx-auto w-full overflow-hidden rounded-2xl border border-border bg-black"
           style={{ aspectRatio: r, maxHeight: "72vh", maxWidth: `calc(72vh * (${r}))` }}>
-          {/* iPhone Safari sizes an iframe to its content: the Drive player came out wider than the frame
-              (black bar on the left, controls cut on the right). 1px + min-width 100% pins it to the frame. */}
-          <iframe src={link.embed} title="Vídeo" className="absolute inset-0 h-full w-px min-w-full border-0" scrolling="no"
-            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
+          {native ? (
+            <video key={link.direct} src={link.direct} poster={linkThumbnail(url) ?? undefined} controls playsInline preload={preload}
+              className="absolute inset-0 size-full object-contain" onError={() => setDriveFallback(true)} />
+          ) : (
+            <iframe src={link.embed} title="Vídeo" className="absolute inset-0 h-full w-px min-w-full border-0" scrolling="no"
+              allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
+          )}
         </div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           {link.kind === "drive" && (

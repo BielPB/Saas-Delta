@@ -9,7 +9,7 @@ import type { PortalData, PortalDeliverable } from "@/lib/portal";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { LinkEmbed } from "@/components/content/link-embed";
-import { linkThumbnail } from "@/lib/media-link";
+import { linkThumbnail, parseMediaLink } from "@/lib/media-link";
 import { bulkApproveAction, finalizeAction, respondAction } from "./actions";
 
 const kindLabel: Record<string, string> = { video: "Vídeo", cover: "Capa", caption: "Legenda", image: "Arte", carousel: "Carrossel", other: "Material" };
@@ -606,11 +606,16 @@ function VideoRow({ it, position, total, media, state, decide, onDetails }: {
   );
 }
 
-/** Drive/YouTube video in the list: a still frame first, the player only after a tap (keeps a long list fast). */
+/**
+ * Video in the list. Drive files use the phone's own player with nothing downloaded until play
+ * (preload none + still frame). YouTube/Vimeo show a still frame and load their player on tap,
+ * which keeps a long list fast.
+ */
 function LazyVideo({ d, aspect, media }: { d: PortalDeliverable; aspect: string | null; media: Record<string, string> }) {
   const [on, setOn] = useState(false);
   const url = d.version?.external_url;
   if (!d.version || d.version.assets.length || !url) return <MediaCard d={d} aspect={aspect} media={media} />;
+  if (parseMediaLink(url)?.kind === "drive") return <LinkEmbed url={url} aspect={aspect} audience="client" preload="none" />;
   const thumb = linkThumbnail(url);
   if (on || !thumb) return <LinkEmbed url={url} aspect={aspect} audience="client" />;
   const r = ratio(aspect);

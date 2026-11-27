@@ -11,6 +11,7 @@ describe("parseMediaLink", () => {
       const r = parseMediaLink(u);
       expect(r?.kind).toBe("drive");
       expect(r && "embed" in r && r.embed).toBe("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/preview");
+      expect(r && "direct" in r && r.direct).toBe("https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOp&export=download&confirm=t");
     }
   });
   it("diferencia pasta do Drive de arquivo", () => {
