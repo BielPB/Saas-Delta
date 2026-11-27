@@ -157,6 +157,20 @@ export async function createCategory(name: string): Promise<ActionResult> {
   return { ok: true, message: "Categoria criada." };
 }
 
+export async function renameCategory(categoryId: string, name: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!ctx.can("clients.manage")) return fail("Você não tem permissão para gerenciar clientes.");
+  if (!isUuid(categoryId)) return fail("Categoria inválida.");
+  const n = name.trim().replace(/\s+/g, " ").slice(0, 60);
+  if (!n) return fail("Dê um nome para a categoria.");
+  const sb = await createClient();
+  const { data, error } = await sb.from("client_categories").update({ name: n }).eq("id", categoryId).eq("workspace_id", ctx.workspace.id).select("id");
+  if (error) return fail(/duplicate|unique/i.test(error.message) ? "Já existe uma categoria com esse nome." : error);
+  if (!data?.length) return fail("Categoria não encontrada.");
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Categoria renomeada." };
+}
+
 export async function setClientCategory(clientId: string, categoryId: string | null): Promise<ActionResult> {
   const ctx = await getContext();
   if (!isUuid(clientId) || (categoryId !== null && !isUuid(categoryId))) return fail("Seleção inválida.");

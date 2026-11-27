@@ -14,7 +14,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
       <h1 className="text-xl font-semibold tracking-tight">Entrar no Delta Flow</h1>
       <p className="mb-6 mt-1 text-sm text-muted">Acesse o workspace da sua agência.</p>
       {sp.erro === "google" && <p role="alert" className="mb-4 text-sm text-[var(--tone-danger-fg)]">Não foi possível entrar com o Google.</p>}
-      {sp.erro === "link" && <p role="alert" className="mb-4 text-sm text-[var(--tone-danger-fg)]">O link expirou ou já foi usado.</p>}
+      {sp.erro === "link" && <p role="alert" className="mb-4 text-sm text-[var(--tone-danger-fg)]">O link expirou ou já foi usado. Se foi para trocar a senha, peça um novo em “Esqueci minha senha” e abra só o e-mail mais recente.</p>}
       <SignInForm next={sp.next} />
       {googleEnabled && (
         <form action={signInWithGoogle} className="mt-3">

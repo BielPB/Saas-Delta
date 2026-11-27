@@ -77,6 +77,9 @@ Legenda: ✅ implementado e testado · 🟢 implementado (validado por typecheck
 | Celular: campos com 16px (sem zoom no iPhone), alvos de toque maiores (`pointer-coarse:`), janelas como folha inferior, área segura do iPhone (app instalado), filtros recolhidos, Pipeline com “Mover” por toque, Calendário em miniaturas, Preview do feed com setas, portal do cliente sem estouro | 🟢 build ok · ⏳ conferir em aparelho real |
 | Resposta imediata: filtros de Minhas demandas no navegador; abas e botões que vão ao servidor marcam o clique na hora (`ToggleLink`); cache do navegador de 30 s (`staleTimes`); menus “…” flutuam por cima de tabelas | 🟢 |
 | Equipe: “Gerar acesso” para convidados (senha provisória enviada pelo WhatsApp, enquanto não há e-mail) | 🟢 |
+| Recuperar senha: o link funciona em qualquer aparelho/navegador (pedido sem PKCE); erros de nova senha explicados (igual à atual, fraca, sessão expirada) | 🟢 ⏳ conferir com e-mail real |
+| Menu de clientes: renomear categoria (menu … no título da categoria; “Sem categoria” não é uma pasta real) | 🟢 |
+| “Vários vídeos por link” (abas de vídeo do cliente): cola o link de uma pasta do Drive (ou vários links), escolhe a subdivisão de cada vídeo e cria um post por vídeo com o link já anexado. Lê a pasta pública sem chave; se não for pública, usa a conta do Drive conectada em Integrações | 🟢 ⏳ conferir com pasta real |
 | E-mail (Resend) | ⏳ depende de domínio próprio |
 | Métricas de redes sociais, IA, financeiro | ⏳ fora do escopo atual |
 

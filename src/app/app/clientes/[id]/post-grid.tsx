@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ImageIcon, MessageSquare, Play, Plus } from "lucide-react";
+import { ImageIcon, Link2, MessageSquare, Play, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form";
 import { Dialog, useToast } from "@/components/ui/overlay";
@@ -10,6 +10,10 @@ import { Avatar } from "@/components/ui/primitives";
 import { postStatusMeta, type PostStatusKey } from "@/lib/post-status";
 import { cn } from "@/lib/utils";
 import { createPost } from "./post-actions";
+import { BulkVideoDialog } from "./bulk-video-dialog";
+
+/** Formats whose main file is a video: they can be created in bulk from a Drive folder link. */
+const VIDEO_FORMATS = new Set(["reels", "stories", "institutional", "ad", "paid_creative", "youtube"]);
 
 export interface GridPost {
   id: string; number: number; title: string; format: string; formatKey: string; status: PostStatusKey;
@@ -34,6 +38,8 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
 }) {
   const [filter, setFilter] = useState<string>("all");
   const [creating, setCreating] = useState(false);
+  const [bulk, setBulk] = useState(false);
+  const videoFormats = formats.filter((f) => VIDEO_FORMATS.has(f.key));
   const present = formats.filter((f) => posts.some((p) => p.formatKey === f.key));
   const shown = filter === "all" ? posts : posts.filter((p) => p.formatKey === filter);
 
@@ -52,7 +58,12 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
             );
           })}
         </div>
-        {canCreate && <Button size="sm" variant="primary" onClick={() => setCreating(true)}><Plus /> Novo {label === "Stories" ? "story" : label === "Reels" ? "reels" : "post"}</Button>}
+        {canCreate && (
+          <div className="flex flex-wrap items-center gap-2">
+            {videoFormats.length > 0 && <Button size="sm" onClick={() => setBulk(true)}><Link2 /> Vários vídeos por link</Button>}
+            <Button size="sm" variant="primary" onClick={() => setCreating(true)}><Plus /> Novo {label === "Stories" ? "story" : label === "Reels" ? "reels" : "post"}</Button>
+          </div>
+        )}
       </div>
 
       {shown.length === 0 ? (
@@ -97,6 +108,7 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
         </ul>
       )}
 
+      {bulk && <BulkVideoDialog clientId={clientId} formats={videoFormats} services={services} defaultDate={defaultDate} onClose={() => setBulk(false)} />}
       {creating && <NewPostDialog clientId={clientId} formats={formats} services={services} defaultDate={defaultDate} onClose={() => setCreating(false)} hrefBase={baseHref} />}
     </section>
   );

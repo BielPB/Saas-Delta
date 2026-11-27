@@ -5,8 +5,10 @@ import { useMemo, useState, useTransition } from "react";
 import { ChevronDown, ChevronRight, MoreHorizontal, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clientHue } from "@/lib/client-color";
-import { Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { setClientCategory } from "@/app/app/clientes/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/form";
+import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
+import { renameCategory, setClientCategory } from "@/app/app/clientes/actions";
 
 export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number; logo: string | null }
 export interface NavCategory { id: string; name: string; position: number }
@@ -31,7 +33,8 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
   const toast = useToast();
   const [q, setQ] = useState("");
   const [closed, setClosed] = useState<Record<string, boolean>>({});
-  const [, start] = useTransition();
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [pending, start] = useTransition();
   const activeId = pathname.match(/^\/app\/clientes\/([0-9a-f-]{36})/)?.[1];
 
   const groups = useMemo(() => {
@@ -47,6 +50,14 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
     const r = await fn();
     if (r.ok) { if (r.message) toast.success(r.message); router.refresh(); } else toast.error(r.error ?? "Erro.");
   });
+
+  const saveName = () => {
+    if (!renaming || !renaming.name.trim()) return;
+    start(async () => {
+      const r = await renameCategory(renaming.id, renaming.name);
+      if (r.ok) { toast.success(r.message ?? "Categoria renomeada."); setRenaming(null); router.refresh(); } else toast.error(r.error ?? "Erro.");
+    });
+  };
 
   return (
     <div>
@@ -70,12 +81,26 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
           const isClosed = !q && groups.length > 1 && (closed[g.id] ?? false);
           return (
             <div key={g.id}>
-              {groups.length > 1 && <button type="button" onClick={() => setClosed((s) => ({ ...s, [g.id]: !isClosed }))} aria-expanded={!isClosed}
-                className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
-                {isClosed ? <ChevronRight className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
-                <span className="truncate">{g.name}</span>
-                <span className="tabular font-normal">{g.clients.length}</span>
-              </button>}
+              {groups.length > 1 && (
+                <div className="group/cat flex items-center rounded-md">
+                  <button type="button" onClick={() => setClosed((s) => ({ ...s, [g.id]: !isClosed }))} aria-expanded={!isClosed}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
+                    {isClosed ? <ChevronRight className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
+                    <span className="truncate">{g.name}</span>
+                    <span className="tabular font-normal">{g.clients.length}</span>
+                  </button>
+                  {canManage && g.id !== "none" && (
+                    // "Sem categoria" is not a real folder: only real categories can be renamed.
+                    <div className="hidden pr-1 group-hover/cat:block group-focus-within/cat:block pointer-coarse:block">
+                      <Menu label={`Opções da categoria ${g.name}`} trigger={(p) => (
+                        <button type="button" {...p} className="flex size-6 items-center justify-center rounded text-muted hover:text-fg pointer-coarse:size-9"><MoreHorizontal className="size-3.5" /></button>
+                      )}>
+                        {(close) => <MenuItem onSelect={() => { close(); setRenaming({ id: g.id, name: g.name }); }}>Renomear categoria</MenuItem>}
+                      </Menu>
+                    </div>
+                  )}
+                </div>
+              )}
               {!isClosed && (
                 <ul className="space-y-px">
                   {g.clients.map((c) => {
@@ -117,6 +142,19 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
         })}
       </div>
 
+      {renaming && (
+        <Dialog open size="sm" title="Renomear categoria" onClose={() => setRenaming(null)}
+          footer={<>
+            <Button onClick={() => setRenaming(null)}>Cancelar</Button>
+            <Button variant="primary" disabled={pending || !renaming.name.trim()} onClick={() => saveName()}>Salvar</Button>
+          </>}>
+          <form onSubmit={(e) => { e.preventDefault(); saveName(); }}>
+            <label className="block text-[13px] font-medium">Nome
+              <Input className="mt-1" autoFocus maxLength={60} value={renaming.name} onChange={(e) => setRenaming({ ...renaming, name: e.target.value })} />
+            </label>
+          </form>
+        </Dialog>
+      )}
     </div>
   );
 }
