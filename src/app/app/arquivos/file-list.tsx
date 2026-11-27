@@ -58,8 +58,8 @@ export function FileList({ rows, canManage, canCreateContent }: { rows: FileRow[
               {f.thumb ? <img src={f.thumb} alt="" className="size-full object-cover" loading="lazy" /> : f.ext}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium" title={f.name}>{f.name}</p>
-              <p className="truncate text-xs text-muted">{f.meta}</p>
+              <p className="wrap-anywhere whitespace-normal text-[13px] font-medium" title={f.name}>{f.name}</p>
+              <p className="wrap-anywhere whitespace-normal text-xs text-muted">{f.meta}</p>
             </div>
             {f.status === "missing" && <Badge tone="danger">Não encontrado na origem</Badge>}
             {f.status === "processing" && <Badge tone="info">Gerando preview</Badge>}

@@ -113,7 +113,7 @@ function EventItem({ e, isSelf, time, target }: {
         <span className="tabular text-subtle">{e.start.dateTime ? time(e.start.dateTime) : "Dia todo"}</span>
         {t && !t.internal && <ExternalLink className="size-3 shrink-0 text-subtle opacity-0 transition-opacity group-hover/ev:opacity-100" aria-hidden />}
       </span>
-      <span className="block truncate">{title}</span>
+      <span className="block wrap-anywhere whitespace-normal">{title}</span>
     </>
   );
   const cls = cn("group/ev block rounded-md border-l-2 bg-surface-2 px-1.5 py-1 text-[11.5px] leading-tight",

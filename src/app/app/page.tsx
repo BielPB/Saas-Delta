@@ -189,7 +189,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <span className="tabular w-4 text-xs text-subtle">{i + 1}</span>
                   <Avatar name={r.name} src={r.avatar} size={28} />
                   <div className="min-w-0 flex-1">
-                    <p className="flex justify-between text-[13px]"><span className="truncate font-medium">{r.name}</span><span className="tabular text-muted">{byGoal ? `${r.pct}%` : r.n}</span></p>
+                    <p className="flex justify-between text-[13px]"><span className="wrap-anywhere whitespace-normal font-medium">{r.name}</span><span className="tabular text-muted">{byGoal ? `${r.pct}%` : r.n}</span></p>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full rounded-full bg-accent" style={{ width: `${top ? ((byGoal ? r.pct : r.n) / top) * 100 : 0}%` }} /></div>
                   </div>
                 </li>
@@ -207,7 +207,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <ul className="divide-y divide-border">
               {missing.map((m) => (
                 <li key={m.id}><Link href={`/app/clientes/${m.id}?aba=posts&mes=${ym}`} className="flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-surface-2">
-                  <span className="min-w-0 flex-1 truncate font-medium">{m.name}</span>
+                  <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal font-medium">{m.name}</span>
                   <span className="tabular text-xs text-muted">{m.approved} de {m.target}</span>
                   <span className="tabular rounded-md bg-surface-2 px-2 py-0.5 text-xs font-semibold">faltam {m.left}</span>
                 </Link></li>
@@ -224,7 +224,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <p className="mb-1 text-xs font-semibold text-muted">{g.label} <span className="tabular font-normal">{g.items.length}</span></p>
                   <ul className="space-y-0.5">
                     {g.items.slice(0, 4).map((it, i) => (
-                      <li key={i}><Link href={it.href} className="flex justify-between gap-2 text-[13px] hover:underline"><span className="truncate">{it.text}</span>{(it as { meta?: string }).meta && <span className="shrink-0 text-xs text-muted">{(it as { meta?: string }).meta}</span>}</Link></li>
+                      <li key={i}><Link href={it.href} className="flex justify-between gap-2 text-[13px] hover:underline"><span className="wrap-anywhere whitespace-normal">{it.text}</span>{(it as { meta?: string }).meta && <span className="shrink-0 text-xs text-muted">{(it as { meta?: string }).meta}</span>}</Link></li>
                     ))}
                   </ul>
                 </div>

@@ -74,7 +74,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
               )}>
                 <div className="min-w-0">
                   <h3 className="text-[15px] font-extrabold uppercase leading-tight tracking-wide">{col.label}</h3>
-                  <p className={cn("truncate text-xs", col.ready ? "text-accent-fg/80" : "text-muted")}>{col.hint}</p>
+                  <p className={cn("wrap-anywhere whitespace-normal text-xs", col.ready ? "text-accent-fg/80" : "text-muted")}>{col.hint}</p>
                 </div>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {create && !col.ready && <NewPostButton options={create} stage={columnToWork[col.key]} iconOnly />}
@@ -88,7 +88,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                   <li key={i.id} draggable={Boolean(i.movable)} onDragStart={() => setDrag(i.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
                     className={cn("rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong", i.movable && "cursor-grab active:cursor-grabbing", drag === i.id && "opacity-50")}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold">{i.format ?? "Conteúdo"}</span>
+                      <span className="wrap-anywhere whitespace-normal rounded-full border border-border-strong px-2.5 py-0.5 text-xs font-semibold">{i.format ?? "Conteúdo"}</span>
                       <span className="flex shrink-0 items-center gap-1">
                         <span className="tabular text-xs text-muted">
                           {col.ready && readyNote(i) ? readyNote(i) : i.planned ? formatDate(i.planned) : ""}
@@ -131,7 +131,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                       {i.assignee ? (
                         <span className="flex min-w-0 items-center gap-2 text-sm">
                           <Avatar name={i.assignee.name} src={i.assignee.avatar} size={28} className="border-2 border-accent-ink/70 bg-transparent font-bold text-fg" />
-                          <span className="truncate">{i.assignee.name.split(" ")[0]}</span>
+                          <span className="wrap-anywhere whitespace-normal">{i.assignee.name}</span>
                         </span>
                       ) : <span className="text-xs text-subtle">Sem responsável</span>}
                       {colOf(i) === "ready" && ["client_approval", "adjustments"].includes(i.stage) && <ApprovalBadge s={i.approval} />}

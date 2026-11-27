@@ -92,8 +92,8 @@ export default async function ContentsPage({ searchParams }: { searchParams: Pro
               <Link href={`/app/conteudos/${r.id}`} className="group block overflow-hidden rounded-lg border border-border bg-surface hover:border-border-strong">
                 <Thumb url={thumb(r)} aspect={r.content_formats?.aspect_ratio === "16:9" ? "16:9" : "4:5"} className="w-full rounded-none border-0" />
                 <div className="space-y-1 p-2.5">
-                  <p className="truncate text-[13px] font-medium"><span className="font-mono text-xs text-subtle">#{r.code}</span> {r.title}</p>
-                  <p className="truncate text-xs text-muted">{r.clients?.name} · {r.content_formats?.name}</p>
+                  <p className="wrap-anywhere whitespace-normal text-[13px] font-medium"><span className="font-mono text-xs text-subtle">#{r.code}</span> {r.title}</p>
+                  <p className="wrap-anywhere whitespace-normal text-xs text-muted">{r.clients?.name} · {r.content_formats?.name}</p>
                   <div className="flex flex-wrap gap-1"><StageBadge s={r.stage} /></div>
                 </div>
               </Link>
@@ -114,8 +114,8 @@ export default async function ContentsPage({ searchParams }: { searchParams: Pro
                 <Link href={`/app/conteudos/${r.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2">
                   <Thumb url={thumb(r)} aspect={r.content_formats?.aspect_ratio} className="w-8" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium"><span className="font-mono text-xs text-subtle">#{r.code}</span> {r.title}</p>
-                    <p className="flex items-center gap-2 truncate text-xs text-muted">
+                    <p className="wrap-anywhere whitespace-normal text-[13px] font-medium"><span className="font-mono text-xs text-subtle">#{r.code}</span> {r.title}</p>
+                    <p className="flex items-center gap-2 wrap-anywhere whitespace-normal text-xs text-muted">
                       {r.clients?.name} · {r.content_formats?.name}
                       {r.client_services && <ServiceDot color={r.client_services.color} name={r.client_services.name} />}
                     </p>

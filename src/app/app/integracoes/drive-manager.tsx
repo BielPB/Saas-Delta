@@ -47,7 +47,7 @@ export function DriveManager({ canManage, configured, connections, mappings, cli
                 {mappings.filter((m) => m.connection_id === c.id).map((m) => (
                   <li key={m.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-[13px]">
                     <Folder className="size-4 text-muted" />
-                    <span className="min-w-0 flex-1 truncate" title={m.folder_path ?? m.folder_name}>{m.folder_path ?? m.folder_name}</span>
+                    <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal" title={m.folder_path ?? m.folder_name}>{m.folder_path ?? m.folder_name}</span>
                     <span className="text-muted">→ {m.client_name}{m.service_name ? ` · ${m.service_name}` : ""}</span>
                     <span className="text-xs text-subtle">{m.last_synced_at ? `sinc. ${relative(m.last_synced_at)}` : "nunca sincronizada"}</span>
                     <Button size="sm" disabled={pending} onClick={() => run(m.id, () => syncMapping(m.id))}>

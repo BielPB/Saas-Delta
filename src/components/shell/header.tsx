@@ -62,12 +62,12 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
 
   return (
     // Installed app on iPhone: the bar sits below the clock/notch (safe-area padding on top).
-    <header className="sticky top-0 z-40 flex h-[calc(3rem+env(safe-area-inset-top))] items-center gap-1.5 border-b border-border bg-surface/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:gap-2 sm:px-4">
+    <header className="sticky top-0 z-40 flex min-h-[calc(3rem+env(safe-area-inset-top))] items-center gap-1.5 border-b border-border bg-surface/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:gap-2 sm:px-4">
       {menuButton}
       {workspaces.length > 1 ? (
         <Menu label="Trocar workspace" align="start" trigger={(p) => (
           <Button variant="ghost" size="sm" {...p} className="min-w-0 max-w-[9.5rem] font-medium text-fg sm:max-w-48">
-            <span className="truncate">{workspace.name}</span><ChevronsUpDown className="text-subtle" />
+            <span className="wrap-anywhere whitespace-normal">{workspace.name}</span><ChevronsUpDown className="text-subtle" />
           </Button>
         )}>
           {(close) => workspaces.map((w) => (
@@ -77,7 +77,7 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
           ))}
         </Menu>
       ) : (
-        <span className="min-w-0 max-w-[9.5rem] truncate px-1 text-[13px] font-medium sm:max-w-48">{workspace.name}</span>
+        <span className="min-w-0 max-w-[9.5rem] wrap-anywhere whitespace-normal px-1 text-[13px] font-medium sm:max-w-48">{workspace.name}</span>
       )}
 
       <div className="flex-1" />
@@ -106,8 +106,8 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
         {(close) => (
           <>
             <div className="border-b border-border px-2.5 pb-2 pt-1.5">
-              <p className="truncate text-sm font-medium">{user.name}</p>
-              <p className="truncate text-xs text-muted">{user.email}</p>
+              <p className="wrap-anywhere whitespace-normal text-sm font-medium">{user.name}</p>
+              <p className="wrap-anywhere whitespace-normal text-xs text-muted">{user.email}</p>
             </div>
             <div className="pt-1">
               <MenuItem onSelect={() => { close(); router.push("/app/conta"); }}><User /> Minha conta</MenuItem>

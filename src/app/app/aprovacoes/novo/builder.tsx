@@ -96,7 +96,7 @@ export function BatchBuilder({ clients, clientId, sensitive, contents, preselect
                 <label className={`flex items-center gap-3 px-3 py-2 text-[13px] pointer-coarse:py-3 ${c.ready ? "cursor-pointer hover:bg-surface-2" : "opacity-60"}`}>
                   <input type="checkbox" className="size-4 accent-[var(--fg)]" disabled={!c.ready} checked={sel.has(c.id)}
                     onChange={(e) => { const n = new Set(sel); if (e.target.checked) n.add(c.id); else n.delete(c.id); setSel(n); }} />
-                  <span className="min-w-0 flex-1 truncate"><span className="font-mono text-xs text-subtle">#{c.code}</span> {c.title}
+                  <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal"><span className="font-mono text-xs text-subtle">#{c.code}</span> {c.title}
                     <span className="text-muted"> · {c.format}{c.service ? ` · ${c.service}` : ""}</span></span>
                   {c.planned && <span className="tabular hidden shrink-0 text-xs text-muted sm:inline">{formatDate(c.planned)}</span>}
                   {c.ready ? <Badge tone={approvalStatus[c.approval as ApprovalStatus].tone}>{approvalStatus[c.approval as ApprovalStatus].label}</Badge> : <Badge>Falta revisão interna</Badge>}

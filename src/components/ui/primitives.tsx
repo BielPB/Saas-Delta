@@ -6,7 +6,7 @@ import { initials } from "@/lib/format";
 export function Badge({ tone = "neutral", children, className, dot }: { tone?: Tone; children: ReactNode; className?: string; dot?: boolean }) {
   return (
     <span
-      className={cn("inline-flex h-5 items-center gap-1 rounded-sm px-1.5 text-[11.5px] font-medium leading-none whitespace-nowrap", className)}
+      className={cn("inline-flex min-h-5 max-w-full py-0.5 items-center gap-1 rounded-sm px-1.5 text-[11.5px] font-medium leading-tight wrap-anywhere whitespace-normal", className)}
       style={{ background: `var(--tone-${tone}-bg)`, color: `var(--tone-${tone}-fg)` }}
     >
       {dot && <span className="size-1.5 rounded-full bg-current" aria-hidden />}
@@ -37,7 +37,7 @@ export function PageHeader({ title, description, actions, eyebrow }: {
   return (
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {eyebrow && <div className="mb-1 truncate text-xs text-muted">{eyebrow}</div>}
+        {eyebrow && <div className="mb-1 wrap-anywhere whitespace-normal text-xs text-muted">{eyebrow}</div>}
         {/* Wraps instead of cutting long names on narrow screens. */}
         <h1 className="break-words text-xl font-bold tracking-tight text-fg sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>}
@@ -95,7 +95,7 @@ export function Progress({ value, max, className, label }: { value: number; max:
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
-  return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-border bg-surface-2 px-1 font-mono text-[10.5px] text-muted">{children}</kbd>;
+  return <kbd className="inline-flex min-h-5 max-w-full py-0.5 min-w-5 items-center justify-center rounded-sm border border-border bg-surface-2 px-1 font-mono text-[10.5px] text-muted">{children}</kbd>;
 }
 
 export function Stat({ label, value, hint, href, tone }: { label: string; value: ReactNode; hint?: ReactNode; href?: string; tone?: Tone }) {

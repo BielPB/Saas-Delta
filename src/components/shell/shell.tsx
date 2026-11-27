@@ -90,13 +90,13 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
         const link = (
           <Link href={i.href} aria-current={active ? "page" : undefined}
             className={cn(
-              "df-press relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:h-10 pointer-coarse:text-sm",
+              "df-press relative flex min-h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:min-h-10 pointer-coarse:text-sm",
               active && "bg-surface-2 font-medium text-fg",
               compact && "w-8 justify-center px-0",
             )}>
             {active && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
             {icons[i.icon]}
-            {compact ? <span className="sr-only">{i.label}</span> : <span className="truncate">{i.label}</span>}
+            {compact ? <span className="sr-only">{i.label}</span> : <span className="wrap-anywhere whitespace-normal">{i.label}</span>}
             {i.href === "/app/notificacoes" && unread > 0 && !compact && (
               <span className="tabular ml-auto rounded-sm bg-accent px-1 text-[10.5px] font-semibold text-accent-fg">{unread > 99 ? "99+" : unread}</span>
             )}

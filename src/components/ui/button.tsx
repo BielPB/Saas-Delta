@@ -6,7 +6,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
 type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const base =
-  "df-button df-press inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors " +
+  "df-button df-press inline-flex items-center justify-center gap-1.5 max-w-full wrap-anywhere whitespace-normal rounded-md text-sm font-medium transition-colors " +
   "disabled:pointer-events-none disabled:opacity-50 select-none [&_svg]:size-4 [&_svg]:shrink-0";
 
 const variants: Record<Variant, string> = {
@@ -18,8 +18,8 @@ const variants: Record<Variant, string> = {
 };
 // Touch screens get taller targets (finger, not mouse pointer).
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-[13px] pointer-coarse:h-9",
-  md: "h-9 px-3.5 pointer-coarse:h-10",
+  sm: "min-h-8 py-1 px-2.5 text-[13px] pointer-coarse:min-h-9",
+  md: "min-h-9 py-1 px-3.5 pointer-coarse:min-h-10",
   icon: "size-9 pointer-coarse:size-10",
   "icon-sm": "size-8 pointer-coarse:size-9",
 };

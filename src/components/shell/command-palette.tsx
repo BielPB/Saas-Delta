@@ -96,8 +96,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   className={cn("flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm pointer-coarse:py-3 [&_svg]:size-4 [&_svg]:text-subtle",
                     i === active && "bg-surface-2")}>
                   {kindIcon[h.kind]}
-                  <span className="min-w-0 flex-1 truncate">{h.title}</span>
-                  {h.subtitle && <span className="max-w-[40%] truncate text-xs text-muted">{h.subtitle}</span>}
+                  <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal">{h.title}</span>
+                  {h.subtitle && <span className="max-w-[40%] wrap-anywhere whitespace-normal text-xs text-muted">{h.subtitle}</span>}
                 </button>
               );
             })}

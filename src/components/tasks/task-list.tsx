@@ -29,8 +29,8 @@ export function TaskList({ tasks, members, empty, showAssignee = true, showAssig
           // Phones: title + actions on the first line, badges and person on a second line (they used to squeeze the title to nothing).
           <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:flex-nowrap">
             <div className="min-w-0 flex-1">
-              <Link href={`/app/tarefas/${t.id}`} className="block truncate text-[13px] font-medium hover:underline pointer-coarse:text-sm">{t.title}</Link>
-              <p className="truncate text-xs text-muted">
+              <Link href={`/app/tarefas/${t.id}`} className="block wrap-anywhere whitespace-normal text-[13px] font-medium hover:underline pointer-coarse:text-sm">{t.title}</Link>
+              <p className="wrap-anywhere whitespace-normal text-xs text-muted">
                 {[t.clients?.name, t.content_items ? `#${t.content_items.code}` : null, t.due_at ? `prazo ${relative(t.due_at)}` : null].filter(Boolean).join(" · ")}
               </p>
             </div>
@@ -39,7 +39,7 @@ export function TaskList({ tasks, members, empty, showAssignee = true, showAssig
                 <PriorityBadge p={t.priority} />
                 {status && <TaskStatusBadge t={t} />}
                 {showAssignee && (who
-                  ? <span className="flex shrink-0 items-center gap-1.5 max-sm:ml-auto"><Avatar name={who.full_name} src={who.avatar_url} size={22} />{showAssigneeName && <span className="w-20 truncate text-xs text-muted max-sm:w-auto">{who.full_name.split(" ")[0]}</span>}</span>
+                  ? <span className="flex shrink-0 items-center gap-1.5 max-sm:ml-auto"><Avatar name={who.full_name} src={who.avatar_url} size={22} />{showAssigneeName && <span className="w-20 wrap-anywhere whitespace-normal text-xs text-muted max-sm:w-auto">{who.full_name.split(" ")[0]}</span>}</span>
                   : <span className="shrink-0 text-xs text-subtle max-sm:ml-auto">Sem responsável</span>)}
               </div>
             )}

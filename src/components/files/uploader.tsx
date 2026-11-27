@@ -157,7 +157,7 @@ export function Uploader({ workspaceId, clientId, serviceId, category, accept = 
           {items.map((it) => (
             <li key={it.key} className="rounded-md border border-border px-3 py-2">
               <div className="flex items-center gap-2 text-[13px]">
-                <span className="min-w-0 flex-1 truncate" title={it.file.name}>{it.file.name}</span>
+                <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal" title={it.file.name}>{it.file.name}</span>
                 <span className="tabular shrink-0 text-xs text-muted">{bytes(it.file.size)}</span>
                 {it.status === "uploading" && <Button size="icon-sm" variant="ghost" aria-label="Pausar" onClick={() => { it.upload?.abort(); patch(it.key, { status: "paused" }); }}><Pause /></Button>}
                 {(it.status === "paused" || (it.status === "error" && it.upload)) && <Button size="icon-sm" variant="ghost" aria-label="Retomar" onClick={() => { it.upload?.start(); patch(it.key, { status: "uploading", error: undefined }); }}><Play /></Button>}

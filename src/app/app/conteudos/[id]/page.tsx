@@ -86,7 +86,7 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
     : content.stage === "published" ? { tone: "success", title: `Publicado em ${formatDateTime(content.published_at)}` }
     : content.stage === "cancelled" ? { tone: "neutral", title: "Conteúdo cancelado" }
     : { tone: "neutral", title: `Em produção · ${stageLabel[content.stage]}`,
-        text: nextTask ? `Próxima tarefa: ${nextTask.title.split(" — ")[0]} (${who(nextTask.assignee_id)}). ${openTasks.length} tarefa(s) em aberto.` : undefined };
+        text: nextTask ? `Próxima tarefa: ${nextTask.title} (${who(nextTask.assignee_id)}). ${openTasks.length} tarefa(s) em aberto.` : undefined };
 
   const facts: Array<[string, React.ReactNode]> = [
     ["Subdivisão", content.client_services ? <ServiceDot color={content.client_services.color} name={content.client_services.name} /> : null],
@@ -189,7 +189,7 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
             <dl className="space-y-2.5 text-[13px]">
               {facts.filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => (
                 <div key={k} className="flex items-baseline justify-between gap-3">
-                  <dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 truncate text-right">{v}</dd>
+                  <dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 wrap-anywhere whitespace-normal text-right">{v}</dd>
                 </div>
               ))}
             </dl>

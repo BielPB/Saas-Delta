@@ -116,9 +116,9 @@ export function Demands({ rows, initial, hasTasks }: {
                       <Link href={r.href} className="flex items-center gap-3 rounded-lg border border-border bg-surface py-2.5 pr-3 transition-colors hover:border-border-strong">
                         <span className="h-9 w-1 shrink-0 rounded-r-full" style={{ background: `hsl(${hue} 60% 55%)` }} aria-hidden />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-semibold">{r.title}</span>
+                          <span className="block wrap-anywhere whitespace-normal text-[14px] font-semibold">{r.title}</span>
                           <span className="flex min-w-0 items-center gap-2 text-xs text-muted">
-                            <span className="truncate" style={{ color: `hsl(${hue} 60% 62%)` }}>{r.clientName}</span>
+                            <span className="wrap-anywhere whitespace-normal" style={{ color: `hsl(${hue} 60% 62%)` }}>{r.clientName}</span>
                             <span className="shrink-0 rounded border border-border px-1.5 text-[10.5px] uppercase tracking-wide">{r.format}</span>
                             {byDeadline && <StatusPill s={r.status} />}
                           </span>

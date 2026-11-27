@@ -50,7 +50,7 @@ export function ServicesManager({ clientId, services, canManage, created }: { cl
               <span className="size-3 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="break-words text-[13px] font-medium">{s.name} {!s.active && <Badge className="ml-1">Inativa</Badge>}</p>
-                {s.description && <p className="truncate text-xs text-muted">{s.description}</p>}
+                {s.description && <p className="wrap-anywhere whitespace-normal text-xs text-muted">{s.description}</p>}
               </div>
               {/* Phones: the goal goes under the name so the buttons keep their place. */}
               <span className="text-xs text-muted max-sm:order-last max-sm:w-full max-sm:pl-6" title="Posts aprovados por mês vindos desta subdivisão">{s.monthly_target ? `meta: ${s.monthly_target} aprovado(s)/mês` : "sem meta própria"}</span>
@@ -148,7 +148,7 @@ export function TargetsManager({ clientId, targets, services, formats, canManage
           {targets.map((t) => (
             <li key={t.id} className="flex items-center gap-2 px-4 py-2 text-[13px]">
               <span className="tabular w-16 shrink-0 text-muted">{t.month.slice(0, 7)}</span>
-              <span className="min-w-0 flex-1 truncate">{t.service_id ? sName.get(t.service_id) : "Todas as subdivisões"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
+              <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal">{t.service_id ? sName.get(t.service_id) : "Todas as subdivisões"}{t.format_id ? ` · ${fName.get(t.format_id)}` : ""}</span>
               <span className="tabular font-medium">{t.target} <span className="font-normal text-muted">aprovados</span></span>
               {canManage && <Button size="icon-sm" variant="ghost" aria-label="Remover meta" onClick={() => start(async () => {
                 const r = await deleteTarget(t.id, clientId); if (r.ok) { toast.success(r.message ?? "Feito."); router.refresh(); } else toast.error(r.error);

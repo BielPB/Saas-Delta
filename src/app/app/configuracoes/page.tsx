@@ -93,7 +93,7 @@ async function AuditTab({ ws, can }: { ws: string; can: boolean }) {
               <td className="whitespace-nowrap text-muted">{formatDateTime(e.created_at as string)}</td>
               <td className="font-mono text-xs">{e.action as string}</td>
               <td className="text-muted">{e.entity_type as string}</td>
-              <td className="max-w-md truncate font-mono text-[11px] text-muted" title={JSON.stringify(e.data)}>{JSON.stringify(e.data)}</td>
+              <td className="max-w-md wrap-anywhere whitespace-normal font-mono text-[11px] text-muted" title={JSON.stringify(e.data)}>{JSON.stringify(e.data)}</td>
             </tr>
           ))}
         </tbody>

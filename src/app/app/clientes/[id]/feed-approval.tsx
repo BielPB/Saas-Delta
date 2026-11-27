@@ -108,14 +108,16 @@ export function FeedApproval({ tiles: initialTiles, clientId, clientName, ym, mo
           {tiles.map((t) => (
             <li key={t.id} draggable={custom} onDragStart={() => setDrag(t.id)} onDragEnd={() => setDrag(null)}
               onDragOver={(e) => { if (custom && drag) e.preventDefault(); }} onDrop={() => dropOn(t.id)}
-              className={cn("relative aspect-[4/5] overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl",
+              className={cn("relative min-w-0 overflow-hidden bg-surface-2 first:rounded-tl-xl [&:nth-child(3)]:rounded-tr-xl",
                 custom && "cursor-grab active:cursor-grabbing", drag === t.id && "opacity-40", drag && drag !== t.id && "ring-2 ring-inset ring-transparent hover:ring-accent-ink/50")}>
               <Link href={t.href} scroll={false} draggable={false} className="group block size-full" title={t.title}>
-                <MediaPreview thumb={t.thumb} video={t.videoSrc ?? null} link={t.link} isVideo={t.video} />
-                {t.video && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-label="Vídeo" />}
-                <span className="absolute inset-x-1.5 bottom-1.5 flex justify-start opacity-90 transition-opacity group-hover:opacity-100">
+                <span className="relative block aspect-[4/5]">
+                  <MediaPreview thumb={t.thumb} video={t.videoSrc ?? null} link={t.link} isVideo={t.video} />
+                  {t.video && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-label="Vídeo" />}
+                </span>
+                <span className="flex p-1.5 justify-start opacity-90 transition-opacity group-hover:opacity-100">
                   {t.missing && !["ready", "scheduled", "published"].includes(t.status)
-                    ? <span className="line-clamp-2 rounded-lg bg-black/75 px-2 py-0.5 text-[10.5px] font-semibold text-white">{t.blocked ?? "Faltam arquivos"}</span>
+                    ? <span className="wrap-anywhere whitespace-normal rounded-lg bg-black/75 px-2 py-0.5 text-[10.5px] font-semibold text-white">{t.blocked ?? "Faltam arquivos"}</span>
                     : <StatusPill s={t.status} className="shadow" />}
                 </span>
               </Link>

@@ -39,7 +39,7 @@ export function ServiceDot({ color, name }: { color?: string | null; name?: stri
   return (
     <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
       <span className="size-2 shrink-0 rounded-full" style={{ background: color ?? "#737373" }} aria-hidden />
-      <span className="truncate">{name}</span>
+      <span className="wrap-anywhere whitespace-normal">{name}</span>
     </span>
   );
 }

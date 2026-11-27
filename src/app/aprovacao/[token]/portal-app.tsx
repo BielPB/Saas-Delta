@@ -245,7 +245,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
               {clientLogo ? <img src={clientLogo} alt="" className="size-full object-cover" /> : data.client.name.charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold">{data.client.name}</h1>
+              <h1 className="wrap-anywhere whitespace-normal text-xl font-bold">{data.client.name}</h1>
               <p className="text-sm text-muted">{data.batch.name}</p>
               <p className="tabular mt-1 text-xs text-muted"><strong className="text-fg">{total}</strong> publicações · <strong className="text-fg">{answered}</strong> respondidas{approvedN ? ` · ${approvedN} aprovadas` : ""}{rejectedN ? ` · ${rejectedN} com ajuste` : ""}</p>
             </div>
@@ -267,22 +267,22 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
               const linkThumb = !thumb ? linkThumbnail(vis?.version?.external_url) : null;
               const videoSrc = !thumb && !linkThumb && a0?.provider === "supabase" && a0.mime_type?.startsWith("video/") ? media[a0.preview_path ?? a0.path ?? ""] : undefined;
               return (
-                <li key={it.content_id} className="relative aspect-[4/5] bg-surface-2">
+                <li key={it.content_id} className="relative min-w-0 bg-surface-2">
                   <button type="button" onClick={() => openItem(n)} className="block size-full text-left" aria-label={`${it.title}${st === "approved" ? " (aprovado)" : st === "rejected" ? " (ajuste pedido)" : ""}`}>
-                    <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center text-subtle">
+                    <span className="relative flex aspect-[4/5] items-center justify-center text-subtle">
                       {isVideo ? <Play className="size-6" aria-hidden /> : <ImageIcon className="size-6" aria-hidden />}
-                      <span className="line-clamp-3 text-[11px]">{it.title}</span>
+                      {(thumb || linkThumb) && (
+                        // eslint-disable-next-line @next/next/no-img-element -- signed private URL or Drive/YouTube thumbnail
+                        <img src={(thumb || linkThumb)!} alt="" referrerPolicy="no-referrer" loading="lazy" className="absolute inset-0 size-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      )}
+                      {videoSrc && <video src={`${videoSrc}#t=0.5`} muted playsInline preload="metadata" aria-hidden className="absolute inset-0 size-full object-cover" />}
+                      {isVideo && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-hidden />}
+                      {st === "approved" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-accent text-accent-fg shadow"><Check className="size-3.5" strokeWidth={3} aria-hidden /></span>}
+                      {st === "rejected" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--tone-danger-fg)] text-white shadow"><X className="size-3.5" strokeWidth={3} aria-hidden /></span>}
+                      {st === "pending" && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[10.5px] font-semibold text-white">Aguardando você</span>}
                     </span>
-                    {(thumb || linkThumb) && (
-                      // eslint-disable-next-line @next/next/no-img-element -- signed private URL or Drive/YouTube thumbnail
-                      <img src={(thumb || linkThumb)!} alt="" referrerPolicy="no-referrer" loading="lazy" className="absolute inset-0 size-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                    )}
-                    {videoSrc && <video src={`${videoSrc}#t=0.5`} muted playsInline preload="metadata" aria-hidden className="absolute inset-0 size-full object-cover" />}
-                    {isVideo && <Play className="absolute right-1.5 top-1.5 size-4 fill-white text-white drop-shadow" aria-hidden />}
-                    {st === "approved" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-accent text-accent-fg shadow"><Check className="size-3.5" strokeWidth={3} aria-hidden /></span>}
-                    {st === "rejected" && <span className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--tone-danger-fg)] text-white shadow"><X className="size-3.5" strokeWidth={3} aria-hidden /></span>}
-                    {st === "pending" && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[10.5px] font-semibold text-white">Aguardando você</span>}
+                    <span className="block p-2 text-xs">{it.title}</span>
                   </button>
                 </li>
               );
@@ -649,7 +649,7 @@ function Brand({ data, media }: { data: PortalData; media: Record<string, string
       <span className="flex min-w-0 items-center gap-2 text-muted">
         {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
         {clientLogo && <img src={clientLogo} alt="" className="h-5 w-auto rounded-sm" />}
-        <span className="truncate">Aprovação de conteúdo · <strong className="text-fg">{data.client.name}</strong></span>
+        <span className="wrap-anywhere whitespace-normal">Aprovação de conteúdo · <strong className="text-fg">{data.client.name}</strong></span>
       </span>
     </div>
   );

@@ -88,13 +88,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
               <li key={c.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 transition-colors hover:bg-surface-2/50">
                 <div className="min-w-0 flex-1 basis-60">
                   <p className="flex items-center gap-2">
-                    <Link href={`/app/clientes/${c.id}`} className="df-press inline-block max-w-full align-middle truncate text-[14px] font-semibold hover:underline">{c.name}</Link>
+                    <Link href={`/app/clientes/${c.id}`} className="df-press inline-block max-w-full align-middle wrap-anywhere whitespace-normal text-[14px] font-semibold hover:underline">{c.name}</Link>
                     {c.is_sensitive && <Badge tone="warning">Sensível</Badge>}
                     {o?.adjust ? <Badge tone="warning">{o.adjust} em ajuste</Badge> : null}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-muted">{line}</p>
+                  <p className="mt-0.5 wrap-anywhere whitespace-normal text-xs text-muted">{line}</p>
                 </div>
-                <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
+                <div className="w-full min-w-0 sm:w-48 sm:flex-none">
                   {target > 0 ? (
                     <>
                       <p className="mb-1 flex justify-between text-xs"><span className="text-muted">Aprovados no mês</span><span className="tabular font-medium">{approved} de {target}</span></p>

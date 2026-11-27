@@ -139,7 +139,7 @@ export function TemplatesManager({ templates, formats, roles, canEdit }: { templ
           <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-medium">{t.name} {!t.active && <Badge className="ml-1">Inativo</Badge>}</p>
-              <p className="truncate text-xs text-muted">{fname.get(t.format_id)} · {t.steps.map((s) => s.title).join(" → ")}</p>
+              <p className="wrap-anywhere whitespace-normal text-xs text-muted">{fname.get(t.format_id)} · {t.steps.map((s) => s.title).join(" → ")}</p>
             </div>
             {canEdit && <>
               <Button size="sm" onClick={() => setEdit(t)}>Editar</Button>

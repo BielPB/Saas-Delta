@@ -50,7 +50,7 @@ export function ContentTable({ rows, thumb, selectable, formId, showClient = tru
               <Link href={`/app/conteudos/${r.id}`} className="flex items-center gap-2.5">
                 <Thumb url={thumb(r)} aspect={r.content_formats?.aspect_ratio} className="w-7" />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium hover:underline">
+                  <span className="block wrap-anywhere whitespace-normal font-medium hover:underline">
                     <span className="font-mono text-xs text-subtle">#{r.code}</span> {r.title}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-muted">

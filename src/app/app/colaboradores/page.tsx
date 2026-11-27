@@ -37,8 +37,8 @@ export default async function MembersPage() {
                     <div className="flex items-center gap-2.5">
                       <Avatar name={m.full_name} src={m.avatar_url} size={28} />
                       <div className="min-w-0">
-                        <p className="truncate font-medium">{m.full_name}{m.user_id === ctx.user.id && <span className="ml-1 text-xs font-normal text-muted">(você)</span>}</p>
-                        <p className="truncate text-xs text-muted">{m.email}</p>
+                        <p className="wrap-anywhere whitespace-normal font-medium">{m.full_name}{m.user_id === ctx.user.id && <span className="ml-1 text-xs font-normal text-muted">(você)</span>}</p>
+                        <p className="wrap-anywhere whitespace-normal text-xs text-muted">{m.email}</p>
                         {/* Phones: roles and status under the name (their columns are hidden). */}
                         <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
                           {m.roles.map((r) => <Badge key={r} tone={r === "owner" ? "accent" : "neutral"}>{roleName.get(r) ?? r}</Badge>)}

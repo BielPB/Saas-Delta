@@ -109,10 +109,10 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
           )}
           {/* Month grid on a phone: a day is ~46px wide, so only the thumbnail shows (tap the day to see the list). */}
           <span className={cn("min-w-0 flex-1", dense && "max-sm:hidden")}>
-            <span className={cn("block truncate font-medium", dense ? "text-[11.5px] leading-tight" : "text-[13px]")}>
+            <span className={cn("block wrap-anywhere whitespace-normal font-medium", dense ? "text-[11.5px] leading-tight" : "text-[13px]")}>
               {i.at && <span className="tabular mr-1 text-subtle">{formatTime(i.at)}</span>}{dense ? <><span className="text-muted">{i.client} | </span>{i.title}</> : i.title}
             </span>
-            {!dense && <span className="block truncate text-xs text-muted">{i.client} · {i.format}{i.channel ? ` · ${channels[i.channel]}` : ""}</span>}
+            {!dense && <span className="block wrap-anywhere whitespace-normal text-xs text-muted">{i.client} · {i.format}{i.channel ? ` · ${channels[i.channel]}` : ""}</span>}
           </span>
         </Link>
         {!dense && (

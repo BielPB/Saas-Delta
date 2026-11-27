@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { contentSelect, listFormats, listMembers, memberMap, postBlockers, postThumbs, signPaths, taskSelect, assetSelect, type AssetRow, type ContentRow, type TaskRow } from "@/lib/data";
 import { formatDateTime, monthStart, relative, bytes, toLocalInput } from "@/lib/format";
 import { formatGroups, isWorkStatus, postStatus } from "@/lib/post-status";
+import { stageLabel, type ContentStage } from "@/lib/domain";
 import { loadPostDetail } from "@/lib/post-detail";
 import { cn, isUuid } from "@/lib/utils";
 import { subdivisionText } from "@/lib/labels";
@@ -57,9 +58,10 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const canManage = ctx.can("clients.manage");
   const isGrid = tab === "posts" || tab === "reels" || tab === "stories";
 
-  const [{ data: services }, formats] = await Promise.all([
+  const [{ data: services }, formats, nextDelivery] = await Promise.all([
     sb.from("client_services").select("*").eq("client_id", id).order("name"),
     listFormats(ctx.workspace.id),
+    loadNextDelivery(ctx.workspace.id, id),
   ]);
   const tabHref = (t: Tab, extra: Record<string, string> = {}) => {
     const p = new URLSearchParams({ aba: t, mes: ym, ...extra });
@@ -83,7 +85,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               {client.is_sensitive && <Badge tone="warning">Sensível</Badge>}
               {client.status !== "active" && <Badge>{client.status === "archived" ? "Arquivado" : "Inativo"}</Badge>}
             </h1>
-            <p className="truncate text-[13px] text-muted">{[client.segment, client.company_name, client.instagram].filter(Boolean).join(" · ") || "Cliente"}</p>
+            <p className="wrap-anywhere whitespace-normal text-[13px] text-muted">{[client.segment, client.company_name, client.instagram].filter(Boolean).join(" · ") || "Cliente"}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -98,6 +100,16 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           {isGrid && ctx.can("contents.manage") && <DuplicateMonth clientId={id} ym={ym} monthLabel={monthLabel(ym)} nextLabel={monthLabel(shiftMonth(ym, 1))} />}
         </div>
       </header>
+
+      <section aria-label="Próxima entrega" className="mb-4 rounded-lg border border-border bg-surface px-4 py-3 wrap-anywhere">
+        <h2 className="text-xs font-medium text-muted">Próxima entrega</h2>
+        {nextDelivery ? (
+          <>
+            <Link className="font-semibold hover:underline" href={`/app/conteudos/${nextDelivery.id}`}>{nextDelivery.title}</Link>
+            <p className="mt-1 text-sm text-muted">{nextDelivery.label} · {formatDateTime(nextDelivery.at, ctx.workspace.timezone)} · {nextDelivery.detail}</p>
+          </>
+        ) : <p className="text-sm">Nenhum conteúdo em aberto com data definida.</p>}
+      </section>
 
       {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
 
@@ -154,6 +166,28 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
       )}
     </>
   );
+}
+
+async function loadNextDelivery(ws: string, client: string) {
+  const sb = await createClient();
+  // Use the delivery deadline first, then the publication date for posts without a deadline.
+  const fields = ["due_at", "scheduled_at", "planned_publish_at"] as const;
+  const candidates = await Promise.all(fields.map(async (field, index) => {
+    let query = sb.from("content_items").select("id, title, stage, due_at, scheduled_at, planned_publish_at")
+      .eq("workspace_id", ws).eq("client_id", client).is("archived_at", null)
+      .not("stage", "in", "(published,cancelled)").not(field, "is", null);
+    for (const prior of fields.slice(0, index)) query = query.is(prior, null);
+    const { data, error } = await query.order(field).order("id").limit(1).maybeSingle();
+    if (error) throw error;
+    return data && { id: data.id as string, title: data.title as string, stage: data.stage as ContentStage,
+      at: data[field] as string, label: field === "due_at" ? "Prazo de entrega" : "Publicação" };
+  }));
+  const next = candidates.filter((row) => row !== null).sort((a, b) => Date.parse(a.at) - Date.parse(b.at))[0];
+  if (!next) return null;
+  const blockers = (await postBlockers([next.id])).get(next.id);
+  const detail = blockers?.adjust.length ? `Ajustar: ${blockers.adjust.join(", ")}`
+    : blockers?.missing.length ? `Falta entregar: ${blockers.missing.join(", ")}` : stageLabel[next.stage];
+  return { ...next, detail };
 }
 
 /** "Aprovação": the month's feed (posts + reels, newest first) and the button that sends it to the client. */
@@ -578,7 +612,7 @@ async function ClientFiles({ client }: { client: string }) {
                   {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
                   {u ? <img src={u} alt="" className="size-full object-cover" loading="lazy" /> : (f.mime_type?.split("/")[0] ?? "arquivo")}
                 </div>
-                <div className="p-2"><p className="truncate text-xs font-medium" title={f.name}>{f.name}</p><p className="text-[11px] text-muted">{f.provider === "drive" ? "Google Drive" : bytes(f.size_bytes)}</p></div>
+                <div className="p-2"><p className="wrap-anywhere whitespace-normal text-xs font-medium" title={f.name}>{f.name}</p><p className="text-[11px] text-muted">{f.provider === "drive" ? "Google Drive" : bytes(f.size_bytes)}</p></div>
               </li>
             );
           })}

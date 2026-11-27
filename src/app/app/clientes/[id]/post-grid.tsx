@@ -95,7 +95,7 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
                   )}
                 </div>
                 <div className="space-y-2 p-2.5 sm:p-3">
-                  <p className="line-clamp-2 min-h-[2.5em] break-words text-[13px] font-semibold leading-tight">{p.title}</p>
+                  <p className="wrap-anywhere whitespace-normal min-h-[2.5em] break-words text-[13px] font-semibold leading-tight">{p.title}</p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{p.format}</span>
                     <StatusPill s={p.status} />

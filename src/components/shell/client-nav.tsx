@@ -79,7 +79,7 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
               <Link href={`/app/clientes/${c.id}`} aria-current={on ? "page" : undefined}
                 className={cn("df-press flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
                 <ClientAvatar name={c.name} size={22} src={c.logo} />
-                <span className="truncate">{c.name}</span>
+                <span className="wrap-anywhere whitespace-normal">{c.name}</span>
                 {c.open > 0 && <span title={`${c.open} conteúdos em aberto`} aria-label={`${c.open} conteúdos em aberto`} className="tabular ml-auto rounded px-1.5 text-[11px] text-muted">{c.open}</span>}
               </Link>
               {canManage && categories.length > 0 && (

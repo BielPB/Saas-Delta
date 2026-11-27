@@ -151,7 +151,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
                     <li key={t.id}>
                       <Link href={`/app/tarefas/${t.id}`} className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5 text-[12.5px] hover:border-border-strong">
                         {t.who ? <Avatar name={t.who} src={t.whoAvatar} size={18} /> : <span className="size-[18px] shrink-0 rounded-full border border-dashed border-border-strong" aria-hidden />}
-                        <span className={cn("min-w-0 flex-1 truncate", t.status === "done" && "text-muted line-through")}>{t.title.replace(/ — .*$/, "")}</span>
+                        <span className={cn("min-w-0 flex-1 wrap-anywhere whitespace-normal", t.status === "done" && "text-muted line-through")}>{t.title}</span>
                         <span className="shrink-0 text-[11px] text-muted">{({ pending: "A fazer", blocked: "Aguardando", in_progress: "Fazendo", in_review: "Revisão", done: "Feita", reopened: "Reaberta" } as Record<string, string>)[t.status] ?? t.status}</span>
                       </Link>
                     </li>
@@ -171,7 +171,7 @@ export function PostDrawer({ post, viewer, managerItems, missing, adjust, tasks,
                         <input type="checkbox" className="size-3.5 accent-[var(--fg)] pointer-coarse:size-4" checked={on} disabled={!canEdit || pending}
                           onChange={() => run(() => setAssignees(post.id, on ? post.assignees.filter((x) => x !== m.id) : [...post.assignees, m.id]))} />
                         <Avatar name={m.name} src={m.avatar} size={20} />
-                        <span className="truncate">{m.name}</span>
+                        <span className="wrap-anywhere whitespace-normal">{m.name}</span>
                       </label>
                     </li>
                   );

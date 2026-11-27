@@ -45,7 +45,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const now: { tone: "warning" | "info" | "neutral" | "success"; title: string; text?: string; quote?: string; cta?: { href: string; label: string } } =
     t.status === "done" ? { tone: "success", title: `Concluída ${t.completed_at ? relative(t.completed_at) : ""}`.trim() }
     : t.status === "cancelled" ? { tone: "neutral", title: "Tarefa cancelada" }
-    : t.status === "blocked" ? { tone: "neutral", title: "Esperando a etapa anterior", text: waitingOn.length ? `Libera quando concluírem: ${waitingOn.map((d) => d.title.split(" — ")[0]).join(", ")}.` : "Libera automaticamente quando a etapa anterior for concluída." }
+    : t.status === "blocked" ? { tone: "neutral", title: "Esperando a etapa anterior", text: waitingOn.length ? `Libera quando concluírem: ${waitingOn.map((d) => d.title).join(", ")}.` : "Libera automaticamente quando a etapa anterior for concluída." }
     : t.status === "in_review" ? { tone: "info", title: "Em revisão pela gestão", text: "Aguarde a aprovação ou um pedido de ajuste." }
     : t.kind === "adjustment" ? {
         tone: "warning", title: rev?.source === "client" ? "O cliente pediu um ajuste" : "Ajuste solicitado", quote: (rev?.reason as string | undefined) ?? undefined,
@@ -103,7 +103,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <section aria-label="Resumo" className="rounded-lg border border-border bg-surface p-4">
             <dl className="space-y-2.5 text-[13px]">
               {facts.filter(([, v]) => v !== null).map(([k, v]) => (
-                <div key={k} className="flex items-baseline justify-between gap-3"><dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 truncate text-right">{v}</dd></div>
+                <div key={k} className="flex items-baseline justify-between gap-3"><dt className="shrink-0 text-muted">{k}</dt><dd className="min-w-0 wrap-anywhere whitespace-normal text-right">{v}</dd></div>
               ))}
             </dl>
           </section>
@@ -113,7 +113,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
               <ul className="pb-2">{sequence.map((d) => (
                 <li key={`${d.rel}-${d.id}`}><Link href={`/app/tarefas/${d.id}`} className="flex items-center gap-2 px-4 py-1.5 text-[13px] hover:bg-surface-2">
                   <span className="w-12 shrink-0 text-xs text-subtle">{d.rel === "antes" ? "Antes" : "Depois"}</span>
-                  <span className="min-w-0 flex-1 truncate">{d.title.split(" — ")[0]}</span>
+                  <span className="min-w-0 flex-1 wrap-anywhere whitespace-normal">{d.title}</span>
                   <Badge tone={taskStatus[d.status].tone}>{taskStatus[d.status].label}</Badge>
                 </Link></li>
               ))}</ul>

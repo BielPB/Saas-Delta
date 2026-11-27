@@ -53,7 +53,7 @@ export function BarList({ data, label, hrefFor }: {
       {data.map((d) => {
         const row = (
           <>
-            <span className="w-28 shrink-0 truncate text-[13px] text-muted sm:w-36">{d.label}</span>
+            <span className="w-28 shrink-0 wrap-anywhere whitespace-normal text-[13px] text-muted sm:w-36">{d.label}</span>
             <span className="relative h-5 flex-1">
               <span className="absolute inset-y-0.5 left-0 rounded-r-[4px] bg-fg/70 transition-colors group-hover:bg-fg" style={{ width: `${(d.value / max) * 100}%`, minWidth: d.value ? 3 : 0 }} />
             </span>

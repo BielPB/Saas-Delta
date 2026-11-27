@@ -44,7 +44,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                   <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.read_at ? "bg-transparent" : "bg-accent")} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block break-words text-[13px] font-medium">{n.title as string}</span>
-                    {n.body && <span className="block truncate text-xs text-muted">{n.body as string}</span>}
+                    {n.body && <span className="block wrap-anywhere whitespace-normal text-xs text-muted">{n.body as string}</span>}
                     {/* Phones: category and time go under the text instead of squeezing it. */}
                     <span className="mt-0.5 block text-[11px] text-subtle sm:hidden">{cats[n.category as string]} · {relative(n.created_at as string)}</span>
                   </span>
