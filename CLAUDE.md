@@ -13,7 +13,7 @@ Leia antes de alterar: BUSINESS_RULES.md, SECURITY.md, AGENTS.md (Next 16 tem AP
 - GitHub: `BielPB/Saas-Delta`, branch `main`.
 - Produção: https://saasdelta.vercel.app (Vercel Hobby, região `gru1`). **Todo push na `main` publica no ar.** Trabalho pela metade vai para outra branch.
 - Supabase Free, projeto em São Paulo, ref `dbwqgkwcskzujbxntgsq` (vincular com `npx supabase link --project-ref dbwqgkwcskzujbxntgsq` se a pasta ainda não estiver vinculada).
-- Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`. Ainda não: `RESEND_API_KEY`, `EMAIL_FROM`.
+- Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_GOOGLE_API_KEY` (chave de API restrita à Drive API: vídeos do Drive no player do aparelho). Ainda não: `RESEND_API_KEY`, `EMAIL_FROM`.
 - Google Cloud em modo **Teste** (usuários de teste; autorização expira a cada 7 dias). Redirect: `https://saasdelta.vercel.app/api/calendar/callback`.
 - Cron diário `/api/cron/deadlines` (8h de Brasília), protegido por `CRON_SECRET`.
 
@@ -28,6 +28,7 @@ Leia antes de alterar: BUSINESS_RULES.md, SECURITY.md, AGENTS.md (Next 16 tem AP
 - Colunas de status só mudam via função que chama `private.allow_state_change()`.
 - O cliente service role (`src/lib/supabase/admin.ts`) só é usado após checagem de permissão do usuário, e nunca com IDs vindos do cliente sem essa checagem.
 - **Server Components não podem importar funções/valores comuns de arquivos `"use client"`** (vira referência vazia, "x is not a function"; já derrubou produção 2 vezes). Helpers compartilhados vão em `src/lib/`. O teste `tests/unit/client-boundary.test.ts` barra isso.
+- Vídeo do Drive: nunca o player embutido do Drive no celular (corta vídeo em pé no iPhone); use a API do Drive (`driveStreamUrl`). Não faça vídeo passar pelo servidor (cota de 10 GB/mês da Vercel Hobby; estourou = 30 dias bloqueado).
 - Mídia privada: URL assinada curta, `<img>`/`<video>` simples, nunca `next/image`. Service worker sem cache. Upload direto limitado a 50 MB (Supabase Free); vídeos grandes vão por link do Google Drive.
 - Nada de dados fictícios fora de `supabase/seed.sql` (local) e dos testes.
 - Contagens de indicadores são de conteúdos, não de entregáveis.

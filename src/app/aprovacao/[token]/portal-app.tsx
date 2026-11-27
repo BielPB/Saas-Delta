@@ -615,7 +615,7 @@ function LazyVideo({ d, aspect, media }: { d: PortalDeliverable; aspect: string 
   const [on, setOn] = useState(false);
   const url = d.version?.external_url;
   if (!d.version || d.version.assets.length || !url) return <MediaCard d={d} aspect={aspect} media={media} />;
-  if (parseMediaLink(url)?.kind === "drive") return <LinkEmbed url={url} aspect={aspect} audience="client" preload="none" />;
+  if (parseMediaLink(url)?.kind === "drive") return <LinkEmbed url={url} aspect={aspect} audience="client" />;
   const thumb = linkThumbnail(url);
   if (on || !thumb) return <LinkEmbed url={url} aspect={aspect} audience="client" />;
   const r = ratio(aspect);

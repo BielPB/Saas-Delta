@@ -26,7 +26,7 @@ Tudo em contas da Delta (código no GitHub privado, Supabase, Vercel, Google Clo
 5. Usa `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `DRIVE_TOKEN_ENCRYPTION_KEY` (a mesma chave cifra os tokens do Drive e da Agenda).
 
 ## 3. Vercel
-Variáveis: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (endereço público, sem barra final), `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_MAX_UPLOAD_MB` (50 no Supabase Free; vídeos grandes vão por link do Google Drive), `RESEND_API_KEY` e `EMAIL_FROM` (quando houver domínio). Variáveis `NEXT_PUBLIC_*` só valem após novo deploy.
+Variáveis: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (endereço público, sem barra final), `CRON_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DRIVE_TOKEN_ENCRYPTION_KEY`, `NEXT_PUBLIC_MAX_UPLOAD_MB` (50 no Supabase Free; vídeos grandes vão por link do Google Drive), `NEXT_PUBLIC_GOOGLE_API_KEY` (chave de API do Google Cloud restrita à Google Drive API; faz os vídeos do Drive tocarem no player do aparelho, inclusive no iPhone), `RESEND_API_KEY` e `EMAIL_FROM` (quando houver domínio). Variáveis `NEXT_PUBLIC_*` só valem após novo deploy.
 1. Importe o repositório; defina as variáveis do `.env.example` (Production e Preview separados).
 2. `CRON_SECRET` com `openssl rand -hex 32`; o `vercel.json` agenda `/api/cron/deadlines` uma vez por dia, às 8h (limite do plano Hobby; no Pro pode voltar a ser de hora em hora). Região das funções: `gru1` (São Paulo), junto do Supabase.
 3. Domínio `app.deltaflow.com.br`.

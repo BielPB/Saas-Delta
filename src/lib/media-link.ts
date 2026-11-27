@@ -5,7 +5,7 @@
  * as "Anyone with the link".
  */
 export type MediaLink =
-  | { kind: "drive"; id: string; embed: string; open: string; direct: string }
+  | { kind: "drive"; id: string; embed: string; open: string }
   | { kind: "drive-folder"; open: string }
   | { kind: "youtube"; id: string; embed: string; open: string }
   | { kind: "vimeo"; id: string; embed: string; open: string }
@@ -24,13 +24,7 @@ export function parseMediaLink(raw: string | null | undefined): MediaLink | null
   if (host === "drive.google.com" || host === "docs.google.com") {
     if (/\/folders\//.test(u.pathname)) return { kind: "drive-folder", open };
     const id = u.pathname.match(/\/(?:file\/)?d\/([A-Za-z0-9_-]+)/)?.[1] ?? u.searchParams.get("id") ?? "";
-    // direct: the file itself, for a native <video>. Drive's own embedded player breaks on iPhone with
-    // vertical videos (wider than the frame, controls in the middle). confirm=t skips the
-    // "can't scan for viruses" page that Drive shows for big files.
-    if (ID.test(id)) return {
-      kind: "drive", id, embed: `https://drive.google.com/file/d/${id}/preview`, open: `https://drive.google.com/file/d/${id}/view`,
-      direct: `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`,
-    };
+    if (ID.test(id)) return { kind: "drive", id, embed: `https://drive.google.com/file/d/${id}/preview`, open: `https://drive.google.com/file/d/${id}/view` };
     return { kind: "other", open };
   }
   if (host === "youtube.com" || host === "m.youtube.com" || host === "youtu.be") {
@@ -55,4 +49,15 @@ export function linkThumbnail(raw: string | null | undefined): string | null {
   if (l.kind === "drive") return `https://drive.google.com/thumbnail?id=${encodeURIComponent(l.id)}&sz=w800`;
   if (l.kind === "youtube") return `https://i.ytimg.com/vi/${encodeURIComponent(l.id)}/hqdefault.jpg`;
   return null;
+}
+
+/**
+ * The file itself through the official Drive API, for a native <video>. Unlike Drive's download
+ * host it answers with the file's real type (e.g. video/quicktime), so iPhone Safari plays it.
+ * Needs a Google API key restricted to the Drive API; works only for files shared publicly.
+ */
+export function driveStreamUrl(fileId: string, apiKey: string | undefined): string | null {
+  const key = (apiKey ?? "").trim();
+  if (!key || !ID.test(fileId)) return null;
+  return `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(key)}`;
 }
