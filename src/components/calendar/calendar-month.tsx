@@ -150,14 +150,14 @@ export function CalendarMonth({ items, canEdit, initialDate, initialMode = "mes"
       </div>
 
       {mode === "lista" ? (
-        <div className="rounded-lg border border-border bg-surface">
+        <div key={ymd(cursor)} className="df-section-enter rounded-lg border border-border bg-surface">
           {listItems.length === 0 ? <p className="p-6 text-center text-sm text-muted">Nenhuma publicação neste mês.</p> : (
             <ul className="divide-y divide-border">{listItems.map((i) => <li key={i.id} className="p-2"><Card i={i} /></li>)}</ul>
           )}
         </div>
       ) : (
         // Week on a phone: the 7 days stack (each one full width) instead of 7 unreadable 46px columns.
-        <div className={cn("grid overflow-hidden rounded-lg border border-border bg-border gap-px",
+        <div key={mode + ymd(cursor)} className={cn("df-section-enter grid overflow-hidden rounded-lg border border-border bg-border gap-px",
           mode === "dia" ? "grid-cols-1" : mode === "semana" ? "grid-cols-1 sm:grid-cols-7" : "grid-cols-7")}>
           {mode !== "dia" && WEEK.map((w) => (
             <div key={w} className={cn("bg-surface-2 px-2 py-1 text-[11px] font-medium text-muted max-sm:px-0 max-sm:text-center", mode === "semana" && "max-sm:hidden")}>{w}</div>

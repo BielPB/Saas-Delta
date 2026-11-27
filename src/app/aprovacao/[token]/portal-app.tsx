@@ -197,7 +197,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
             {data.batch.due_at && <p className="text-sm text-muted">Responda até <strong className="text-accent-ink">{dueLabel(data.batch.due_at)}</strong></p>}
           </div>
         </header>
-        <main className="mx-auto max-w-2xl px-4 py-6">
+        <main key={"videos"} className="df-section-enter mx-auto max-w-2xl px-4 py-6">
           <h1 className="text-xl font-bold">{data.client.name}</h1>
           <p className="text-sm text-muted">{data.batch.name}</p>
           <p className="tabular mt-1 text-xs text-muted"><strong className="text-fg">{list.length}</strong> vídeos{approvedN ? ` · ${approvedN} aprovados` : ""}{rejectedN ? ` · ${rejectedN} com ajuste` : ""}</p>
@@ -238,7 +238,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
             {data.batch.due_at && <p className="text-sm text-muted">Responda até <strong className="text-accent-ink">{dueLabel(data.batch.due_at)}</strong></p>}
           </div>
         </header>
-        <main className="mx-auto max-w-2xl px-4 py-6">
+        <main key={"feed"} className="df-section-enter mx-auto max-w-2xl px-4 py-6">
           <div className="mb-5 flex items-center gap-4">
             <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-accent-ink bg-surface-2 text-xl font-bold">
               {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
@@ -331,7 +331,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
+      <main key={idx} className="df-section-enter mx-auto max-w-6xl px-4 py-6 sm:px-8">
         {total > 1 && (
           <button type="button" onClick={backToFeed} disabled={pending}
             className="-ml-1 mb-3 inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] font-medium text-muted hover:bg-surface-2 hover:text-fg">

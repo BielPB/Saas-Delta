@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </aside>
       <div className="flex flex-col justify-center px-6 py-12 sm:px-12">
         <div className="mb-8 lg:hidden"><Logo /></div>
-        <div className="mx-auto w-full max-w-sm">{children}</div>
+        <div data-route-content className="mx-auto w-full max-w-sm">{children}</div>
       </div>
     </main>
   );

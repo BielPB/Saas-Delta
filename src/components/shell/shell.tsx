@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity, ArrowLeft, Bell, ChevronDown, ChevronRight, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
   ListTodo, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Plug, Settings, Stamp, User, Users, X,
@@ -36,16 +36,6 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const search = useSearchParams().toString();
-
-  const mainRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const entry = mainRef.current?.animate([{ opacity: 0.86 }, { opacity: 1 }], {
-      duration: 150,
-      easing: "ease-out",
-    });
-    return () => entry?.cancel();
-  }, [pathname, workspace.id]);
 
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) { setLastPath(pathname); setMobileOpen(false); }
@@ -179,7 +169,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
           menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main ref={mainRef} id="conteudo" aria-busy={navigating} className={cn("mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
+        <main key={workspace.id} id="conteudo" aria-busy={navigating} className={cn("df-section-enter mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
           {parent && (
             <button type="button" onClick={goBack}
               className="df-press -ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">

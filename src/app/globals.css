@@ -129,7 +129,17 @@
 }
 a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
+@keyframes df-section-enter {
+  from { opacity: 0.55; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  /* Streamed page sections can mount after the URL has already changed. */
+  :where(#conteudo > section, #conteudo > header, #conteudo > article, .df-section-enter, dialog[open], [role="dialog"], [role="menu"], [role="tabpanel"], details[open] > :not(summary)) {
+    animation: df-section-enter 220ms ease-out;
+  }
+
   .df-press {
     transition: scale 110ms ease-out, background-color 150ms, color 150ms, border-color 150ms;
   }

@@ -73,14 +73,14 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
       </div>
 
       {shown.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-14 text-center">
+        <div key={filter} className="df-section-enter flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-14 text-center">
           <ImageIcon className="size-6 text-subtle" aria-hidden />
           <p className="text-sm font-medium">Nada planejado neste mês</p>
           <p className="max-w-xs text-xs text-muted">Crie o primeiro e acompanhe aqui do planejamento até a publicação.</p>
           {canCreate && <Button size="sm" className="mt-1" onClick={() => setCreating(true)}><Plus /> Criar</Button>}
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+        <ul key={filter} className="df-section-enter grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
           {shown.map((p) => (
             <li key={p.id}>
               <Link href={hrefFor[p.id]} scroll={false}
