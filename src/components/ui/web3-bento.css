@@ -95,6 +95,7 @@
 @media (max-width:560px) {
   .delta-bento-grid { grid-template-columns:minmax(0,1fr); grid-template-areas:"hero" "clients" "gauge" "trend" "mix" "goal" "attention" }
   .delta-bento-hero { min-height:225px }
+  .delta-bento-hero-value { flex-basis:100%; max-width:none; text-align:left }
   .delta-bento-gauge svg { margin-top:12px }
 }
 
