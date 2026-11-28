@@ -53,3 +53,11 @@
   .dock-disc svg { width:16px; height:16px }
   .delta-dock li[data-zoom] .dock-disc { transform:none }
 }
+
+/* Some mobile browsers draw the address bar over the visual viewport. */
+@media (display-mode:browser) and (max-width:767px),
+       (display-mode:browser) and (pointer:coarse) and (orientation:landscape) and (max-height:500px) {
+  .dock-footer {
+    padding-bottom:max(5rem, calc(8px + env(safe-area-inset-bottom, 0px)));
+  }
+}
