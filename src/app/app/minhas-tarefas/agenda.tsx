@@ -7,7 +7,8 @@ import { integrations } from "@/lib/env";
 import { calendarToken, listEvents, type GEvent } from "@/lib/calendar/google";
 import { syncCalendar } from "@/lib/calendar/sync";
 import { AgendaEvent } from "./agenda-event";
-import { cn } from "@/lib/utils";
+import { ScheduleCalendar } from "@/components/ui/schedule-calendar";
+import { fromLocalInput, toLocalInput } from "@/lib/format";
 import { formatGroups } from "@/lib/post-status";
 
 /**
@@ -33,12 +34,15 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
     after(() => syncCalendar(conn.id as string, origin).catch(() => {}));
   }
 
-  const start = new Date(); start.setHours(0, 0, 0, 0);
-  const days = Array.from({ length: 7 }, (_, i) => new Date(start.getTime() + i * 864e5));
+  const today = toLocalInput(new Date().toISOString(), tz).slice(0, 10);
+  // Advance calendar dates before converting local midnight to instants (including DST).
+  const dates = Array.from({ length: 8 }, (_, i) => new Date(Date.parse(today) + i * 864e5));
+  const isoDates = dates.map(date => date.toISOString().slice(0, 10));
+  const bounds = isoDates.map(date => fromLocalInput(`${date}T00:00`, tz)!);
   let events: GEvent[] = [];
   let failed = false;
   try {
-    events = await listEvents(await calendarToken(conn.id as string), start.toISOString(), new Date(start.getTime() + 7 * 864e5).toISOString());
+    events = await listEvents(await calendarToken(conn.id as string), bounds[0], bounds[7]);
   } catch { failed = true; }
 
   // Events Delta Flow created point back to the task / post; other events open in Google Agenda.
@@ -74,47 +78,25 @@ export async function AgendaStrip({ ws, uid, isSelf, tz, origin }: { ws: string;
     return { href: e.htmlLink, internal: false };
   };
 
-  const dayKey = (d: Date | string) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(typeof d === "string" ? new Date(d) : d);
   const time = (iso: string) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
-  const label = (d: Date, i: number) => (i === 0 ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: tz }).format(d).replace(".", ""));
-  const byDay = (d: Date) => events.filter((e) => (e.start.dateTime ? dayKey(e.start.dateTime) : e.start.date) === dayKey(d));
-
-  return (
-    <section aria-label="Agenda" className="mb-5 rounded-xl border border-border bg-surface">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-        <h2 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted"><CalendarDays className="size-3.5" aria-hidden /> Agenda</h2>
-        <span className="text-[11px] text-subtle">{failed ? "Não foi possível ler o Google Agenda agora" : "Google Agenda"}</span>
-      </header>
-      {/* Phones: the 7 days scroll sideways in one strip (was 4 tall rows). */}
-      <ol className="flex snap-x divide-x divide-border overflow-x-auto overscroll-x-contain sm:grid sm:grid-cols-4 sm:divide-x-0 sm:overflow-visible lg:grid-cols-7 lg:divide-x">
-        {days.map((d, i) => {
-          const list = byDay(d);
-          return (
-            <li key={i} className={cn("min-h-24 w-[42%] shrink-0 snap-start px-2.5 py-2 sm:w-auto", i === 0 && "bg-accent-soft/40")}>
-              <p className="mb-1.5 flex items-baseline gap-1.5">
-                <span className={cn("text-[11px] font-semibold uppercase", i === 0 ? "text-accent-ink" : "text-muted")}>{label(d, i)}</span>
-                <span className="tabular text-xs text-subtle">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", timeZone: tz }).format(d)}</span>
-              </p>
-              <ul className="space-y-1">
-                {list.slice(0, 4).map((e) => <EventItem key={e.id} e={e} isSelf={isSelf} day={new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: tz }).format(d)} time={time} target={target} />)}
-                {list.length > 4 && (
-                  <li>
-                    <details className="group">
-                      <summary className="cursor-pointer list-none text-[11px] font-medium text-muted hover:text-fg [&::-webkit-details-marker]:hidden">
-                        <span className="group-open:hidden">+{list.length - 4} mais</span><span className="hidden group-open:inline">mostrar menos</span>
-                      </summary>
-                      <ul className="mt-1 space-y-1">{list.slice(4).map((e) => <EventItem key={e.id} e={e} isSelf={isSelf} day={new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: tz }).format(d)} time={time} target={target} />)}</ul>
-                    </details>
-                  </li>
-                )}
-                {list.length === 0 && <li className="text-[11px] text-subtle">—</li>}
-              </ul>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
+  const days = dates.slice(0, 7).map((date, i) => {
+    const iso = isoDates[i];
+    const list = events.filter(e => {
+      if (e.start.date) return e.start.date <= iso && (e.end.date ? iso < e.end.date : iso === e.start.date);
+      if (!e.start.dateTime) return false;
+      const start = Date.parse(e.start.dateTime);
+      const end = e.end.dateTime ? Date.parse(e.end.dateTime) : start;
+      return start < Date.parse(bounds[i + 1]) && Math.max(end, start + 1) > Date.parse(bounds[i]);
+    });
+    const label = date.toLocaleDateString("pt-BR", { dateStyle: "full", timeZone: "UTC" });
+    return {
+      iso, label, weekday: date.toLocaleDateString("pt-BR", { weekday: "short", timeZone: "UTC" }).replace(".", ""),
+      month: date.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }),
+      count: list.length,
+      events: list.map((e, index) => <EventItem key={index} e={e} isSelf={isSelf} day={label} time={time} target={target} />),
+    };
+  });
+  return <ScheduleCalendar key={`${uid}-${today}`} days={days} failed={failed}/>;
 }
 
 function EventItem({ e, isSelf, day, time, target }: {
@@ -124,6 +106,6 @@ function EventItem({ e, isSelf, day, time, target }: {
   const priv = !isSelf && (e.visibility === "private" || e.visibility === "confidential");
   const t = target(e, priv);
   const title = priv ? "Ocupado" : e.summary ?? "(sem título)";
-  return <AgendaEvent title={title} day={day} time={e.start.dateTime ? time(e.start.dateTime) : "Dia todo"}
+  return <AgendaEvent title={title} day={day} time={e.start.dateTime ? [e.start.dateTime, e.end.dateTime].filter((v): v is string => Boolean(v)).map(time).join(" – ") : "Dia todo"}
     description={priv ? "Compromisso privado." : t?.note?.trim() || e.description} location={priv ? undefined : e.location} target={t} />;
 }
