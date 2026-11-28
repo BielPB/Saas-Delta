@@ -19,7 +19,7 @@ interface DashboardProps {
   delivered: number;
   approved: number;
   planned: number;
-  stuck: number;
+  pendingContents: number;
 }
 
 // Midpoint Bézier segments from the reference keep the curve within adjacent data points.
@@ -79,32 +79,36 @@ export function Web3Bento(p: DashboardProps) {
   return <div className="delta-bento-grid">
     <section className="delta-bento-hero">
       <header><div><h1>{p.greeting}{p.name && <>, <em>{p.name}</em></>}</h1><small>Visão geral de {p.month.toLocaleLowerCase("pt-BR")}</small></div>
-        <div className="delta-bento-hero-value"><small>Posts com aprovação</small><strong>{total}</strong></div>
+        <div className="delta-bento-hero-value"><small>Posts com ao menos uma entrega aprovada</small><strong>{total}</strong></div>
       </header>
       <div className="delta-bento-bars" role="img" aria-label={`Posts com aprovação por dia: ${p.days.join(", ")}`}>
-        {p.days.map((n,i) => <span key={i} title={`Dia ${i+1} · ${n} com aprovação`} style={{height: n ? `${100*n/max}%` : 2, background: i % 7 > 4 ? colors[1] : colors[0], opacity: n ? 1 : .3}}/>)}
+        {p.days.map((n,i) => <span key={i} title={`Dia ${i+1} · ${n} com aprovação`} style={{height: n ? `${100*n/max}%` : 2, background: colors[0], opacity: n ? 1 : .3}}/>)}
       </div><div className="delta-bento-axis"><span>01</span><span>Aprovações por dia</span><span>{p.days.length}</span></div>
     </section>
     <section className="delta-bento-clients"><header><h2>Carteira de clientes</h2><Layers3 size={16}/></header>
-      <div className="delta-bento-stack">{p.clients.slice(0,3).map(c => <Link key={c.id} href={`/app/clientes/${c.id}?mes=${p.period}`}><span>{c.name}</span><ArrowUpRight size={15}/></Link>)}</div>
+      <div className="delta-bento-stack">{p.clients.length === 0 && <small>Nenhum cliente com produção no período.</small>}{p.clients.slice(0,3).map(c => <Link key={c.id} href={`/app/clientes/${c.id}?mes=${p.period}`}><span>{c.name}<small>{c.planned} {c.planned === 1 ? "post planejado" : "posts planejados"}</small></span><ArrowUpRight size={15}/></Link>)}</div>
       <Link href="/app/clientes" className="delta-bento-wallet"><small>Clientes ativos</small><strong>{p.activeClients}</strong></Link>
     </section>
-    <section className="delta-bento-gauge"><h2>Taxa de aprovação</h2>
+    <section className="delta-bento-gauge"><h2>Posts totalmente aprovados</h2>
       <svg viewBox="0 0 160 92" aria-hidden="true"><path d="M12 80a68 68 0 0 1 136 0" fill="none" stroke="#333" strokeWidth="10" strokeLinecap="round"/>
         {rate > 0 && <path d="M12 80a68 68 0 0 1 136 0" fill="none" pathLength="100" stroke="var(--highlight)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${rate} 100`}/>}
         <g transform={`rotate(${rate*1.8} 80 80)`}><path d="M80 80L28 80" stroke="#fafafa" strokeWidth="2.5"/><circle cx="80" cy="80" r="5" fill="#fafafa"/></g></svg>
-      <strong>{p.planned ? rate+"%" : "—"}</strong><small>{p.approved} de {p.planned} posts planejados</small>
+      <strong>{p.planned ? rate+"%" : "—"}</strong><small>{p.approved} de {p.planned} planejados no mês</small>
     </section>
     <Trend days={p.days} previous={p.previous} elapsed={p.elapsed}/>
     <section className="delta-bento-mix"><h2>Produção por cliente</h2><strong>{p.planned} <small>posts</small></strong>
       <div className="delta-bento-segments" aria-hidden>{groups.map((g,i) => <span key={i} style={{flex:g.n, background:colors[i]}}/>)}</div>
-      {groups.length ? <ul>{groups.map((g,i) => <li key={i}><i style={{background:colors[i]}}/><span>{g.name}</span><b>{g.n}</b></li>)}</ul> : <small>Nenhum post planejado neste mês.</small>}
+      {groups.length ? <ul>{groups.map((g,i) => <li key={i}><i style={{background:colors[i]}}/><span>{g.name}</span><b>{g.n} <small>· {Math.round(100 * g.n / p.planned)}%</small></b></li>)}</ul> : <small>Nenhum post planejado neste mês.</small>}
     </section>
     <section className="delta-bento-goal"><h2>Meta do mês</h2><strong>{p.target ? goal+"%" : "—"}</strong>
       <p>{p.target ? `${p.delivered} de ${p.target} aprovações para a meta` : "Nenhuma meta definida."}</p>
       <div className="delta-bento-meter"><span style={{width:`${Math.min(goal,100)}%`}}/></div>
+      {p.target > 0 && <dl className="delta-bento-goal-details">
+        <div><dt>Meta total</dt><dd>{p.target}</dd></div>
+        <div><dt>Faltam aprovar</dt><dd>{Math.max(0, p.target - p.delivered)}</dd></div>
+      </dl>}
       <a href="#falta">{p.target ? "Ver metas por cliente" : "Consultar metas"} <ArrowUpRight size={16}/></a>
     </section>
-    <section className="delta-bento-attention"><h2>Conteúdos travados</h2><strong>{p.stuck}</strong><a href="#atencao">Ver pendências <ArrowUpRight size={15}/></a></section>
+    <section className="delta-bento-attention"><h2>Precisam de atenção agora</h2><strong>{p.pendingContents} <small>{p.pendingContents === 1 ? "conteúdo" : "conteúdos"}</small></strong><a href="#atencao">Ver pendências <ArrowUpRight size={15}/></a></section>
   </div>;
 }

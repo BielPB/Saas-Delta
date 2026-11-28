@@ -60,7 +60,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const delivered = [...perClient.values()].reduce((n, c) => n + Math.min(c.approved, c.target), 0);
   const missing = [...perClient.entries()].filter(([, c]) => c.target > c.approved).map(([id, c]) => ({ id, ...c, left: c.target - c.approved }))
     .sort((x, y) => y.left - x.left);
-  const stuck = att ? att.rejected_contents.length + att.stale_approvals.length + att.late_publications.length : 0;
+
 
   // Team rhythm: first client approval per post, by day of month.
   function approvalDays(rows: Array<{ content_id: string; created_at: string }>, period: string) {
@@ -124,10 +124,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <Web3Bento greeting={hello} name={displayName} month={MonthName} period={ym} days={perDay} previous={previous}
         elapsed={elapsed} clients={clientTotals} activeClients={activeClients ?? 0} target={target} delivered={delivered}
-        approved={clientTotals.reduce((sum,c) => sum+c.approved,0)} planned={clientTotals.reduce((sum,c) => sum+c.planned,0)} stuck={stuck} />
+        approved={clientTotals.reduce((sum,c) => sum+c.approved,0)} planned={clientTotals.reduce((sum,c) => sum+c.planned,0)} pendingContents={new Set(attentionItems.flatMap(group => group.items.map(item => item.href))).size} />
 
       <div className="mb-4">
-        <Panel title="Top membros" actions={
+        <Panel className="dashboard-detail" title="Desempenho da equipe" actions={
           <ToggleGroup active={byGoal ? "meta" : "geral"} aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
             <ToggleLink value="meta" href={`/app?mes=${ym}`} scroll={false} className="rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5" activeClassName="bg-accent text-accent-fg" title="% da meta individual de cada pessoa">Meta individual</ToggleLink>
             <ToggleLink value="geral" href={`/app?mes=${ym}&ranking=geral`} scroll={false} className="rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5" activeClassName="bg-accent text-accent-fg" title="Quantidade de posts aprovados">Geral</ToggleLink>
@@ -153,7 +153,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section id="falta" aria-labelledby="falta-t" className="rounded-xl border border-border bg-surface">
+        <section id="falta" aria-labelledby="falta-t" className="dashboard-detail rounded-xl border border-border bg-surface">
           <h2 id="falta-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">O que falta para a meta <span className="font-normal text-muted">· por cliente</span></h2>
           {missing.length === 0 ? <p className="px-4 py-4 text-[13px] text-muted">{target ? "Todos os clientes bateram a meta do mês." : "Nenhuma meta definida."}</p> : (
             <ul className="divide-y divide-border">
@@ -167,7 +167,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </ul>
           )}
         </section>
-        <section id="atencao" aria-labelledby="atencao-t" className="rounded-xl border border-border bg-surface">
+        <section id="atencao" aria-labelledby="atencao-t" className="dashboard-detail rounded-xl border border-border bg-surface">
           <h2 id="atencao-t" className="border-b border-border px-4 py-3 text-[13px] font-semibold">Precisa de atenção</h2>
           {attentionItems.length === 0 ? <p className="px-4 py-4 text-[13px] text-muted">Nada travado agora.</p> : (
             <div className="divide-y divide-border">
@@ -187,7 +187,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
       <div className="mt-4">
       {onboarding.pending.length > 0 && ctx.can("workspace.manage") && (
-        <Panel className="mb-5" title={`Primeiros passos · ${onboarding.done} de ${onboarding.total}`}>
+        <Panel className="dashboard-detail mb-5" title={`Primeiros passos · ${onboarding.done} de ${onboarding.total}`}>
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {onboarding.steps.map((st) => (
               <li key={st.label}>
