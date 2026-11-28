@@ -11,7 +11,7 @@ import { Button } from "./button";
  * Dialog — native <dialog>: focus trap, Esc and inert background for free.
  * -------------------------------------------------------------------------- */
 export function Dialog({
-  open, onClose, title, description, children, footer, size = "md",
+  open, onClose, title, description, children, footer, size = "md", mobilePlacement = "bottom",
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,6 +20,7 @@ export function Dialog({
   children?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
+  mobilePlacement?: "top" | "bottom";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -29,6 +30,24 @@ export function Dialog({
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
   }, [open]);
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    const dialog = ref.current;
+    if (!open || mobilePlacement !== "top" || !dialog || !viewport) return;
+    const resize = () => {
+      dialog.style.setProperty("--visible-height", `${viewport.height}px`);
+      dialog.style.setProperty("--visible-top", `${viewport.offsetTop}px`);
+    };
+    resize();
+    viewport.addEventListener("resize", resize);
+    viewport.addEventListener("scroll", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      viewport.removeEventListener("scroll", resize);
+      dialog.style.removeProperty("--visible-height");
+      dialog.style.removeProperty("--visible-top");
+    };
+  }, [open, mobilePlacement]);
   return (
     <dialog
       ref={ref}
@@ -39,7 +58,7 @@ export function Dialog({
         "m-auto w-[calc(100%-2rem)] rounded-lg border border-border bg-surface p-0 text-fg shadow-pop backdrop:backdrop-blur-[1px]",
         size === "sm" && "max-w-sm", size === "md" && "max-w-lg", size === "lg" && "max-w-2xl",
         // Phones: bottom sheet (full width, anchored to the bottom, thumb-reachable buttons).
-        "max-sm:mb-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0",
+        mobilePlacement === "top" ? "dialog-mobile-top" : "max-sm:mb-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0",
       )}
     >
       {open && (

@@ -93,7 +93,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, unread
         Pular para o conteúdo
       </a>
 
-      <Dialog open={panel !== null} onClose={() => setPanel(null)}
+      <Dialog mobilePlacement={panel === "clients" ? "top" : "bottom"} open={panel !== null} onClose={() => setPanel(null)}
         title={panel === "clients" ? "Clientes" : "Mais opções"}>
         {panel === "clients" ? <div onClick={e => {
           if (e.target instanceof Element && e.target.closest("a[href]")) setPanel(null);

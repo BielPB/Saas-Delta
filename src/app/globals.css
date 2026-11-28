@@ -166,3 +166,19 @@ a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color
 }
 
 .skeleton { background: var(--surface-2); }
+
+@media (max-width: 767px), (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  dialog.dialog-mobile-top {
+    --panel-inset: max(12px, env(safe-area-inset-top));
+    --panel-clearance: min(7rem, 20svh);
+    position: fixed;
+    top: calc(var(--visible-top, 0px) + var(--panel-inset));
+    bottom: auto;
+    margin-block: 0;
+    max-height: none;
+  }
+
+  .dialog-mobile-top > div {
+    max-height: calc(min(100svh, var(--visible-height, 100svh)) - var(--panel-inset) - var(--panel-clearance) - 2px);
+  }
+}
