@@ -59,7 +59,4 @@
        (display-mode:browser) and (pointer:coarse) and (orientation:landscape) and (max-height:500px) {
   /* Keep the dock within the viewport available with browser controls expanded. */
   .app-shell { height:100svh }
-  .dock-footer {
-    padding-bottom:calc(7rem + env(safe-area-inset-bottom, 0px));
-  }
 }
