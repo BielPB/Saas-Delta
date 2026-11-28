@@ -36,14 +36,12 @@ export function FloatingDock({ items }: { items: DockItem[] }) {
       aria-expanded={expanded} aria-controls="delta-dock-items" onClick={() => setExpanded(!expanded)}>
       {expanded ? <X size={22}/> : <Menu size={22}/>}
     </button>
-    <ul id="delta-dock-items" onPointerLeave={() => setHighlight(null)} onBlur={e => {
-      if (!e.currentTarget.contains(e.relatedTarget)) setHighlight(null);
-    }}>
+    <ul id="delta-dock-items">
       {items.map((item, i) => {
         const distance = highlight === null ? Infinity : Math.abs(highlight - i);
         const face = <><span className="dock-disc">{item.icon}</span><span className="dock-label" aria-hidden>{item.label}</span></>;
         return <li key={item.label} data-zoom={distance === 0 ? "selected" : distance === 1 ? "near" : undefined}
-          onPointerEnter={e => { if (e.pointerType !== "touch") setHighlight(i); }} onFocus={() => setHighlight(i)}>
+          onPointerEnter={e => { if (e.pointerType === "mouse") setHighlight(i); }} onPointerLeave={() => setHighlight(null)}>
           {"href" in item
             ? <Link href={item.href} onNavigate={() => setExpanded(false)} aria-label={item.label} aria-current={item.active ? "page" : undefined}>{face}</Link>
             : <button type="button" aria-label={item.label} aria-haspopup="dialog" data-active={item.active} onClick={() => { if (expanded) launcher.current?.focus(); setExpanded(false); item.open(); }}>{face}</button>}

@@ -27,7 +27,9 @@
   pointer-events:none; white-space:nowrap; padding:4px 9px; border-radius:7px; background:#272729;
   color:#fff; font-size:12px; line-height:1.4; box-shadow:0 2px 8px #0003;
 }
-.delta-dock li:focus-within .dock-label, .delta-dock li:hover .dock-label {display:block}
+@media (min-width:768px) {
+  .delta-dock li[data-zoom=selected] .dock-label { display:block }
+}
 .delta-dock li[data-zoom=selected] {z-index:1}
 @media (prefers-reduced-motion:no-preference) {
   .dock-disc { transition:transform 170ms cubic-bezier(.2,.75,.25,1); }

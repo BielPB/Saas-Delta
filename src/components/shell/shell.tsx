@@ -88,7 +88,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, unread
   );
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable=true]]:select-text [&_[contenteditable=plaintext-only]]:select-text">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-pop">
         Pular para o conteúdo
       </a>

@@ -2,14 +2,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
-import { Bell, Check, ChevronsUpDown, LogOut, Moon, Search, Sun, User } from "lucide-react";
+import { Bell, Check, ChevronsUpDown, LogOut, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, Kbd } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/primitives";
 import { Menu, MenuItem } from "@/components/ui/overlay";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import { switchWorkspace } from "@/app/app/actions";
 import { signOut } from "@/app/(auth)/actions";
-import { CommandPalette } from "./command-palette";
 
 /** The theme lives on <html class="dark">; observe it as an external store. */
 function subscribeTheme(cb: () => void) {
@@ -25,7 +24,6 @@ export function Header({ brand, unread: initialUnread, user, workspace, workspac
   workspace: { id: string; name: string };
   workspaces: Array<{ id: string; name: string }>;
 }) {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [base, setBase] = useState(initialUnread);
   const [extra, setExtra] = useState(0);
   if (base !== initialUnread) { setBase(initialUnread); setExtra(0); }
@@ -33,15 +31,6 @@ export function Header({ brand, unread: initialUnread, user, workspace, workspac
   const dark = useSyncExternalStore(subscribeTheme, () => document.documentElement.classList.contains("dark"), () => false);
   const [, start] = useTransition();
   const router = useRouter();
-
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearchOpen(true); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   // Realtime: new notifications for this user bump the counter and refresh server data.
   useEffect(() => {
@@ -81,14 +70,6 @@ export function Header({ brand, unread: initialUnread, user, workspace, workspac
 
       <div className="flex-1" />
 
-      <button type="button" onClick={() => setSearchOpen(true)}
-        className="flex h-8 w-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface-2 px-2 text-[13px] text-subtle transition-colors hover:border-border-strong hover:text-muted pointer-coarse:size-9 sm:w-64 sm:justify-start"
-        aria-label="Buscar (Ctrl K)">
-        <Search className="size-4 shrink-0" aria-hidden />
-        <span className="hidden flex-1 text-left sm:inline">Buscar clientes, conteúdos, tarefas…</span>
-        <span className="hidden sm:inline-flex"><Kbd>⌘K</Kbd></span>
-      </button>
-
       <Link href="/app/notificacoes" aria-label={`Notificações${unread ? `, ${unread} não lidas` : ""}`}
         className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg pointer-coarse:size-9">
         <Bell className="size-4" />
@@ -115,8 +96,6 @@ export function Header({ brand, unread: initialUnread, user, workspace, workspac
           </>
         )}
       </Menu>
-
-      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }
