@@ -6,12 +6,12 @@ import { fail, type ActionResult } from "@/lib/errors";
 
 export async function saveProfile(name: string): Promise<ActionResult> {
   const ctx = await getContext();
-  if (name.trim().length < 2) return fail("Informe seu nome.");
+  if (!name.trim() || name.trim().length > 120) return fail("Informe seu nome.");
   const sb = await createClient();
-  const { error } = await sb.from("profiles").update({ full_name: name.trim().slice(0, 120) }).eq("id", ctx.user.id);
+  const { error } = await sb.from("profiles").update({ full_name: name.trim() }).eq("id", ctx.user.id);
   if (error) return fail(error);
   revalidatePath("/app", "layout");
-  return { ok: true, message: "Perfil atualizado." };
+  return { ok: true, message: "Nome de exibição atualizado." };
 }
 
 const CATS = ["tasks", "approvals", "publications", "files", "system"];

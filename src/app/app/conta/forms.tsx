@@ -10,9 +10,11 @@ export function ProfileForm({ name }: { name: string }) {
   const [pending, start] = useTransition();
   const toast = useToast();
   return (
-    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveProfile(v); if (r.ok) toast.success(r.message ?? "Salvo."); else toast.error(r.error); }); }}>
-      <Input value={v} onChange={(e) => setV(e.target.value)} aria-label="Nome" autoComplete="name" />
-      <Button type="submit" variant="primary" disabled={pending || v === name}>Salvar</Button>
+    <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveProfile(v); if (r.ok) toast.success(r.message ?? "Salvo."); else toast.error(r.error); }); }}>
+      <label className="min-w-0 flex-1 text-sm font-medium">Como você quer ser chamado?
+        <Input className="mt-1" value={v} onChange={(e) => setV(e.target.value)} maxLength={120} required autoComplete="nickname" />
+      </label>
+      <Button type="submit" variant="primary" disabled={pending || !v.trim() || v.trim() === name}>Salvar</Button>
     </form>
   );
 }

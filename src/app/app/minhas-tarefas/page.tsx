@@ -74,7 +74,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
   const activeMembers = [...members.values()].filter((m) => m.status === "active" && m.user_id).map((m) => ({ id: m.user_id, name: m.full_name }));
 
   const person = members.get(uid);
-  const first = (person?.full_name || ctx.profile.full_name || "").split(" ")[0];
+  const displayName = ctx.profile.full_name;
   const hour = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: ctx.workspace.timezone }).format(new Date()));
   const hello = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
@@ -83,7 +83,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Minhas demandas</p>
-          <h1 className="mt-0.5 break-words text-xl font-bold tracking-tight sm:text-2xl">{uid === ctx.user.id ? `${hello}${first ? `, ${first}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
+          <h1 className="mt-0.5 break-words text-xl font-bold tracking-tight sm:text-2xl">{uid === ctx.user.id ? `${hello}${displayName ? `, ${displayName}` : ""}!` : `Demandas de ${person?.full_name ?? "colaborador"}`}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {canViewOthers && <ViewAs value={uid} me={ctx.user.id} members={activeMembers} />}

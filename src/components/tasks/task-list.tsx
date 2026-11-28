@@ -39,7 +39,7 @@ export function TaskList({ tasks, members, empty, showAssignee = true, showAssig
                 <PriorityBadge p={t.priority} />
                 {status && <TaskStatusBadge t={t} />}
                 {showAssignee && (who
-                  ? <span className="flex shrink-0 items-center gap-1.5 max-sm:ml-auto"><Avatar name={who.full_name} src={who.avatar_url} size={22} />{showAssigneeName && <span className="w-20 wrap-anywhere whitespace-normal text-xs text-muted max-sm:w-auto">{who.full_name.split(" ")[0]}</span>}</span>
+                  ? <span className="flex shrink-0 items-center gap-1.5 max-sm:ml-auto"><Avatar name={who.full_name} src={who.avatar_url} size={22} />{showAssigneeName && <span className="w-20 wrap-anywhere whitespace-normal text-xs text-muted max-sm:w-auto">{who.full_name}</span>}</span>
                   : <span className="shrink-0 text-xs text-subtle max-sm:ml-auto">Sem responsável</span>)}
               </div>
             )}

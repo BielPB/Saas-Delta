@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { ProfileForm } from "../conta/forms";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listFormats, listTemplates, signPaths } from "@/lib/data";
@@ -13,9 +13,12 @@ export const metadata: Metadata = { title: "Configurações" };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
   const ctx = await getContext();
-  if (!ctx.can("workspace.manage") && !ctx.can("roles.manage") && !ctx.can("members.manage")) notFound();
+  const profilePanel = <Panel title="Meu perfil"><ProfileForm name={ctx.profile.full_name} /></Panel>;
+  if (!ctx.can("workspace.manage") && !ctx.can("roles.manage") && !ctx.can("members.manage")) {
+    return <div className="max-w-3xl"><PageHeader title="Configurações" />{profilePanel}</div>;
+  }
   const sp = await searchParams;
-  const tab = ["agencia", "aprovacao", "funcoes", "templates", "formatos", "seguranca", "armazenamento"].includes(sp.aba ?? "") ? sp.aba! : "agencia";
+  const tab = ["perfil", "agencia", "aprovacao", "funcoes", "templates", "formatos", "seguranca", "armazenamento"].includes(sp.aba ?? "") ? sp.aba! : "agencia";
   const sb = await createClient();
   const ws = ctx.workspace.id;
 
@@ -29,10 +32,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <div className="max-w-5xl">
       <PageHeader title="Configurações" description={`${w?.name} · deltaflow.com.br/${w?.slug} · plano ${w?.plan}`} />
       <LinkTabs active={tab} base="/app/configuracoes" tabs={[
-        { key: "agencia", label: "Agência e identidade" }, { key: "aprovacao", label: "Aprovações e notificações" },
+        { key: "agencia", label: "Agência e identidade" }, { key: "perfil", label: "Meu perfil" }, { key: "aprovacao", label: "Aprovações e notificações" },
         { key: "funcoes", label: "Funções e permissões" }, { key: "templates", label: "Templates de produção" }, { key: "formatos", label: "Formatos" },
         { key: "seguranca", label: "Segurança e auditoria" }, { key: "armazenamento", label: "Armazenamento" },
       ]} />
+      {tab === "perfil" && profilePanel}
       {tab === "agencia" && <Panel><AgencyForm workspaceId={ws} canEdit={ctx.can("workspace.manage")} initial={{ name: w!.name, brand_color: w!.brand_color, timezone: w!.timezone, logo_path: w!.logo_path, logoUrl: logo }} /></Panel>}
       {tab === "aprovacao" && s && <Panel><ApprovalSettingsForm canEdit={ctx.can("workspace.manage")} initial={s as never} /></Panel>}
       {tab === "funcoes" && <RolesTab ws={ws} canEdit={ctx.can("roles.manage")} mine={ctx.permissions} />}

@@ -25,8 +25,8 @@ export default async function ProductivityPage() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.user_id}>
-                <td><div className="flex items-center gap-2"><Avatar name={r.full_name || r.email} size={24} />
-                  <Link className="font-medium hover:underline" href={`/app/tarefas?responsavel=${r.user_id}`}>{r.full_name || r.email}</Link>
+                <td><div className="flex items-center gap-2"><Avatar name={r.full_name || "Colaborador"} size={24} />
+                  <Link className="font-medium hover:underline" href={`/app/tarefas?responsavel=${r.user_id}`}>{r.full_name || "Colaborador"}</Link>
                   {r.overloaded && <Badge tone="warning">Sobrecarregado</Badge>}</div></td>
                 <td className="min-w-40">
                   <div className="flex items-center gap-2">

@@ -362,7 +362,7 @@ async function Overview({ ws, client, month, servicesCount, can }: {
   }
   const teamRows = [...team.entries()]
     .filter(([, e]) => e.todo + e.doing + e.done > 0)
-    .map(([id, e]) => ({ id, name: id ? members.get(id)?.full_name || members.get(id)?.email || "Colaborador" : "Sem responsável", avatar: id ? members.get(id)?.avatar_url ?? null : null, ...e }))
+    .map(([id, e]) => ({ id, name: id ? members.get(id)?.full_name || "Colaborador" : "Sem responsável", avatar: id ? members.get(id)?.avatar_url ?? null : null, ...e }))
     .sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || b.late - a.late || (b.todo + b.doing) - (a.todo + a.doing));
 
   const stats = [

@@ -155,7 +155,7 @@ export async function listMembers(ws: string): Promise<MemberRow[]> {
     const p = r.user_id ? pm.get(r.user_id) : undefined;
     return {
       member_id: r.id, user_id: r.user_id ?? "", status: r.status, invited_email: r.invited_email,
-      full_name: (p?.full_name as string) || (p?.email as string) || r.invited_email || "Convidado",
+      full_name: (p?.full_name as string) || (r.user_id ? "Colaborador" : "Convidado"),
       email: (p?.email as string) ?? r.invited_email, avatar_url: (p?.avatar_url as string) ?? null,
       roles: r.member_roles.map((m) => m.roles?.key ?? "").filter(Boolean),
       monthly_target: r.monthly_target,

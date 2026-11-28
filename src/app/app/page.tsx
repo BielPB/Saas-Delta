@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const hour = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: ctx.workspace.timezone }).format(new Date()));
   const hello = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const first = (ctx.profile.full_name || "").split(" ")[0];
+  const displayName = ctx.profile.full_name;
   const cheer = !target ? "Defina as metas dos clientes para acompanhar o mês." : pct >= 100 ? "Meta batida. Equipe incrível!" : pct >= 80 ? "Reta final, falta pouco." : pct >= 40 ? "Bom ritmo, vamos fechar o mês com tudo." : "Começo de mês: hora de acelerar a produção.";
   const R = 52; const C = 2 * Math.PI * R;
 
@@ -133,7 +133,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {/* Phones: text and ring side by side (smaller ring) instead of the ring alone on a second row. */}
       <section aria-label="Meta do mês" className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 sm:flex-wrap sm:gap-6 sm:p-6">
         <div className="min-w-0 flex-1 sm:basis-72">
-          <p className="text-sm text-muted">{hello}{first ? `, ${first}` : ""}</p>
+          <p className="text-sm text-muted">{hello}{displayName ? `, ${displayName}` : ""}</p>
           <h1 className="mt-1 text-[1.6rem] font-bold leading-tight tracking-tight sm:text-4xl">
             {target ? <>{MonthName} está em <span className="text-accent-ink">{pct}% da meta</span>.</> : <>{MonthName} ainda sem meta definida.</>}
           </h1>

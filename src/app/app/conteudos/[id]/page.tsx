@@ -71,7 +71,7 @@ export default async function ContentPage({ params }: { params: Promise<{ id: st
   const openTasks = taskRows.filter((t) => !["done", "cancelled"].includes(t.status));
   const doneTasks = taskRows.filter((t) => ["done", "cancelled"].includes(t.status));
   const nextTask = openTasks.find((t) => t.status !== "blocked") ?? openTasks[0];
-  const who = (uid: string | null | undefined) => (uid ? members.get(uid)?.full_name?.split(" ")[0] ?? "sem responsável" : "sem responsável");
+  const who = (uid: string | null | undefined) => (uid ? members.get(uid)?.full_name ?? "sem responsável" : "sem responsável");
 
   // One sentence that tells the team what happens next with this content.
   const next: { tone: "warning" | "accent" | "info" | "neutral" | "success"; title: string; text?: string; quotes?: Array<{ label: string; text: string }> } =
