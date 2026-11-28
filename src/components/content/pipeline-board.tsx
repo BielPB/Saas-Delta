@@ -61,16 +61,17 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
   return (
     <>
       {/* Phones: one column per screen with a peek of the next, snapping as you swipe. */}
-      <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-4 sm:-mx-6 sm:snap-none sm:px-6 lg:-mx-8 lg:px-8" aria-label="Pipeline de produção">
+      <div role="region" aria-label="Pipeline de produção" tabIndex={0}
+        className="grid max-h-[max(45dvh,calc(100dvh-23rem))] grid-flow-col auto-cols-[min(19rem,calc(100vw-3.5rem))] grid-rows-[max-content] snap-x snap-proximity gap-3 overflow-auto overscroll-x-contain pb-2 sm:snap-none">
         {boardColumns.map((col) => {
           const list = items.filter((i) => colOf(i) === col.key);
           return (
             <section key={col.key} aria-label={`${col.label}: ${list.length}`} aria-busy={pending}
               onDragOver={(e) => { if (drag) { e.preventDefault(); setOver(col.key); } }} onDragLeave={() => setOver(null)} onDrop={() => onDrop(col.key)}
-              className={cn("flex w-[min(19rem,calc(100vw-3.5rem))] shrink-0 snap-start flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
+              className={cn("flex min-w-0 snap-start flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
               <header className={cn(
-                "flex items-center justify-between rounded-xl border-2 px-4 py-2.5",
-                col.ready ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 text-fg",
+                "sticky top-0 z-10 flex items-center justify-between rounded-xl border-2 px-4 py-2.5",
+                col.ready ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 bg-bg text-fg",
               )}>
                 <div className="min-w-0">
                   <h3 className="text-[15px] font-extrabold uppercase leading-tight tracking-wide">{col.label}</h3>
@@ -117,7 +118,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                         {i.deliverables!.map((d, n) => (
                           <li key={`${d.kind}-${n}`} className={cn(
                             "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold",
-                            d.done ? "bg-accent text-accent-fg" : "border border-dashed border-accent-ink/70 text-fg",
+                            d.done ? "bg-accent text-accent-fg" : "border border-dashed border-accent-ink/70 bg-bg text-fg",
                           )}>
                             {d.done && <Check className="size-3" strokeWidth={3} aria-hidden />}
                             {kindLabel[d.kind] ?? d.kind}

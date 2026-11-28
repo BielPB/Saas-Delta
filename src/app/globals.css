@@ -94,6 +94,13 @@
 }
 
 @layer base {
+  * { scrollbar-width: thin; }
+  html { scrollbar-color: var(--accent-ink) transparent; }
+  @supports not (scrollbar-width: thin) {
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--accent-ink); border-radius: 999px; }
+    ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  }
   html { scrollbar-gutter: stable; -webkit-text-size-adjust: 100%; }
   body {
     overflow-wrap: break-word;
