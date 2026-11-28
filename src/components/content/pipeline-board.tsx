@@ -60,17 +60,17 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
 
   return (
     <>
-      {/* Phones: one column per screen with a peek of the next, snapping as you swipe. */}
+      {/* Phones: swipe between stages; scroll each card list vertically under its header. */}
       <div role="region" aria-label="Pipeline de produção" tabIndex={0}
-        className="relative grid max-h-[max(38dvh,calc(100dvh-30rem))] grid-flow-col auto-cols-[min(19rem,calc(100vw-3.5rem))] grid-rows-[max-content] snap-x snap-proximity gap-3 overflow-auto overscroll-x-contain pb-2 sm:snap-none">
+        className="relative grid sm:max-h-[max(38dvh,calc(100dvh-30rem))] grid-flow-col auto-cols-[100%] sm:auto-cols-[19rem] grid-rows-[max-content] snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain sm:overflow-auto sm:pb-2 sm:snap-none">
         {boardColumns.map((col) => {
           const list = items.filter((i) => colOf(i) === col.key);
           return (
             <section key={col.key} aria-label={`${col.label}: ${list.length}`} aria-busy={pending}
               onDragOver={(e) => { if (drag) { e.preventDefault(); setOver(col.key); } }} onDragLeave={() => setOver(null)} onDrop={() => onDrop(col.key)}
-              className={cn("flex min-w-0 snap-start flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
+              className={cn("flex min-w-0 snap-start max-sm:snap-always max-sm:max-h-[max(38dvh,calc(100dvh-30rem))] flex-col gap-3 rounded-xl transition-colors", over === col.key && drag && "bg-accent/10 ring-2 ring-accent-ink/40")}>
               <header className={cn(
-                "sticky top-0 z-10 flex items-center justify-between rounded-xl border-2 px-4 py-2.5",
+                "sticky top-0 z-10 flex shrink-0 items-center justify-between rounded-xl border-2 px-4 py-2.5",
                 col.ready ? "border-accent bg-accent text-accent-fg" : "border-accent-ink/70 bg-bg text-fg",
               )}>
                 <div className="min-w-0">
@@ -84,7 +84,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
                 </span>
               </header>
 
-              <ul className="flex min-h-24 flex-col gap-3">
+              <ul className="flex min-h-24 flex-col gap-3 max-sm:min-h-0 max-sm:overflow-y-auto max-sm:overscroll-y-contain">
                 {list.map((i) => (
                   <li key={i.id} draggable={Boolean(i.movable)} onDragStart={() => setDrag(i.id)} onDragEnd={() => { setDrag(null); setOver(null); }}
                     className={cn("rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong", i.movable && "cursor-grab active:cursor-grabbing", drag === i.id && "opacity-50")}>
