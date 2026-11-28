@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getContext } from "@/lib/auth";
-import { notFound } from "next/navigation";
+import { requirePermission, sectionPermissions } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, Badge, PageHeader, Panel, Table } from "@/components/ui/primitives";
 
@@ -10,8 +9,7 @@ export const metadata: Metadata = { title: "Produtividade" };
 interface Row { user_id: string; full_name: string; email: string; open_tasks: number; in_progress: number; overdue: number; due_this_week: number; done_30d: number; overloaded: boolean }
 
 export default async function ProductivityPage() {
-  const ctx = await getContext();
-  if (!ctx.can("tasks.view_all") && !ctx.can("reports.view")) notFound();
+  const ctx = await requirePermission(sectionPermissions.produtividade);
   const sb = await createClient();
   const { data } = await sb.rpc("team_workload", { p_ws: ctx.workspace.id });
   const rows = (data ?? []) as Row[];

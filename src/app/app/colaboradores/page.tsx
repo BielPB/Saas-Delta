@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getContext } from "@/lib/auth";
+import { requirePermission, sectionPermissions } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listMembers } from "@/lib/data";
 import { Avatar, Badge, PageHeader, Panel, Table } from "@/components/ui/primitives";
@@ -9,7 +9,7 @@ import { InviteButton, MemberRowActions, MemberTargetInput } from "./member-acti
 export const metadata: Metadata = { title: "Colaboradores" };
 
 export default async function MembersPage() {
-  const ctx = await getContext();
+  const ctx = await requirePermission(sectionPermissions.colaboradores);
   const sb = await createClient();
   const [members, { data: roles }, { data: load }] = await Promise.all([
     listMembers(ctx.workspace.id),

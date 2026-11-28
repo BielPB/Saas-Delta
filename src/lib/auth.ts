@@ -88,8 +88,15 @@ export const getContext = cache(async (): Promise<AppContext> => {
 });
 
 /** Page-level guard. The database enforces the same rule; this only avoids rendering a useless page. */
-export async function requirePermission(p: Permission) {
+export const sectionPermissions = {
+  tarefas: ["tasks.view_all", "tasks.manage"],
+  colaboradores: ["members.manage", "tasks.view_all"],
+  produtividade: ["tasks.view_all", "reports.view"],
+  integracoes: ["integrations.manage", "files.manage"],
+} satisfies Record<string, Permission[]>;
+
+export async function requirePermission(p: Permission | Permission[]) {
   const ctx = await getContext();
-  if (!ctx.can(p)) notFound();
+  if (!(Array.isArray(p) ? p.some(ctx.can) : ctx.can(p))) notFound();
   return ctx;
 }

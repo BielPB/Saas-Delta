@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Mail, MessageCircle, Share2 } from "lucide-react";
-import { getContext } from "@/lib/auth";
+import { requirePermission, sectionPermissions } from "@/lib/auth";
 import { integrations } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { listClientsLite, listServicesLite } from "@/lib/data";
@@ -22,7 +22,7 @@ const errors: Record<string, string> = {
 };
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
-  const ctx = await getContext();
+  const ctx = await requirePermission(sectionPermissions.integracoes);
   const sp = await searchParams;
   const sb = await createClient();
   const [{ data: conns }, { data: maps }, { data: jobs }, clients, services] = await Promise.all([

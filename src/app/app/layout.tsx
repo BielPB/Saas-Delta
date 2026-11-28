@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getContext, type Permission } from "@/lib/auth";
+import { getContext, sectionPermissions, type Permission } from "@/lib/auth";
 import { googleApiKey, isConfigured } from "@/lib/env";
 import { DriveKeyProvider } from "@/components/content/link-embed";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +12,7 @@ const nav: Array<{ title: string; items: Array<{ href: string; label: string; ic
   { title: "Principal", items: [
     { href: "/app", label: "Visão geral", icon: "layout" },
     { href: "/app/minhas-tarefas", label: "Minhas demandas", icon: "check" },
-    { href: "/app/tarefas", label: "Tarefas da equipe", icon: "list", perm: ["tasks.view_all", "tasks.manage"] },
+    { href: "/app/tarefas", label: "Tarefas da equipe", icon: "list", perm: sectionPermissions.tarefas },
     { href: "/app/pipeline", label: "Pipeline", icon: "kanban" },
     { href: "/app/calendario", label: "Calendário", icon: "calendar" },
     { href: "/app/aprovacoes", label: "Aprovações", icon: "stamp", perm: "approvals.manage" },
@@ -20,12 +20,12 @@ const nav: Array<{ title: string; items: Array<{ href: string; label: string; ic
   { title: "Mais", items: [
     { href: "/app/conteudos", label: "Todos os conteúdos", icon: "film" },
     { href: "/app/arquivos", label: "Arquivos", icon: "folder" },
-    { href: "/app/colaboradores", label: "Equipe", icon: "users", perm: ["members.manage", "tasks.view_all"] },
+    { href: "/app/colaboradores", label: "Equipe", icon: "users", perm: sectionPermissions.colaboradores },
     { href: "/app/relatorios", label: "Relatórios", icon: "chart", perm: "reports.view" },
-    { href: "/app/produtividade", label: "Produtividade", icon: "gauge", perm: ["tasks.view_all", "reports.view"] },
+    { href: "/app/produtividade", label: "Produtividade", icon: "gauge", perm: sectionPermissions.produtividade },
     { href: "/app/atividade", label: "Atividade", icon: "activity" },
     { href: "/app/notificacoes", label: "Notificações", icon: "bell" },
-    { href: "/app/integracoes", label: "Integrações", icon: "plug", perm: ["integrations.manage", "files.manage"] },
+    { href: "/app/integracoes", label: "Integrações", icon: "plug", perm: sectionPermissions.integracoes },
     { href: "/app/configuracoes", label: "Configurações", icon: "settings" },
     { href: "/app/conta", label: "Minha conta", icon: "user" },
   ] },

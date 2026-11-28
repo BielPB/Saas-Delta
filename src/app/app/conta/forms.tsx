@@ -11,7 +11,7 @@ export function ProfileForm({ name }: { name: string }) {
   const toast = useToast();
   return (
     <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveProfile(v); if (r.ok) toast.success(r.message ?? "Salvo."); else toast.error(r.error); }); }}>
-      <label className="min-w-0 flex-1 text-sm font-medium">Como você quer ser chamado?
+      <label className="min-w-0 flex-[1_1_14rem] text-sm font-medium">Como você quer ser chamado?
         <Input className="mt-1" value={v} onChange={(e) => setV(e.target.value)} maxLength={120} required autoComplete="nickname" />
       </label>
       <Button type="submit" variant="primary" disabled={pending || !v.trim() || v.trim() === name}>Salvar</Button>

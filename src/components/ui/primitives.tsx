@@ -6,7 +6,7 @@ import { initials } from "@/lib/format";
 export function Badge({ tone = "neutral", children, className, dot }: { tone?: Tone; children: ReactNode; className?: string; dot?: boolean }) {
   return (
     <span
-      className={cn("inline-flex min-h-5 max-w-full py-0.5 items-center gap-1 rounded-sm px-1.5 text-[11.5px] font-medium leading-tight wrap-anywhere whitespace-normal", className)}
+      className={cn("inline-flex min-h-5 max-w-full py-0.5 items-center gap-1 rounded-sm px-1.5 text-[11.5px] font-medium leading-tight wrap-normal whitespace-normal", className)}
       style={{ background: `var(--tone-${tone}-bg)`, color: `var(--tone-${tone}-fg)` }}
     >
       {dot && <span className="size-1.5 rounded-full bg-current" aria-hidden />}

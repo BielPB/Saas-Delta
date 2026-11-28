@@ -14,8 +14,22 @@ export function NavigationMotion() {
         { duration: 180, easing: "ease-out" },
       );
     }
+    function preventContextMenu(event: Event) {
+      event.preventDefault();
+    }
+    function preventNativeDrag(event: DragEvent) {
+      // The board, feed and calendar deliberately make their item draggable.
+      if (event.target instanceof Element && event.target.matches('[draggable="true"]')) return;
+      event.preventDefault();
+    }
+    document.addEventListener("contextmenu", preventContextMenu, true);
+    document.addEventListener("dragstart", preventNativeDrag, true);
     document.addEventListener("click", press, true);
-    return () => document.removeEventListener("click", press, true);
+    return () => {
+      document.removeEventListener("click", press, true);
+      document.removeEventListener("contextmenu", preventContextMenu, true);
+      document.removeEventListener("dragstart", preventNativeDrag, true);
+    };
   }, []);
 
   return null;

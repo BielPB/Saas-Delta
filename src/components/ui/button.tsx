@@ -6,7 +6,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
 type Size = "sm" | "md" | "icon" | "icon-sm";
 
 const base =
-  "df-button df-press inline-flex items-center justify-center gap-1.5 max-w-full wrap-anywhere whitespace-normal rounded-md text-sm font-medium transition-colors " +
+  "df-button df-press inline-flex items-center justify-center gap-1.5 max-w-full shrink-0 whitespace-nowrap rounded-md text-sm font-medium transition-colors " +
   "disabled:pointer-events-none disabled:opacity-50 select-none [&_svg]:size-4 [&_svg]:shrink-0";
 
 const variants: Record<Variant, string> = {

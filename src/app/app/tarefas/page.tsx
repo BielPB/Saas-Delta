@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
-import { getContext } from "@/lib/auth";
+import { requirePermission, sectionPermissions } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listClientsLite, listMembers, memberMap, openPostsLite, parseFilters, qs, taskSelect, type TaskRow } from "@/lib/data";
 import { taskStatus } from "@/lib/domain";
@@ -22,7 +22,7 @@ const filters = z.object({
 });
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  const ctx = await getContext();
+  const ctx = await requirePermission(sectionPermissions.tarefas);
   const raw = await searchParams;
   const f = parseFilters(filters, raw);
   const sb = await createClient();
