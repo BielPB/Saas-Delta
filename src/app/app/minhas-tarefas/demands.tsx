@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import "./deadline-filter.css";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { clientHue } from "@/lib/client-color";
@@ -39,8 +40,8 @@ export function Demands({ rows, initial, hasTasks }: {
   const pickClient = (id: string | null) => { setCliente(id); sync({ cliente: id }); };
   const pickOrder = (deadline: boolean) => { setByDeadline(deadline); sync({ ordem: deadline ? "prazo" : null }); };
 
-  const counters: Array<{ key: Filter; label: string; n: number; danger?: boolean }> = [
-    { key: "atrasadas", label: "Atrasadas", n: rows.filter((r) => r.late).length, danger: true },
+  const counters: Array<{ key: Filter; label: string; n: number }> = [
+    { key: "atrasadas", label: "Atrasadas", n: rows.filter((r) => r.late).length },
     { key: "hoje", label: "Para hoje", n: rows.filter((r) => r.today).length },
     { key: "semana", label: "Próximos 7 dias", n: rows.filter((r) => r.week).length },
     { key: "todas", label: "Todas abertas", n: rows.length },
@@ -65,16 +66,16 @@ export function Demands({ rows, initial, hasTasks }: {
 
   return (
     <>
-      <nav aria-label="Filtro por prazo" className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {counters.map((c) => (
-          <button key={c.key} type="button" onClick={() => pickFilter(c.key)} aria-pressed={f === c.key}
-            className={cn("min-w-0 rounded-xl border bg-surface px-3 py-2.5 text-left transition-colors hover:border-border-strong sm:px-4 sm:py-3",
-              f === c.key ? "border-accent-ink/70 ring-1 ring-accent-ink/30" : "border-border")}>
-            <p className={cn("tabular text-2xl font-bold", c.danger && c.n > 0 && "text-[var(--tone-danger-fg)]")}>{c.n}</p>
-            <p className="text-xs text-muted">{c.label}</p>
-          </button>
-        ))}
-      </nav>
+      <div className="demand-deadline-container">
+        <nav aria-label="Filtro por prazo" className="demand-deadlines">
+          {counters.map((c) => (
+            <button key={c.key} type="button" onClick={() => pickFilter(c.key)} aria-pressed={f === c.key}>
+              <span>{c.label}</span>
+              <span className="tabular">{c.n}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         {/* Phones: client chips scroll sideways in one row instead of piling up. */}

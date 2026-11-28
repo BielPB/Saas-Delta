@@ -1,0 +1,43 @@
+.demand-deadline-container { container-type: inline-size; }
+
+.demand-deadlines {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.demand-deadlines button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.5rem 0.85rem;
+  border-radius: 14px;
+  color: var(--fg-muted);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.demand-deadlines button:hover { color: var(--fg); }
+.demand-deadlines button[aria-pressed="true"] {
+  color: var(--accent-fg);
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--accent) 87%, var(--accent-fg)),
+    var(--accent) 78%);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--surface) 40%, transparent),
+    0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.demand-deadlines button:focus-visible { z-index: 1; }
+
+@container (max-width: 38rem) {
+  .demand-deadlines { grid-template-columns: repeat(2, 1fr); width: 100%; }
+  .demand-deadlines button { min-height: 44px; padding-inline: 0.4rem; }
+}
