@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { ArrowRight, Check, CheckCheck, ChevronLeft, ChevronRight, Copy, ImageIcon, Loader2, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea, Input } from "@/components/ui/form";
@@ -50,15 +50,6 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
   const [pending, start] = useTransition();
   const toast = useToast();
   const router = useRouter();
-
-  // Keeps the current step visible in the sideways-scrolling row (phones). Scrolls only the row, never the page.
-  const stepsRef = useRef<HTMLOListElement>(null);
-  useEffect(() => {
-    const ol = stepsRef.current;
-    const cur = ol?.querySelector<HTMLElement>('[aria-current="step"]');
-    if (!ol || !cur || ol.scrollWidth <= ol.clientWidth) return;
-    ol.scrollLeft += cur.getBoundingClientRect().left - ol.getBoundingClientRect().left - (ol.clientWidth - cur.clientWidth) / 2;
-  }, [idx, feed]);
 
   const total = data.items.length;
   const item = data.items[Math.min(idx, total - 1)];
@@ -210,7 +201,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
           </ol>
         </main>
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-          <div className="mx-auto flex max-w-2xl gap-2 px-4 py-3">
+          <div className="mx-auto flex max-w-2xl flex-wrap gap-2 px-4 py-3 [&>button]:basis-32">
             {list.length < total && (
               <Button className="h-11 min-w-0 flex-1 rounded-full px-3 pointer-coarse:h-12" onClick={() => { setVideos(false); setFeed(true); window.scrollTo({ top: 0 }); }}>Ver tudo em grade</Button>
             )}
@@ -290,7 +281,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
           </ul>
         </main>
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-          <div className="mx-auto flex max-w-2xl gap-2 px-4 py-3">
+          <div className="mx-auto flex max-w-2xl flex-wrap gap-2 px-4 py-3 [&>button]:basis-32">
             <Button className="h-11 min-w-0 flex-1 rounded-full px-3 pointer-coarse:h-12" onClick={() => openItem(Math.max(0, data.items.findIndex((i) => stateOf(i) === "pending")))}>
               <span className="sm:hidden">Avaliar 1 a 1</span><span className="hidden sm:inline">Avaliar uma a uma</span>
             </Button>
@@ -343,8 +334,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
             <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">Conteúdo {idx + 1} de {total}{item.service ? ` · ${item.service}` : ""}</p>
             <h1 className="mt-1 break-words text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
           </div>
-          {/* Phones: the numbered steps scroll sideways in one row (20 posts used to fill half the screen). */}
-          <ol ref={stepsRef} className="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 sm:flex-wrap" aria-label="Conteúdos do lote">
+          <ol className="flex min-w-0 max-w-full flex-wrap gap-2" aria-label="Conteúdos do lote">
             {data.items.map((it, n) => {
               const st = stateOf(it);
               const current = n === idx;
@@ -369,7 +359,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
           </p>
         )}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
           {main && (
             <div>
               <SectionLabel>{kindLabel[main.kind] ?? main.title} · {item.format}</SectionLabel>
@@ -472,7 +462,7 @@ export function PortalApp({ token, data, media }: { token: string; data: PortalD
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <p className="tabular text-sm text-muted" aria-live="polite">{answered} de {total} respondidos</p>
             {/* Phones: the two buttons share the full width (the long labels used to overflow the card). */}
-            <div className="flex gap-2 max-sm:w-full">
+            <div className="flex flex-wrap gap-2 max-sm:w-full">
               <Button className="h-11 rounded-full px-4 pointer-coarse:h-12 max-sm:flex-1 sm:px-5" disabled={pending || idx === 0} onClick={() => go(idx - 1)}><ChevronLeft /> Anterior</Button>
               {isLast ? (
                 <Button variant="primary" className="h-11 rounded-full px-4 font-bold pointer-coarse:h-12 max-sm:flex-[2] sm:px-6" disabled={pending} onClick={finalize}>
@@ -580,7 +570,7 @@ function VideoRow({ it, position, total, media, state, decide, onDetails }: {
             )}
             <Textarea rows={3} aria-label={`O que ajustar em ${it.title}`} value={comment} onChange={(e) => setComment(e.target.value)} autoFocus
               placeholder="Ex.: cortar o início, trocar a música, ajustar uma palavra na legenda..." />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button className="h-11 rounded-full px-4" disabled={busy} onClick={() => setMode("buttons")}>Cancelar</Button>
               <Button variant="primary" className="h-11 flex-1 rounded-full font-bold" disabled={busy || comment.trim().length < 3 || flagged.length === 0}
                 onClick={() => run({ choice: "rejected", comment, flagged })}>
@@ -642,13 +632,13 @@ function Brand({ data, media }: { data: PortalData; media: Record<string, string
     <div className="flex min-w-0 items-center gap-3 text-sm">
       <span className="flex items-center gap-2 font-bold">
         {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
-        {agencyLogo ? <img src={agencyLogo} alt={data.agency.name} className="h-6 w-auto" /> : <span className="flex size-6 items-center justify-center rounded-md text-[11px] font-bold" style={{ background: data.agency.brand_color, color: "#171717" }}>{data.agency.name[0]}</span>}
+        {agencyLogo ? <img src={agencyLogo} alt={data.agency.name} className="h-6 w-auto max-w-24 object-contain" /> : <span className="flex size-6 items-center justify-center rounded-md text-[11px] font-bold" style={{ background: data.agency.brand_color, color: "#171717" }}>{data.agency.name[0]}</span>}
         <span className="hidden sm:inline">{data.agency.name}</span>
       </span>
       <span className="hidden h-5 w-px bg-border sm:block" aria-hidden />
       <span className="flex min-w-0 items-center gap-2 text-muted">
         {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
-        {clientLogo && <img src={clientLogo} alt="" className="h-5 w-auto rounded-sm" />}
+        {clientLogo && <img src={clientLogo} alt="" className="h-5 w-auto max-w-20 rounded-sm object-contain" />}
         <span className="wrap-anywhere whitespace-normal">Aprovação de conteúdo · <strong className="text-fg">{data.client.name}</strong></span>
       </span>
     </div>
@@ -662,7 +652,7 @@ function CaptionCard({ d }: { d: PortalDeliverable }) {
   if (!v.text && v.external_url) return <LinkEmbed url={v.external_url} audience="client" />;
   return (
     <div className="max-w-2xl rounded-2xl border border-border bg-surface p-4 sm:p-5">
-      <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{v.text}</p>
+      <p className="wrap-anywhere whitespace-pre-wrap text-[15px] leading-relaxed">{v.text}</p>
       <button type="button" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-fg"
         onClick={() => navigator.clipboard.writeText(v.text ?? "").then(() => toast.success("Texto copiado."))}><Copy className="size-3.5" /> Copiar texto</button>
     </div>
@@ -709,7 +699,7 @@ function MediaCard({ d, aspect, media, badge, crop }: { d: PortalDeliverable; as
             <span className="tabular text-sm font-semibold" aria-live="polite">{i + 1} de {assets.length}</span>
             <Button size="icon" onClick={() => setI((x) => Math.min(assets.length - 1, x + 1))} disabled={i === assets.length - 1} aria-label="Próxima imagem"><ChevronRight /></Button>
           </div>
-          <ul className="mt-2 flex justify-center gap-2 overflow-x-auto pb-1" aria-label="Todas as imagens">
+          <ul className="mt-2 flex flex-wrap justify-center gap-2 pb-1" aria-label="Todas as imagens">
             {assets.map((x, n) => {
               const thumb = x.provider === "supabase" ? media[x.thumbnail_path ?? x.preview_path ?? x.path ?? ""] : undefined;
               return (
