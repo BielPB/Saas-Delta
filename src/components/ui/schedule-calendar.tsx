@@ -25,7 +25,7 @@ export function ScheduleCalendar({ days, failed }: { days: ScheduleDay[]; failed
     buttons.current[next]?.focus();
   }
 
-  return <section aria-label="Agenda" className="mx-auto mb-5 w-full max-w-[360px] rounded-[26px] bg-[#191919] p-1 pt-5 text-white shadow-lg">
+  return <section aria-label="Agenda" className="mx-auto mb-5 w-full rounded-[26px] bg-[#191919] p-1 pt-5 text-white shadow-lg">
     <header className="mb-4 flex items-baseline justify-between gap-2 px-4">
       <h2 className="text-base font-semibold capitalize">{day.month}</h2>
       <span className="text-[11px] text-neutral-400">Google Agenda</span>

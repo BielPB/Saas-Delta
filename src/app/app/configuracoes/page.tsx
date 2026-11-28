@@ -29,7 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const logo = w?.logo_path ? (await signPaths([w.logo_path])).get(w.logo_path) ?? null : null;
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-6xl">
       <PageHeader title="Configurações" description={`${w?.name} · deltaflow.com.br/${w?.slug} · plano ${w?.plan}`} />
       <LinkTabs active={tab} base="/app/configuracoes" tabs={[
         { key: "agencia", label: "Agência e identidade" }, { key: "perfil", label: "Meu perfil" }, { key: "aprovacao", label: "Aprovações e notificações" },

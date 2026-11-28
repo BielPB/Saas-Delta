@@ -62,7 +62,7 @@ export function PipelineBoard({ items, canPublish, canSubmit = false, create }: 
     <>
       {/* Phones: one column per screen with a peek of the next, snapping as you swipe. */}
       <div role="region" aria-label="Pipeline de produção" tabIndex={0}
-        className="grid max-h-[max(45dvh,calc(100dvh-23rem))] grid-flow-col auto-cols-[min(19rem,calc(100vw-3.5rem))] grid-rows-[max-content] snap-x snap-proximity gap-3 overflow-auto overscroll-x-contain pb-2 sm:snap-none">
+        className="grid max-h-[max(38dvh,calc(100dvh-30rem))] grid-flow-col auto-cols-[min(19rem,calc(100vw-3.5rem))] grid-rows-[max-content] snap-x snap-proximity gap-3 overflow-auto overscroll-x-contain pb-2 sm:snap-none">
         {boardColumns.map((col) => {
           const list = items.filter((i) => colOf(i) === col.key);
           return (

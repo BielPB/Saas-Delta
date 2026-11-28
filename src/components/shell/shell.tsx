@@ -88,12 +88,11 @@ export function Shell({ sections, clientsNav, canManageClients, children, unread
   );
 
   return (
-    <div className="flex min-h-dvh select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable=true]]:select-text [&_[contenteditable=plaintext-only]]:select-text">
+    <div className="flex h-dvh flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable=true]]:select-text [&_[contenteditable=plaintext-only]]:select-text">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-pop">
         Pular para o conteúdo
       </a>
 
-      <FloatingDock items={dock} />
       <Dialog open={panel !== null} onClose={() => setPanel(null)}
         title={panel === "clients" ? "Clientes" : "Mais opções"}>
         {panel === "clients" ? <div onClick={e => {
@@ -104,19 +103,23 @@ export function Shell({ sections, clientsNav, canManageClients, children, unread
           </div>}
       </Dialog>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges]">
         <Header
           brand={<Link href="/app" aria-label="Delta — visão geral" className="mr-1 flex shrink-0 items-center"><Logo compact /></Link>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main key={workspace.id} id="conteudo" aria-busy={navigating} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5 lg:px-8">
+        <main key={workspace.id} id="conteudo" aria-busy={navigating} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-5 pt-4 sm:px-6 sm:pt-5 lg:px-8">
+          <div className="mx-auto w-full has-[>.max-w-3xl]:max-w-3xl has-[>.max-w-4xl]:max-w-4xl has-[>.max-w-5xl]:max-w-5xl has-[>.max-w-6xl]:max-w-6xl">
           {parent && (
             <button type="button" onClick={goBack}
               className="df-press -ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">
               <ArrowLeft className="size-4" aria-hidden /> Voltar
             </button>
-          )}{children}</main>
+          )}{children}
+          </div>
+        </main>
       </div>
+      <footer className="dock-footer"><FloatingDock items={dock} /></footer>
     </div>
   );
 }

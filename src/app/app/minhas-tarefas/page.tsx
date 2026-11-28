@@ -91,9 +91,11 @@ export default async function MyWorkPage({ searchParams }: { searchParams: Promi
         </div>
       </header>
 
-      <Suspense fallback={<div className="skeleton mb-5 h-36 rounded-xl" aria-hidden />}>
-        <AgendaStrip ws={ws} uid={uid} isSelf={uid === ctx.user.id} tz={ctx.workspace.timezone} origin={origin} />
-      </Suspense>
+      <div className="demand-overview-width">
+        <Suspense fallback={<div className="skeleton mb-5 h-36 rounded-xl" aria-hidden />}>
+          <AgendaStrip ws={ws} uid={uid} isSelf={uid === ctx.user.id} tz={ctx.workspace.timezone} origin={origin} />
+        </Suspense>
+      </div>
 
       {/* key: switching "Ver como" to another person starts from that person's URL filters. */}
       <Demands key={uid} rows={rows} hasTasks={tasks.length > 0} initial={{ f: sp.f ?? null, cliente: sp.cliente ?? null, ordem: sp.ordem ?? null }} />
