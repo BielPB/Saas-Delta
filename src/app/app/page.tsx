@@ -4,10 +4,9 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Circle } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { listMembers } from "@/lib/data";
-import { formatDate, formatDateTime, relative } from "@/lib/format";
+import { formatDate, formatDateTime, fromLocalInput, toLocalInput, relative } from "@/lib/format";
 import { Avatar, Panel } from "@/components/ui/primitives";
-import { cn } from "@/lib/utils";
-import { ColumnChart } from "@/components/charts";
+import { Web3Bento } from "@/components/ui/web3-bento";
 import { ToggleGroup, ToggleLink } from "@/components/ui/toggle-links";
 
 export const metadata: Metadata = { title: "Visão geral" };
@@ -30,44 +29,54 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const raw = await searchParams;
   const sb = await createClient();
   const ws = ctx.workspace.id;
-  const ym = /^\d{4}-\d{2}$/.test(raw.mes ?? "") ? raw.mes : new Date().toISOString().slice(0, 7);
-  const m0 = `${ym}-01T00:00:00Z`; const m1 = `${shiftMonth(ym, 1)}-01T00:00:00Z`;
+  const tz = ctx.workspace.timezone;
+  const today = toLocalInput(new Date().toISOString(), tz).slice(0, 10);
+  const ym = /^\d{4}-(0[1-9]|1[0-2])$/.test(raw.mes ?? "") ? raw.mes : today.slice(0, 7);
+  const startOfMonth = (period: string) => fromLocalInput(`${period}-01T00:00`, tz)!;
+  const m0 = startOfMonth(ym); const m1 = startOfMonth(shiftMonth(ym, 1));
   const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(`${ym}-15T12:00:00`));
   const MonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-  const [{ data: prog }, { data: a }, members, onboarding, { data: approvals }, { count: activeClients }] = await Promise.all([
+  const [{ data: prog }, { data: a }, members, onboarding, { data: approvals }, { count: activeClients }, { data: previousApprovals }] = await Promise.all([
     sb.rpc("client_progress", { p_ws: ws, p_month: `${ym}-01`, p_client: null }),
     sb.rpc("dashboard_attention", { p_ws: ws }),
     listMembers(ws),
     onboardingState(ws),
-    sb.from("approval_responses").select("content_id, created_at").eq("workspace_id", ws).eq("decision", "approved").gte("created_at", m0).lt("created_at", m1).limit(5000),
+    sb.from("approval_responses").select("content_id, created_at").eq("workspace_id", ws).eq("decision", "approved").gte("created_at", m0).lt("created_at", m1).order("created_at").limit(5000),
     sb.from("clients").select("id", { count: "exact", head: true }).eq("workspace_id", ws).eq("status", "active"),
+    sb.from("approval_responses").select("content_id, created_at").eq("workspace_id", ws).eq("decision", "approved").gte("created_at", startOfMonth(shiftMonth(ym, -1))).lt("created_at", m0).order("created_at").limit(5000),
   ]);
   const att = a as Attention | null;
 
   // Goal: approved posts (incl. scheduled/published) per client vs. the month's target.
-  const perClient = new Map<string, { name: string; target: number; approved: number }>();
-  for (const r of (prog ?? []) as Array<{ client_id: string; client_name: string; client_target: number; approved: number }>) {
-    const e = perClient.get(r.client_id) ?? { name: r.client_name, target: Number(r.client_target) || 0, approved: 0 };
+  const perClient = new Map<string, { name: string; target: number; approved: number; planned: number }>();
+  for (const r of (prog ?? []) as Array<{ client_id: string; client_name: string; client_target: number; approved: number; planned: number }>) {
+    const e = perClient.get(r.client_id) ?? { name: r.client_name, target: Number(r.client_target) || 0, approved: 0, planned: 0 };
+    e.planned += Number(r.planned);
     e.approved += Number(r.approved);
     perClient.set(r.client_id, e);
   }
   const target = [...perClient.values()].reduce((n, c) => n + c.target, 0);
-  const delivered = [...perClient.values()].reduce((n, c) => n + Math.min(c.approved, c.target || c.approved), 0);
-  const pct = target ? Math.round((delivered / target) * 100) : 0;
+  const delivered = [...perClient.values()].reduce((n, c) => n + Math.min(c.approved, c.target), 0);
   const missing = [...perClient.entries()].filter(([, c]) => c.target > c.approved).map(([id, c]) => ({ id, ...c, left: c.target - c.approved }))
     .sort((x, y) => y.left - x.left);
   const stuck = att ? att.rejected_contents.length + att.stale_approvals.length + att.late_publications.length : 0;
 
   // Team rhythm: first client approval per post, by day of month.
-  const firstApproval = new Map<string, string>();
-  for (const r of (approvals ?? []) as Array<{ content_id: string; created_at: string }>) {
-    const cur = firstApproval.get(r.content_id);
-    if (!cur || r.created_at < cur) firstApproval.set(r.content_id, r.created_at);
+  function approvalDays(rows: Array<{ content_id: string; created_at: string }>, period: string) {
+    const first = new Map<string, string>();
+    for (const row of rows) {
+      const prev = first.get(row.content_id);
+      if (!prev || row.created_at < prev) first.set(row.content_id, row.created_at);
+    }
+    const dayCount = new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5)), 0)).getUTCDate();
+    const days = Array<number>(dayCount).fill(0);
+    for (const date of first.values()) days[Number(toLocalInput(date, tz).slice(8, 10)) - 1]++;
+    return { first, days };
   }
-  const daysInMonth = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate();
-  const perDay = Array.from({ length: daysInMonth }, () => 0);
-  for (const at of firstApproval.values()) perDay[Number(new Intl.DateTimeFormat("en-CA", { day: "numeric", timeZone: ctx.workspace.timezone }).format(new Date(at))) - 1]++;
+  const { first: firstApproval, days: perDay } = approvalDays(approvals ?? [], ym);
+  const previous = approvalDays(previousApprovals ?? [], shiftMonth(ym, -1)).days;
+  const elapsed = ym < today.slice(0, 7) ? perDay.length : ym > today.slice(0, 7) ? 0 : Number(today.slice(8));
 
   // Top members: approved posts this month where the person is responsible or editor.
   const approvedIds = [...firstApproval.keys()];
@@ -102,9 +111,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const hour = Number(new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hour12: false, timeZone: ctx.workspace.timezone }).format(new Date()));
   const hello = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const displayName = ctx.profile.full_name;
-  const cheer = !target ? "Defina as metas dos clientes para acompanhar o mês." : pct >= 100 ? "Meta batida. Equipe incrível!" : pct >= 80 ? "Reta final, falta pouco." : pct >= 40 ? "Bom ritmo, vamos fechar o mês com tudo." : "Começo de mês: hora de acelerar a produção.";
-  const R = 52; const C = 2 * Math.PI * R;
-
+  const clientTotals = Array.from(perClient, ([id, c]) => ({ id, ...c })).sort((a,b) => b.planned - a.planned || a.name.localeCompare(b.name));
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -115,66 +122,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </nav>
       </div>
 
-      {onboarding.pending.length > 0 && ctx.can("workspace.manage") && (
-        <Panel className="mb-5" title={`Primeiros passos · ${onboarding.done} de ${onboarding.total}`}>
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {onboarding.steps.map((st) => (
-              <li key={st.label}>
-                <Link href={st.href} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-2">
-                  {st.done ? <CheckCircle2 className="size-4 text-[var(--tone-success-fg)]" aria-label="Concluído" /> : <Circle className="size-4 text-subtle" aria-label="Pendente" />}
-                  <span className={st.done ? "text-muted line-through" : ""}>{st.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
+      <Web3Bento greeting={hello} name={displayName} month={MonthName} period={ym} days={perDay} previous={previous}
+        elapsed={elapsed} clients={clientTotals} activeClients={activeClients ?? 0} target={target} delivered={delivered}
+        approved={clientTotals.reduce((sum,c) => sum+c.approved,0)} planned={clientTotals.reduce((sum,c) => sum+c.planned,0)} stuck={stuck} />
 
-      {/* Phones: text and ring side by side (smaller ring) instead of the ring alone on a second row. */}
-      <section aria-label="Meta do mês" className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 sm:flex-wrap sm:gap-6 sm:p-6">
-        <div className="min-w-0 flex-1 sm:basis-72">
-          <p className="text-sm text-muted">{hello}{displayName ? `, ${displayName}` : ""}</p>
-          <h1 className="mt-1 text-[1.6rem] font-bold leading-tight tracking-tight sm:text-4xl">
-            {target ? <>{MonthName} está em <span className="text-accent-ink">{pct}% da meta</span>.</> : <>{MonthName} ainda sem meta definida.</>}
-          </h1>
-          <p className="mt-1 text-sm text-muted">{cheer}</p>
-          {target > 0 && <p className="mt-1 text-xs text-subtle">Posts aprovados pelos clientes no mês ÷ soma das metas dos clientes.</p>}
-          {missing.length > 0 && <a href="#falta" className="mt-4 inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-medium hover:bg-surface-2">Ver o que falta ({missing.reduce((n, m) => n + m.left, 0)})</a>}
-        </div>
-        <div className="relative size-24 shrink-0 self-start sm:size-36 sm:self-center" role="img" aria-label={`${pct}% da meta: ${delivered} de ${target}`}>
-          <svg viewBox="0 0 120 120" className="size-full -rotate-90">
-            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="9" />
-            <circle cx="60" cy="60" r={R} fill="none" stroke="var(--accent-ink)" strokeWidth="9" strokeLinecap="round"
-              strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, target ? delivered / target : 0))} />
-          </svg>
-          <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="tabular text-xl font-bold sm:text-3xl">{pct}%</span>
-            <span className="tabular text-[11px] text-muted sm:text-xs">{delivered} de {target}</span>
-          </span>
-        </div>
-      </section>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: "Clientes", value: activeClients ?? 0, sub: "ativos", href: "/app/clientes" },
-          { label: "Meta do mês", value: target, sub: target ? `posts aprovados · faltam ${Math.max(0, target - delivered)}` : "defina a meta de cada cliente", href: "/app/clientes" },
-          { label: "Aprovados", value: delivered, sub: target ? `${pct}% da meta` : "pelos clientes no mês", accent: true, href: "/app/clientes" },
-          { label: "Travados", value: stuck, sub: stuck ? "ajustes, aprovações paradas e atrasos" : "tudo fluindo", danger: stuck > 0, href: "#atencao" },
-        ].map((k) => (
-          <Link key={k.label} href={k.href} className="min-w-0 rounded-xl border border-border bg-surface p-3 transition-colors hover:border-border-strong sm:p-4">
-            <p className="text-xs text-muted">{k.label}</p>
-            <p className={cn("tabular mt-1 text-2xl font-bold sm:text-3xl", k.accent && "text-accent-ink", k.danger && "text-[var(--tone-danger-fg)]")}>{k.value}</p>
-            <p className="mt-0.5 text-xs text-muted">{k.sub}</p>
-          </Link>
-        ))}
-      </div>
-
-      <div className="mb-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <Panel className="min-w-0" title={<span>Ritmo da equipe <span className="ml-1 font-normal text-muted">posts aprovados por dia</span></span>}
-          actions={<span className="tabular text-xs text-muted">{firstApproval.size} no mês</span>}>
-          <ColumnChart label="Posts aprovados por dia" height={140}
-            data={perDay.map((v, i) => ({ label: String(i + 1), value: v, detail: `${i + 1} de ${monthName}: ${v} aprovado(s)` }))} />
-        </Panel>
+      <div className="mb-4">
         <Panel title="Top membros" actions={
           <ToggleGroup active={byGoal ? "meta" : "geral"} aria-label="Tipo de ranking" className="flex rounded-full border border-border p-0.5 text-[11px] font-semibold">
             <ToggleLink value="meta" href={`/app?mes=${ym}`} scroll={false} className="rounded-full px-2.5 py-0.5 text-muted pointer-coarse:py-1.5" activeClassName="bg-accent text-accent-fg" title="% da meta individual de cada pessoa">Meta individual</ToggleLink>
@@ -232,6 +184,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           )}
         </section>
+      </div>
+      <div className="mt-4">
+      {onboarding.pending.length > 0 && ctx.can("workspace.manage") && (
+        <Panel className="mb-5" title={`Primeiros passos · ${onboarding.done} de ${onboarding.total}`}>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {onboarding.steps.map((st) => (
+              <li key={st.label}>
+                <Link href={st.href} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-2">
+                  {st.done ? <CheckCircle2 className="size-4 text-[var(--tone-success-fg)]" aria-label="Concluído" /> : <Circle className="size-4 text-subtle" aria-label="Pendente" />}
+                  <span className={st.done ? "text-muted line-through" : ""}>{st.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       </div>
     </>
   );

@@ -1,0 +1,81 @@
+.delta-bento-grid {
+  --highlight: color-mix(in srgb, var(--accent) 83%, #c4ed85);
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  grid-template-areas: "hero hero clients gauge" "trend trend mix goal" "trend trend attention goal";
+  gap: 10px;
+  background: #0c0c0c;
+  color: #fafafa;
+  padding: clamp(10px,1.6vw,22px);
+  border-radius: 26px;
+  margin-bottom: 1rem;
+  container-type: inline-size;
+}
+.delta-bento-grid section {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(16px,1.45vw,24px);
+  border: 1px solid #323232;
+  border-radius: 23px;
+  background: #191919;
+}
+.delta-bento-grid header, .delta-bento-wallet, .delta-bento-goal a, .delta-bento-attention a, .delta-bento-stack a, .delta-bento-axis { display:flex; align-items:center; justify-content:space-between; gap:8px }
+.delta-bento-grid header { align-items: flex-start; flex-wrap:wrap }
+.delta-bento-grid h2, .delta-bento-grid small { font-size:.78rem; font-weight:500; line-height:1.4; color:#bebebf }
+.delta-bento-grid strong, .delta-bento-axis, .delta-bento-mix b { font-family:var(--font-mono); font-variant-numeric: tabular-nums }
+.delta-bento-hero { grid-area:hero; min-height:260px }
+.delta-bento-hero h1 { font-size:clamp(1.45rem,2.5vw,2.6rem); line-height:1.08; font-weight:650; letter-spacing:-.055em }
+.delta-bento-hero header > div:first-child { flex:1 1 10rem; min-width:0 }
+.delta-bento-hero em { color:var(--highlight); font-style:normal }
+.delta-bento-hero-value { text-align:right }
+.delta-bento-hero-value strong, .delta-bento-wallet strong, .delta-bento-gauge strong, .delta-bento-mix strong, .delta-bento-attention strong { display:block; font-size:clamp(1.5rem,2.4vw,2.4rem); line-height:1.2; letter-spacing:-.06em }
+.delta-bento-bars { margin:24px 0 8px; height:125px; display:flex; align-items:end; gap:3px; margin-top:auto; padding-top:12px }
+.delta-bento-bars span { flex:1; border-radius:4px; min-width:0 }
+.delta-bento-axis { color:#b0afb3; font-size:.66rem }
+.delta-bento-grid .delta-bento-clients { grid-area:clients; padding-bottom:0; overflow:hidden }
+.delta-bento-clients header { color:#b6b5ba; margin-bottom:1rem }
+.delta-bento-stack { margin:auto 0 0; padding-top:6px }
+.delta-bento-stack a { position:relative; padding:10px 12px 17px; min-height:40px; border-radius:11px 11px 0 0; font-weight:650; font-size:.8rem; color:#1c1723; background:linear-gradient(120deg,#fcd5af,#ec9f93); margin-inline:8% }
+.delta-bento-stack a + a { margin-top:-7px; background:linear-gradient(115deg,#d3c8f5,#a5a6e8); margin-inline:4% }
+.delta-bento-stack a:nth-child(3) { background:linear-gradient(115deg,#c4f583,#61d9aa); margin-inline:0 }
+.delta-bento-stack svg, .delta-bento-goal svg, .delta-bento-attention svg { flex-shrink:0 }
+.delta-bento-wallet { margin:0 calc(-1 * clamp(16px,1.45vw,24px)); padding:15px; background:linear-gradient(120deg,#31442a,#12382e) }
+.delta-bento-wallet small { color:#e0ebdf }
+.delta-bento-gauge { grid-area:gauge; text-align:center; align-items:center }
+.delta-bento-gauge h2 { align-self:flex-start }
+.delta-bento-gauge svg { margin:auto 0 0; width: min(80%,155px) }
+.delta-bento-gauge small { margin:4px 0 auto }
+.delta-bento-trend { grid-area:trend; min-height:315px }
+.delta-bento-legend { margin:18px 0; display:flex; gap:28px; flex-wrap:wrap }
+.delta-bento-legend small::before { content:""; display:inline-block; width:13px; margin-right:6px; vertical-align:middle; border-top:2px solid var(--highlight) }
+.delta-bento-legend > div + div small::before { border-color:#af9dbf; border-top-style:dashed }
+.delta-bento-legend strong { display:block; font-size:1.5rem }
+.delta-bento-pills { display:flex; border:1px solid #393939; border-radius:20px; padding:2px; gap:2px }
+.delta-bento-pills button { font:500 .68rem var(--font-mono); padding:4px 8px; border-radius:inherit; color:#cdcdcd }
+.delta-bento-pills button[aria-pressed=true] { background:#f2f2f2; color:#191919 }
+.delta-bento-plot { width:100%; min-height:145px; flex:1; margin-bottom:8px }
+.delta-bento-mix { grid-area:mix }
+.delta-bento-mix strong, .delta-bento-attention strong { margin:14px 0 8px }
+.delta-bento-mix strong small { letter-spacing:0 }
+.delta-bento-segments { height:22px; display:flex; gap:3px; margin:8px 0; border-radius:5px; background:#222 }
+.delta-bento-segments span {border-radius:5px}
+.delta-bento-mix li { display:grid; grid-template-columns:8px 1fr auto; align-items:baseline; gap:7px; font-size:.76rem; margin-top:4px }
+.delta-bento-mix i { width:7px; height:7px; border-radius:50% }
+.delta-bento-grid .delta-bento-goal { grid-area:goal; background:var(--accent); color:var(--accent-fg); border-color:transparent }
+.delta-bento-goal h2 { color:inherit }
+.delta-bento-goal strong { margin:28px 0 6px; font-size:clamp(2.7rem,4vw,4.2rem); line-height:1; letter-spacing:-.07em }
+.delta-bento-goal p, .delta-bento-goal a, .delta-bento-attention a {font-size:.82rem}
+.delta-bento-goal a, .delta-bento-attention a { margin-top:auto; padding-top:14px; justify-content:flex-start }
+.delta-bento-meter { height:8px; margin:24px 0; border-radius:8px; background:color-mix(in srgb,currentColor 18%,transparent); overflow:hidden }
+.delta-bento-meter span { display:block; background:currentColor; height:100%; border-radius:inherit }
+.delta-bento-attention { grid-area:attention }
+.delta-bento-attention a {color:var(--highlight)}
+@media (max-width:1150px) {
+  .delta-bento-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-areas:"hero hero" "clients gauge" "trend trend" "mix goal" "attention goal" }
+}
+@media (max-width:560px) {
+  .delta-bento-grid { grid-template-columns:minmax(0,1fr); grid-template-areas:"hero" "clients" "gauge" "trend" "mix" "goal" "attention" }
+  .delta-bento-hero { min-height:225px }
+  .delta-bento-gauge svg { margin-top:12px }
+}
