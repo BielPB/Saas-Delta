@@ -123,6 +123,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <Web3Bento greeting={hello} name={displayName} month={MonthName} period={ym} days={perDay} previous={previous}
+        attentionBreakdown={attentionItems.map(g => `${g.label}: ${g.items.length}`)}
         elapsed={elapsed} clients={clientTotals} activeClients={activeClients ?? 0} target={target} delivered={delivered}
         approved={clientTotals.reduce((sum,c) => sum+c.approved,0)} planned={clientTotals.reduce((sum,c) => sum+c.planned,0)} pendingContents={new Set(attentionItems.flatMap(group => group.items.map(item => item.href))).size} />
 

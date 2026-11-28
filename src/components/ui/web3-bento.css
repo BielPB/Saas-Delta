@@ -66,7 +66,7 @@
 .delta-bento-mix strong, .delta-bento-attention strong { margin:14px 0 8px }
 .delta-bento-mix strong small { letter-spacing:0 }
 .delta-bento-segments { height:22px; display:flex; gap:3px; margin:8px 0; border-radius:5px; background:#222 }
-.delta-bento-segments span {border-radius:5px}
+.delta-bento-segments button {border-radius:5px}
 .delta-bento-mix li { display:grid; grid-template-columns:8px 1fr auto; align-items:baseline; gap:7px; font-size:.76rem; margin-top:4px }
 .delta-bento-mix i { width:7px; height:7px; border-radius:50% }
 .delta-bento-grid .delta-bento-goal { grid-area:goal; background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 21%,transparent),rgb(255 255 255 / 3%)); border-color:color-mix(in srgb,var(--accent) 32%,transparent) }
@@ -97,3 +97,26 @@
   .delta-bento-hero { min-height:225px }
   .delta-bento-gauge svg { margin-top:12px }
 }
+
+.delta-bento-bars { gap:0 }
+.delta-bento-bars button, .delta-trend-days button {
+  display:flex; flex:1; min-width:0; height:100%; align-items:end; padding-inline:1px;
+}
+.delta-bento-bars button span { pointer-events:none }
+.delta-bento-bars button:is(:hover,:focus-visible), .delta-trend-days button:is(:hover,:focus-visible) {
+  background:rgb(255 255 255 / 8%); border-radius:4px;
+}
+.delta-trend-inspector { position:relative; flex:1; display:flex; margin-bottom:8px }
+.delta-trend-inspector .delta-bento-plot { margin:0 }
+.delta-trend-days { position:absolute; inset:0; display:flex }
+.delta-bento-grid .delta-metric-heading { width:100%; align-items:center; flex-wrap:nowrap }
+.delta-metric-heading button { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:50%; color:#cbd1d0 }
+.delta-metric-heading button:hover { background:rgb(255 255 255 / 8%); color:var(--highlight) }
+.delta-bento-grid .delta-metric-heading svg { width:16px; margin:0 }
+.delta-metric-tip {
+  position:fixed; z-index:60; width:max-content; max-width:min(19rem,calc(100vw - 16px));
+  border:1px solid #505758; background:#24292b; color:#f7f8f8; border-radius:10px;
+  padding:9px 12px; font-size:.8rem; line-height:1.45; box-shadow:0 4px 16px #0003;
+  overflow-wrap:anywhere; pointer-events:none;
+}
+@media (pointer:coarse) { .delta-metric-heading button { width:44px; height:44px } }
