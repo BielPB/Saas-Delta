@@ -182,3 +182,10 @@ a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color
     max-height: calc(min(100svh, var(--visible-height, 100svh)) - var(--panel-inset) - var(--panel-clearance) - 2px);
   }
 }
+
+.client-pick-row, .client-pick-action { display:none }
+@media (max-width:767px) and (pointer:coarse), (orientation:landscape) and (max-height:500px) and (pointer:coarse) {
+  .client-direct-link { display:none }
+  .client-pick-row { display:flex; min-height:44px }
+  .client-pick-action { display:block; position:sticky; top:0; z-index:1; background:var(--surface) }
+}

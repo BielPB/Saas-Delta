@@ -30,6 +30,7 @@ export function ClientNav({ clients, canManage }: { clients: NavClient[]; canMan
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState<NavClient | null>(null);
@@ -38,6 +39,8 @@ export function ClientNav({ clients, canManage }: { clients: NavClient[]; canMan
 
   const needle = q.trim().toLocaleLowerCase("pt-BR");
   const visible = clients.filter((client) => client.name.toLocaleLowerCase("pt-BR").includes(needle));
+
+  const selected = visible.find(client => client.id === selectedId);
 
   const saveName = () => {
     if (!renaming || !renaming.name.trim()) return;
@@ -64,18 +67,29 @@ export function ClientNav({ clients, canManage }: { clients: NavClient[]; canMan
       </label>
 
       {visible.length === 0 && <p className="px-2 py-1 text-xs text-muted">{needle ? "Nenhum cliente encontrado." : "Nenhum cliente ainda."}</p>}
+      <div className="client-pick-action mx-1 mb-2">
+        {selected ? <Link href={`/app/clientes/${selected.id}`} className="flex min-h-11 items-center justify-center rounded-md bg-accent px-3 text-center text-sm font-semibold text-accent-fg">
+          Abrir {selected.name}
+        </Link> : <p className="flex min-h-11 items-center px-1 text-xs text-muted">Selecione o cliente que deseja abrir.</p>}
+      </div>
       <ul aria-label="Clientes" className="space-y-0.5">
         {visible.map((c) => {
           const on = c.id === activeId;
+          const rowClass = cn("df-press flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60");
+          const label = <>
+                <ClientAvatar name={c.name} size={22} src={c.logo} />
+                <span className="wrap-anywhere whitespace-normal">{c.name}</span>
+                {c.open > 0 && <span title={`${c.open} conteúdos em aberto`} aria-label={`${c.open} conteúdos em aberto`} className="tabular ml-auto rounded px-1.5 text-[11px] text-muted">{c.open}</span>}
+          </>;
           return (
             <li key={c.id} className={cn("group relative flex items-center rounded-md", on ? "bg-surface-2" : "hover:bg-surface-2")}>
               {on && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
               <Link href={`/app/clientes/${c.id}`} aria-current={on ? "page" : undefined}
-                className={cn("df-press flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] pointer-coarse:py-2.5 pointer-coarse:text-sm", on ? "font-medium text-fg" : "text-muted hover:text-fg", c.status !== "active" && "opacity-60")}>
-                <ClientAvatar name={c.name} size={22} src={c.logo} />
-                <span className="wrap-anywhere whitespace-normal">{c.name}</span>
-                {c.open > 0 && <span title={`${c.open} conteúdos em aberto`} aria-label={`${c.open} conteúdos em aberto`} className="tabular ml-auto rounded px-1.5 text-[11px] text-muted">{c.open}</span>}
-              </Link>
+                className={cn(rowClass, "client-direct-link")}>{label}</Link>
+              <button type="button" aria-pressed={selectedId === c.id} onClick={() => setSelectedId(c.id)}
+                className={cn(rowClass, "client-pick-row text-left aria-pressed:bg-accent-soft aria-pressed:text-fg")}>
+                {label}
+              </button>
               {canManage && (
                 <div className="shrink-0 pr-1">
                   <Menu label={`Opções de ${c.name}`} trigger={(p) => (
