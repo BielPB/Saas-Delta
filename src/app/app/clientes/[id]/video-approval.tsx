@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, useToast } from "@/components/ui/overlay";
 import { sendVideosForApproval } from "./post-actions";
 
-/** "Link dos vídeos": every video of the month in one link, which the client watches as a list. */
+/** "Link dos vídeos": reviewed videos of the month in one link, which the client watches as a list. */
 export function VideoApprovalButton({ clientId, clientName, ym, contentIds }: { clientId: string; clientName: string; ym: string; contentIds: string[] }) {
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<{ url: string; pin: string | null; sent: number; skipped: number } | null>(null);
@@ -28,12 +28,12 @@ export function VideoApprovalButton({ clientId, clientName, ym, contentIds }: { 
       <Button size="sm" onClick={() => setConfirm(true)} disabled={!contentIds.length}><Send /> Link dos vídeos</Button>
 
       <Dialog open={confirm} onClose={() => setConfirm(false)} size="sm" title={`Link com os vídeos de ${monthLabel}`}
-        description="O cliente abre e vê todos os vídeos em sequência, com Aprovar e Pedir ajuste embaixo de cada um."
+        description="O cliente abre e vê os vídeos revisados em sequência, com Aprovar e Pedir ajuste embaixo de cada um."
         footer={<><Button onClick={() => setConfirm(false)}>Cancelar</Button>
           <Button variant="primary" disabled={pending} onClick={send}>{pending ? <Loader2 className="animate-spin" /> : <Send />} Gerar link</Button></>}>
         <ul className="space-y-1.5 text-sm text-muted">
-          <li>• Entram os vídeos deste mês que já têm o arquivo ou o link do Drive e ainda não foram aprovados.</li>
-          <li>• Os que ainda não têm o vídeo ficam de fora.</li>
+          <li>• Entram somente os vídeos do mês cuja versão atual já foi revisada e liberada para aprovação.</li>
+          <li>• Vídeos em produção ou em ajuste ficam de fora.</li>
           <li>• É um link separado do link do mês (preview do feed).</li>
         </ul>
       </Dialog>

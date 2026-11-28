@@ -18,7 +18,7 @@ const VIDEO_FORMATS = new Set(["reels", "stories", "institutional", "ad", "paid_
 
 export interface GridPost {
   id: string; number: number; title: string; format: string; formatKey: string; status: PostStatusKey;
-  thumb: string | null; link: boolean; video?: string | null; people: Array<{ name: string; avatar: string | null }>; comments: number; date: string | null;
+  inApproval: boolean; thumb: string | null; link: boolean; video?: string | null; people: Array<{ name: string; avatar: string | null }>; comments: number; date: string | null;
 }
 
 const toneCls: Record<string, string> = {
@@ -45,8 +45,8 @@ export function PostGrid({ posts, hrefFor, baseHref, label, clientId, formats, s
   const videoFormats = formats.filter((f) => VIDEO_FORMATS.has(f.key));
   const present = formats.filter((f) => posts.some((p) => p.formatKey === f.key));
   const shown = filter === "all" ? posts : posts.filter((p) => p.formatKey === filter);
-  const openVideos = posts.filter((p) => VIDEO_FORMATS.has(p.formatKey) && !["ready", "scheduled", "published", "cancelled"].includes(p.status)).map((p) => p.id);
-  const canSendVideos = Boolean(video?.canSend) && openVideos.length > 0;
+  const openVideos = posts.filter((p) => VIDEO_FORMATS.has(p.formatKey) && p.inApproval).map((p) => p.id);
+  const canSendVideos = Boolean(video?.canSend) && videoFormats.length > 0;
 
   return (
     <section aria-label={label}>

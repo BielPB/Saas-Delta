@@ -11,7 +11,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/overlay";
 import { Header } from "./header";
-import { ClientNav, type NavCategory, type NavClient } from "./client-nav";
+import { ClientNav, type NavClient } from "./client-nav";
 
 const icons: Record<string, ReactNode> = {
   layout: <LayoutGrid />, check: <CheckSquare />, list: <ListTodo />, kanban: <Kanban />, calendar: <CalendarDays />,
@@ -23,7 +23,7 @@ export interface NavSection { title: string; items: Array<{ href: string; label:
 
 export function Shell({ sections, clientsNav, canManageClients, children, initialCollapsed, unread, user, workspace, workspaces }: {
   sections: NavSection[];
-  clientsNav: { categories: NavCategory[]; clients: NavClient[] };
+  clientsNav: NavClient[];
   canManageClients: boolean;
   children: ReactNode;
   initialCollapsed: boolean;
@@ -110,7 +110,7 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
   const navList = (compact: boolean) => (
     <nav aria-label="Navegação principal" className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
       {sections[0] && renderItems(sections[0].items, compact)}
-      {!compact && <ClientNav categories={clientsNav.categories} clients={clientsNav.clients} canManage={canManageClients} />}
+      {!compact && <ClientNav clients={clientsNav} canManage={canManageClients} />}
       {sections.slice(1).map((sec) => compact ? (
         <div key={sec.title}><div className="mx-2 mb-1 h-px bg-border" aria-hidden />{renderItems(sec.items, true)}</div>
       ) : (

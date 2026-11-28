@@ -8,10 +8,9 @@ import { clientHue } from "@/lib/client-color";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Dialog, Menu, MenuItem, useToast } from "@/components/ui/overlay";
-import { renameCategory, setClientCategory } from "@/app/app/clientes/actions";
+import { renameClient, deleteClient } from "@/app/app/clientes/actions";
 
-export interface NavClient { id: string; name: string; status: string; category_id: string | null; open: number; logo: string | null }
-export interface NavCategory { id: string; name: string; position: number }
+export interface NavClient { id: string; name: string; status: string; open: number; logo: string | null }
 
 export function ClientAvatar({ name, size = 24, src }: { name: string; size?: number; src?: string | null }) {
   const hue = clientHue(name);
@@ -27,28 +26,24 @@ export function ClientAvatar({ name, size = 24, src }: { name: string; size?: nu
   );
 }
 
-export function ClientNav({ categories, clients, canManage }: { categories: NavCategory[]; clients: NavClient[]; canManage: boolean }) {
+export function ClientNav({ clients, canManage }: { clients: NavClient[]; canManage: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const toast = useToast();
   const [q, setQ] = useState("");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState<NavClient | null>(null);
   const [pending, start] = useTransition();
   const activeId = pathname.match(/^\/app\/clientes\/([0-9a-f-]{36})/)?.[1];
 
   const needle = q.trim().toLocaleLowerCase("pt-BR");
   const visible = clients.filter((client) => client.name.toLocaleLowerCase("pt-BR").includes(needle));
 
-  const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => start(async () => {
-    const r = await fn();
-    if (r.ok) { if (r.message) toast.success(r.message); router.refresh(); } else toast.error(r.error ?? "Erro.");
-  });
-
   const saveName = () => {
     if (!renaming || !renaming.name.trim()) return;
     start(async () => {
-      const r = await renameCategory(renaming.id, renaming.name);
-      if (r.ok) { toast.success(r.message ?? "Categoria renomeada."); setRenaming(null); router.refresh(); } else toast.error(r.error ?? "Erro.");
+      const r = await renameClient(renaming.id, renaming.name);
+      if (r.ok) { toast.success(r.message ?? "Cliente renomeado."); setRenaming(null); router.refresh(); } else toast.error(r.error ?? "Erro.");
     });
   };
 
@@ -72,7 +67,6 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
       <ul aria-label="Clientes" className="space-y-0.5">
         {visible.map((c) => {
           const on = c.id === activeId;
-          const category = categories.find((cat) => cat.id === c.category_id);
           return (
             <li key={c.id} className={cn("group relative flex items-center rounded-md", on ? "bg-surface-2" : "hover:bg-surface-2")}>
               {on && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
@@ -82,20 +76,15 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
                 <span className="wrap-anywhere whitespace-normal">{c.name}</span>
                 {c.open > 0 && <span title={`${c.open} conteúdos em aberto`} aria-label={`${c.open} conteúdos em aberto`} className="tabular ml-auto rounded px-1.5 text-[11px] text-muted">{c.open}</span>}
               </Link>
-              {canManage && categories.length > 0 && (
-                // No hover on touch screens: the "…" stays visible there.
-                <div className="hidden pr-1 group-hover:block group-focus-within:block pointer-coarse:block">
+              {canManage && (
+                <div className="shrink-0 pr-1">
                   <Menu label={`Opções de ${c.name}`} trigger={(p) => (
                     <button type="button" {...p} className="flex size-6 items-center justify-center rounded text-muted hover:text-fg pointer-coarse:size-9"><MoreHorizontal className="size-3.5" /></button>
                   )}>
                     {(close) => (
                       <>
-                        {category && <MenuItem onSelect={() => { close(); setRenaming({ id: category.id, name: category.name }); }}>Renomear categoria {category.name}</MenuItem>}
-                        <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-subtle">Mover para</p>
-                        {categories.filter((cat) => cat.id !== c.category_id).map((cat) => (
-                          <MenuItem key={cat.id} onSelect={() => { close(); run(() => setClientCategory(c.id, cat.id)); }}>{cat.name}</MenuItem>
-                        ))}
-                        {c.category_id && <MenuItem onSelect={() => { close(); run(() => setClientCategory(c.id, null)); }}>Sem categoria</MenuItem>}
+                        <MenuItem onSelect={() => { close(); setRenaming({ id: c.id, name: c.name }); }}>Renomear cliente</MenuItem>
+                        <MenuItem danger onSelect={() => { close(); setDeleting(c); }}>Excluir cliente</MenuItem>
                       </>
                     )}
                   </Menu>
@@ -106,15 +95,31 @@ export function ClientNav({ categories, clients, canManage }: { categories: NavC
         })}
       </ul>
 
+      {deleting && (
+        <Dialog open size="sm" title="Excluir cliente" onClose={() => setDeleting(null)}
+          footer={<>
+            <Button disabled={pending} onClick={() => setDeleting(null)}>Cancelar</Button>
+            <Button variant="danger" disabled={pending} onClick={() => start(async () => {
+              const r = await deleteClient(deleting.id);
+              if (!r.ok) { toast.error(r.error); return; }
+              toast.success("Cliente excluído.");
+              setDeleting(null);
+              if (activeId === deleting.id) router.replace("/app/clientes");
+              else router.refresh();
+            })}>Excluir cliente</Button>
+          </>}>
+          <p className="text-sm">Excluir <strong>{deleting.name}</strong> do CRM? Os links de aprovação desse cliente serão desativados.</p>
+        </Dialog>
+      )}
       {renaming && (
-        <Dialog open size="sm" title="Renomear categoria" onClose={() => setRenaming(null)}
+        <Dialog open size="sm" title="Renomear cliente" onClose={() => setRenaming(null)}
           footer={<>
             <Button onClick={() => setRenaming(null)}>Cancelar</Button>
             <Button variant="primary" disabled={pending || !renaming.name.trim()} onClick={() => saveName()}>Salvar</Button>
           </>}>
           <form onSubmit={(e) => { e.preventDefault(); saveName(); }}>
             <label className="block text-[13px] font-medium">Nome
-              <Input className="mt-1" autoFocus maxLength={60} value={renaming.name} onChange={(e) => setRenaming({ ...renaming, name: e.target.value })} />
+              <Input className="mt-1" autoFocus maxLength={160} value={renaming.name} onChange={(e) => setRenaming({ ...renaming, name: e.target.value })} />
             </label>
           </form>
         </Dialog>

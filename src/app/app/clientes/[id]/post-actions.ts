@@ -177,20 +177,16 @@ export async function sendVideosForApproval(clientId: string, ym: string, conten
   const ids = [...new Set(contentIds.filter(isUuid))].slice(0, 200);
   if (!ids.length) return fail("Nenhum vídeo neste mês.");
   const sb = await createClient();
-  const { data: client } = await sb.from("clients").select("name, is_sensitive").eq("id", clientId).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  const { data: client } = await sb.from("clients").select("is_sensitive").eq("id", clientId).eq("workspace_id", ctx.workspace.id).maybeSingle();
   if (!client) return fail("Cliente não encontrado.");
-
-  const prep = await releaseForClient(sb, ids);
-  if ("error" in prep) return fail(prep.error.replace("Nenhum post está pronto", "Nenhum vídeo está pronto"));
-  const ready = prep.ready;
 
   const [y, m] = ym.split("-").map(Number);
   const sensitive = Boolean(client.is_sensitive);
   const day = 86_400_000;
   const expires = sensitive ? Date.now() + 30 * day : Math.max(Date.now() + 15 * day, Date.UTC(y, m + 1, 1)); // two months after the month starts
-  const create = (pin: string | null) => sb.rpc("create_approval_batch", {
-    p_ws: ctx.workspace.id, p_client: clientId, p_name: `Vídeos — ${client.name} · ${String(m).padStart(2, "0")}/${y}`,
-    p_content_ids: ready, p_due_at: null, p_expires_at: new Date(expires).toISOString(), p_pin: pin,
+  const create = (pin: string | null) => sb.rpc("create_video_link", {
+    p_ws: ctx.workspace.id, p_client: clientId, p_month: `${ym}-01`,
+    p_ids: ids, p_expires: new Date(expires).toISOString(), p_pin: pin,
   });
   let pin: string | null = null;
   let { data, error } = await create(null);
@@ -198,8 +194,8 @@ export async function sendVideosForApproval(clientId: string, ym: string, conten
     pin = String(randomInt(10000)).padStart(4, "0"); // client or workspace requires a PIN
     ({ data, error } = await create(pin));
   }
-  if (error) return fail(error);
-  const r = data as { token: string };
+  if (error) return fail(error.message.includes("no_reviewed_videos") ? "Nenhum vídeo deste mês está revisado e liberado para aprovação." : error);
+  const r = data as { token: string; sent: number };
   refresh(clientId);
-  return { ok: true, data: { url: `${await appOrigin()}/aprovacao/${r.token}`, pin, sent: ready.length, skipped: ids.length - ready.length } };
+  return { ok: true, data: { url: `${await appOrigin()}/aprovacao/${r.token}`, pin, sent: r.sent, skipped: ids.length - r.sent } };
 }

@@ -45,6 +45,28 @@ export async function saveClient(_: ActionResult | null, form: FormData): Promis
   redirect(`/app/clientes/${data.id}?aba=servicos&novo=1`);
 }
 
+export async function renameClient(id: string, name: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!ctx.can("clients.manage")) return fail("Sem permissão para gerenciar clientes.");
+  const parsed = clientSchema.shape.name.safeParse(name);
+  if (!isUuid(id) || !parsed.success) return fail("Informe um nome de até 160 caracteres.");
+  const sb = await createClient();
+  const { data, error } = await sb.from("clients").update({ name: parsed.data }).eq("workspace_id", ctx.workspace.id).eq("id", id).select("id").maybeSingle();
+  if (error || !data) return fail(error ?? "Cliente não encontrado.");
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Cliente renomeado." };
+}
+
+export async function deleteClient(id: string): Promise<ActionResult> {
+  const ctx = await getContext();
+  if (!isUuid(id) || !ctx.can("clients.manage")) return fail("Sem permissão para excluir este cliente.");
+  const sb = await createClient();
+  const { error } = await sb.rpc("delete_client", { p_ws: ctx.workspace.id, p_client: id });
+  if (error) return fail(error);
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Cliente excluído." };
+}
+
 export async function setClientStatus(id: string, status: "active" | "inactive" | "archived") {
   const ctx = await getContext();
   const sb = await createClient();

@@ -272,6 +272,7 @@ async function PostsTab({ ws, clientId, tab, ym, postId, formats, services, me, 
     const t = thumbs.get(r.id);
     return {
       id: r.id, number: i + 1, title: r.title, format: r.content_formats?.name ?? "Post", formatKey: fmtByKey.get(r.format_id)?.key ?? "",
+      inApproval: r.stage === "client_approval" && r.production_status === "done" && ["not_sent", "awaiting", "partially_approved"].includes(r.approval_status),
       status: postStatus(r), thumb: t?.url ?? null, link: t?.link ?? false, video: t?.video ?? null, people, comments: commentsBy.get(r.id) ?? 0,
       date: r.planned_publish_at ? dateFmt.format(new Date(r.planned_publish_at)) : null,
     };

@@ -544,3 +544,37 @@ describe("Fila de jobs (worker)", () => {
     await expectDbError(as(a.owner, (q) => q("select * from claim_background_jobs(array['send_email'], 1)")), /permission denied/);
   });
 });
+
+describe("Link dos vídeos e exclusão do cliente", () => {
+  it("inclui só versões já revisadas e oculta o vídeo quando uma nova versão ainda aguarda revisão", async () => {
+    const draft = await createReels(a, "Ainda em produção");
+    const reviewed = await createReels(a, "Revisado");
+    await produceAll(a, reviewed);
+    const month = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 7) + "-01";
+    const batch = await as(a.manager, (q) => rpc<{ token: string; sent: number }>(q, "create_video_link", [
+      a.ws, a.clientA, month, [draft, reviewed], null, null,
+    ]));
+    expect(batch.sent).toBe(1);
+    const { session } = await openPortal(batch.token);
+    expect((await portalGet(batch.token, session!)).items.map(i => i.content_id)).toEqual([reviewed]);
+    expect((await contentState(draft)).approval_status).toBe("not_sent");
+    const video = await deliverableOf(reviewed, "video");
+    const asset = await uploadAsset(a.editor, a.ws, a.clientA, "v2.mp4", "video/mp4");
+    await as(a.editor, q => rpc(q, "add_deliverable_version", [video.id, null, [asset], null, "Correção"]));
+    expect((await portalGet(batch.token, session!)).items).toHaveLength(0);
+  });
+
+  it("exclui o cliente somente com permissão e desativa o link já compartilhado", async () => {
+    const agency = await setupAgency("Exclusao");
+    const content = await createReels(agency);
+    await produceAll(agency, content);
+    const { token } = await as(agency.manager, q => rpc<{ token: string }>(q, "create_approval_batch", [
+      agency.ws, agency.clientA, "Revisão", [content], null, null, null,
+    ]));
+    const { session } = await openPortal(token);
+    await expectDbError(as(agency.editor, q => rpc(q, "delete_client", [agency.ws, agency.clientA])), "permission_denied");
+    await as(agency.owner, q => rpc(q, "delete_client", [agency.ws, agency.clientA]));
+    expect(await as(agency.owner, q => q("select id from clients where id=$1", [agency.clientA]))).toHaveLength(0);
+    await expectDbError(portalGet(token, session!), "link_unavailable");
+  });
+});
