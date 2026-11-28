@@ -3,13 +3,13 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, ArrowLeft, Bell, ChevronDown, ChevronRight, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
-  ListTodo, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Plug, Settings, Stamp, User, Users, X,
+  Activity, ArrowLeft, Bell, Ellipsis, Building2, CalendarDays, ChartColumn, CheckSquare, Film, Folder, Gauge, Kanban, LayoutGrid,
+  ListTodo,  Plug, Settings, Stamp, User, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/overlay";
+import { FloatingDock, type DockItem } from "@/components/ui/floating-dock";
+import { Dialog } from "@/components/ui/overlay";
 import { Header } from "./header";
 import { ClientNav, type NavClient } from "./client-nav";
 
@@ -21,24 +21,22 @@ const icons: Record<string, ReactNode> = {
 
 export interface NavSection { title: string; items: Array<{ href: string; label: string; icon: string }> }
 
-export function Shell({ sections, clientsNav, canManageClients, children, initialCollapsed, unread, user, workspace, workspaces }: {
+export function Shell({ sections, clientsNav, canManageClients, children, unread, user, workspace, workspaces }: {
   sections: NavSection[];
   clientsNav: NavClient[];
   canManageClients: boolean;
   children: ReactNode;
-  initialCollapsed: boolean;
   unread: number;
   user: { id: string; name: string; email: string; avatar: string | null };
   workspace: { id: string; name: string };
   workspaces: Array<{ id: string; name: string }>;
 }) {
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [panel, setPanel] = useState<"clients" | "more" | null>(null);
   const pathname = usePathname();
   const search = useSearchParams().toString();
 
   const [lastPath, setLastPath] = useState(pathname);
-  if (lastPath !== pathname) { setLastPath(pathname); setMobileOpen(false); }
+  if (lastPath !== pathname) { setLastPath(pathname); setPanel(null); }
 
   // Instant feedback: every page and filter change is a server round trip, so show progress at once.
   const [navigating, setNavigating] = useState(false);
@@ -73,56 +71,20 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
   }, [navigating]);
   // PWA: installability + push. The worker caches nothing (see public/sw.js).
   useEffect(() => { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {}); }, []);
-  const toggle = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    document.cookie = `df_sidebar=${next ? "collapsed" : "open"}; path=/; max-age=31536000; samesite=lax`;
-  };
+  const isActive = (href: string) => pathname === href || (href !== "/app" && pathname.startsWith(href + "/"));
+  const primary = sections[0]?.items ?? [];
+  const secondary = sections.slice(1).flatMap(section => section.items);
+  const dock: DockItem[] = primary.map(item => ({ ...item, icon: icons[item.icon], active: isActive(item.href) }));
+  dock.splice(Math.min(3, dock.length), 0, { label: "Clientes", icon: <Building2/>, active: isActive("/app/clientes"), open: () => setPanel("clients") });
+  if (secondary.length) dock.push({ label: "Mais opções", icon: <Ellipsis/>, active: secondary.some(item => isActive(item.href)), open: () => setPanel("more") });
 
-  const isActive = (href: string) => (href === "/app" ? pathname === "/app" : pathname.startsWith(href));
-
-  const [moreOpen, setMoreOpen] = useState(() => sections.slice(1).some((sec) => sec.items.some((i) => isActive(i.href))));
-
-  const renderItems = (items: NavSection["items"], compact: boolean) => (
-    <ul className="space-y-px">
-      {items.map((i) => {
-        const active = isActive(i.href);
-        const link = (
-          <Link href={i.href} aria-current={active ? "page" : undefined}
-            className={cn(
-              "df-press relative flex min-h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4 [&_svg]:shrink-0 pointer-coarse:min-h-10 pointer-coarse:text-sm",
-              active && "bg-surface-2 font-medium text-fg",
-              compact && "w-8 justify-center px-0",
-            )}>
-            {active && <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" aria-hidden />}
-            {icons[i.icon]}
-            {compact ? <span className="sr-only">{i.label}</span> : <span className="wrap-anywhere whitespace-normal">{i.label}</span>}
-            {i.href === "/app/notificacoes" && unread > 0 && !compact && (
-              <span className="tabular ml-auto rounded-sm bg-accent px-1 text-[10.5px] font-semibold text-accent-fg">{unread > 99 ? "99+" : unread}</span>
-            )}
-          </Link>
-        );
-        return <li key={i.href}>{compact ? <Tooltip content={i.label} side="right">{link}</Tooltip> : link}</li>;
-      })}
-    </ul>
-  );
-
-  const navList = (compact: boolean) => (
-    <nav aria-label="Navegação principal" className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
-      {sections[0] && renderItems(sections[0].items, compact)}
-      {!compact && <ClientNav clients={clientsNav} canManage={canManageClients} />}
-      {sections.slice(1).map((sec) => compact ? (
-        <div key={sec.title}><div className="mx-2 mb-1 h-px bg-border" aria-hidden />{renderItems(sec.items, true)}</div>
-      ) : (
-        <div key={sec.title}>
-          <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}
-            className="df-press flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg">
-            {moreOpen ? <ChevronDown className="size-3" aria-hidden /> : <ChevronRight className="size-3" aria-hidden />} {sec.title}
-          </button>
-          {moreOpen && renderItems(sec.items, false)}
-        </div>
-      ))}
-    </nav>
+  const menuLink = (item: NavSection["items"][number]) => (
+    <Link key={item.href} href={item.href} onNavigate={() => setPanel(null)} aria-current={isActive(item.href) ? "page" : undefined}
+      className={cn("flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2", isActive(item.href) && "bg-accent-soft text-accent-ink")}>
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 [&_svg]:size-4">{icons[item.icon]}</span>
+      {item.label}
+      {item.href === "/app/notificacoes" && unread > 0 && <span className="ml-auto text-xs">{unread}</span>}
+    </Link>
   );
 
   return (
@@ -131,44 +93,23 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
         Pular para o conteúdo
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className={cn("sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-150 md:flex",
-        collapsed ? "w-[52px]" : "w-60")}>
-        <div className={cn("flex h-12 items-center border-b border-border", collapsed ? "justify-center" : "justify-between px-3")}>
-          <Link href="/app" aria-label="Delta Flow — visão geral"><Logo compact={collapsed} /></Link>
-          {!collapsed && (
-            <Button variant="ghost" size="icon-sm" onClick={toggle} aria-label="Recolher menu"><PanelLeftClose /></Button>
-          )}
-        </div>
-        {navList(collapsed)}
-        {collapsed && (
-          <div className="border-t border-border p-2">
-            <Button variant="ghost" size="icon-sm" onClick={toggle} aria-label="Expandir menu"><PanelLeftOpen /></Button>
-          </div>
-        )}
-      </aside>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button className="absolute inset-0 bg-[var(--overlay)]" aria-label="Fechar menu" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overscroll-contain border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-            <div className="flex h-12 items-center justify-between border-b border-border px-3">
-              <Logo />
-              <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X /></Button>
-            </div>
-            {navList(false)}
-          </aside>
-        </div>
-      )}
+      <FloatingDock items={dock} />
+      <Dialog open={panel !== null} onClose={() => setPanel(null)}
+        title={panel === "clients" ? "Clientes" : "Mais opções"}>
+        {panel === "clients" ? <div onClick={e => {
+          if (e.target instanceof Element && e.target.closest("a[href]")) setPanel(null);
+        }}><ClientNav clients={clientsNav} canManage={canManageClients}/></div> :
+          <div className="grid gap-1 sm:grid-cols-2">
+            {secondary.map(menuLink)}
+          </div>}
+      </Dialog>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
-          onOpenMenu={() => setMobileOpen(true)}
-          menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
+          brand={<Link href="/app" aria-label="Delta — visão geral" className="mr-1 flex shrink-0 items-center"><Logo compact /></Link>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main key={workspace.id} id="conteudo" aria-busy={navigating} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5 lg:px-8">
+        <main key={workspace.id} id="conteudo" aria-busy={navigating} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5 lg:px-8">
           {parent && (
             <button type="button" onClick={goBack}
               className="df-press -ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">

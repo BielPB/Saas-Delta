@@ -1,0 +1,49 @@
+.delta-dock {
+  position: fixed;
+  z-index: 41;
+  inset-inline: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  margin-inline: auto;
+  width: max-content;
+  color: #eee;
+}
+.delta-dock ul, .dock-launcher {
+  border: 1px solid #ffffff18;
+  border-radius: 18px;
+  background: #181819;
+  box-shadow: 0 5px 20px #0003, inset 0 1px #ffffff08;
+}
+.delta-dock ul { display:flex; align-items:end; gap:4px; padding:6px 10px; }
+.delta-dock li { position:relative; }
+.delta-dock li > :is(a,button) { display:grid; width:54px; height:48px; place-items:center; border-radius:14px; }
+.dock-disc {
+  display:grid; place-items:center; width:38px; height:38px; border-radius:50%;
+  background:#2b2b2d; color:#d4d4d6; transform-origin:center bottom;
+}
+.dock-disc svg { width:18px; height:18px; }
+.delta-dock [aria-current=page] .dock-disc, .delta-dock [data-active=true] .dock-disc { color:var(--accent); background:color-mix(in srgb,var(--accent) 13%,#272729); }
+.dock-label {
+  display:none; position:absolute; left:50%; bottom:calc(100% + 18px); transform:translateX(-50%);
+  pointer-events:none; white-space:nowrap; padding:4px 9px; border-radius:7px; background:#272729;
+  color:#fff; font-size:12px; line-height:1.4; box-shadow:0 2px 8px #0003;
+}
+.delta-dock li:focus-within .dock-label, .delta-dock li:hover .dock-label {display:block}
+.delta-dock li[data-zoom=selected] {z-index:1}
+@media (prefers-reduced-motion:no-preference) {
+  .dock-disc { transition:transform 170ms cubic-bezier(.2,.75,.25,1); }
+  .delta-dock li[data-zoom=selected] .dock-disc {transform:translateY(-3px) scale(1.56)}
+  .delta-dock li[data-zoom=near] .dock-disc {transform:scale(1.16)}
+}
+.delta-dock .dock-launcher { display:none; }
+@media(max-width:767px) {
+  .delta-dock { inset-inline:auto 16px; }
+  .delta-dock ul {display:none}
+  .delta-dock[data-expanded=true] ul {
+    display:grid; gap:2px; position:absolute; right:0; bottom:calc(100% + 8px);
+    max-height:calc(100dvh - 6rem - env(safe-area-inset-bottom)); overflow-y:auto; padding:6px;
+  }
+  .delta-dock li > :is(a,button) { display:flex; flex-direction:row-reverse; justify-content:space-between; gap:10px; width:100%; padding-inline:8px }
+  .delta-dock .dock-label { display:block; position:static; transform:none; background:transparent; box-shadow:none; font-size:13px }
+  .delta-dock li[data-zoom] .dock-disc { transform:none }
+  .delta-dock .dock-launcher {display:grid; place-items:center; width:48px; height:48px; border-radius:50%}
+}

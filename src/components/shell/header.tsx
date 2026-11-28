@@ -18,9 +18,8 @@ function subscribeTheme(cb: () => void) {
   return () => mo.disconnect();
 }
 
-export function Header({ menuButton, unread: initialUnread, user, workspace, workspaces }: {
-  onOpenMenu: () => void;
-  menuButton: ReactNode;
+export function Header({ brand, unread: initialUnread, user, workspace, workspaces }: {
+  brand: ReactNode;
   unread: number;
   user: { id: string; name: string; email: string; avatar: string | null };
   workspace: { id: string; name: string };
@@ -63,7 +62,7 @@ export function Header({ menuButton, unread: initialUnread, user, workspace, wor
   return (
     // Installed app on iPhone: the bar sits below the clock/notch (safe-area padding on top).
     <header className="sticky top-0 z-40 flex min-h-[calc(3rem+env(safe-area-inset-top))] items-center gap-1.5 border-b border-border bg-surface/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:gap-2 sm:px-4">
-      {menuButton}
+      {brand}
       {workspaces.length > 1 ? (
         <Menu label="Trocar workspace" align="start" trigger={(p) => (
           <Button variant="ghost" size="sm" {...p} className="min-w-0 max-w-[9.5rem] font-medium text-fg sm:max-w-48">

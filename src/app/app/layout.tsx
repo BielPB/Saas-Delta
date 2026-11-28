@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getContext, sectionPermissions, type Permission } from "@/lib/auth";
 import { googleApiKey, isConfigured } from "@/lib/env";
 import { DriveKeyProvider } from "@/components/content/link-embed";
@@ -40,7 +39,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     sb.from("notifications").select("id", { count: "exact", head: true }).eq("workspace_id", ctx.workspace.id).is("read_at", null),
     clientNav(ctx.workspace.id),
   ]);
-  const collapsed = (await cookies()).get("df_sidebar")?.value === "collapsed";
 
   const sections: NavSection[] = nav
     .map((s) => ({
@@ -58,7 +56,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       sections={sections}
       clientsNav={clientsNav}
       canManageClients={ctx.can("clients.manage")}
-      initialCollapsed={collapsed}
       unread={count ?? 0}
       user={{ id: ctx.user.id, name: ctx.profile.full_name || "Colaborador", email: ctx.profile.email ?? "", avatar: ctx.profile.avatar_url }}
       workspace={{ id: ctx.workspace.id, name: ctx.workspace.name }}
