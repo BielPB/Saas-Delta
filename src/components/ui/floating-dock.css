@@ -57,7 +57,9 @@
 /* Some mobile browsers draw the address bar over the visual viewport. */
 @media (display-mode:browser) and (max-width:767px),
        (display-mode:browser) and (pointer:coarse) and (orientation:landscape) and (max-height:500px) {
+  /* Keep the dock within the viewport available with browser controls expanded. */
+  .app-shell { height:100svh }
   .dock-footer {
-    padding-bottom:max(5rem, calc(8px + env(safe-area-inset-bottom, 0px)));
+    padding-bottom:calc(7rem + env(safe-area-inset-bottom, 0px));
   }
 }
