@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 /**
  * Tabs / segmented buttons that navigate (the server renders the new view).
  * The clicked one lights up immediately, instead of after the server answers;
- * the content follows with the top progress bar. When the new page arrives,
+ * the content stays in place. When the new page arrives,
  * `active` from the server takes over again.
  */
 const Ctx = createContext<{ shown: string; pick: (v: string) => void }>({ shown: "", pick: () => {} });
@@ -26,8 +26,8 @@ export function ToggleGroup({ active, children, as = "nav", className, ...aria }
   );
 }
 
-export function ToggleLink({ value, className, activeClassName, onClick, currentAttr = "page", ...props }: ComponentProps<typeof Link> & {
-  value: string; activeClassName?: string;
+export function ToggleLink({ value, className, activeClassName, onClick, animatePress = true, currentAttr = "page", ...props }: ComponentProps<typeof Link> & {
+  value: string; activeClassName?: string; animatePress?: boolean;
   /** aria-current value, or aria-selected when the group is a tablist. */
   currentAttr?: "page" | "true" | "tab";
 }) {
@@ -35,7 +35,7 @@ export function ToggleLink({ value, className, activeClassName, onClick, current
   const on = shown === value;
   const a11y = currentAttr === "tab" ? { role: "tab", "aria-selected": on } : { "aria-current": on ? currentAttr : undefined };
   return (
-    <Link {...props} {...a11y} className={cn("df-press", className, on && activeClassName)}
+    <Link {...props} {...a11y} className={cn(animatePress && "df-press", className, on && activeClassName)}
       onClick={(e: MouseEvent<HTMLAnchorElement>) => {
         onClick?.(e);
         // Ctrl/Cmd-click opens a new tab: the current view does not change.

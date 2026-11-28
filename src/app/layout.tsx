@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ToastProvider } from "@/components/ui/overlay";
-import { Suspense } from "react";
 import { NavigationMotion } from "@/components/ui/navigation-motion";
 import "./globals.css";
 
@@ -38,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-dvh overflow-x-clip">
-        <Suspense fallback={null}><NavigationMotion /></Suspense>
+        <NavigationMotion />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

@@ -94,7 +94,7 @@
 }
 
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  html { scrollbar-gutter: stable; -webkit-text-size-adjust: 100%; }
   body {
     overflow-wrap: anywhere;
     background: var(--bg);
@@ -130,17 +130,7 @@
 }
 a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
-@keyframes df-section-enter {
-  from { opacity: 0.55; translate: 0 6px; }
-  to { opacity: 1; translate: 0 0; }
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  /* Streamed page sections can mount after the URL has already changed. */
-  :where(#conteudo > section, #conteudo > header, #conteudo > article, .df-section-enter, dialog[open], [role="dialog"], [role="menu"], [role="tabpanel"], details[open] > :not(summary)) {
-    animation: df-section-enter 220ms ease-out;
-  }
-
   .df-press {
     transition: scale 110ms ease-out, background-color 150ms, color 150ms, border-color 150ms;
   }
@@ -166,12 +156,4 @@ a, button, input, select, textarea, label, summary { -webkit-tap-highlight-color
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-@keyframes df-shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
-.skeleton {
-  background: linear-gradient(90deg, var(--surface-2) 0, var(--surface-3) 40%, var(--surface-2) 80%);
-  background-size: 800px 100%;
-  animation: df-shimmer 1.4s linear infinite;
-}
-
-@keyframes df-progress { 0% { width: 0 } 40% { width: 65% } 100% { width: 92% } }
-.df-progress { animation: df-progress 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards; }
+.skeleton { background: var(--surface-2); }

@@ -162,14 +162,13 @@ export function Shell({ sections, clientsNav, canManageClients, children, initia
         </div>
       )}
 
-      {navigating && <div className="df-progress fixed inset-x-0 top-0 z-[300] h-[3px] bg-accent" role="progressbar" aria-label="Carregando página" />}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
           onOpenMenu={() => setMobileOpen(true)}
           menuButton={<Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><MenuIcon /></Button>}
           unread={unread} user={user} workspace={workspace} workspaces={workspaces}
         />
-        <main key={workspace.id} id="conteudo" aria-busy={navigating} className={cn("df-section-enter mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 transition-opacity duration-200 sm:px-6 sm:pt-5 lg:px-8", navigating && "opacity-60")}>
+        <main key={workspace.id} id="conteudo" aria-busy={navigating} className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-5 lg:px-8">
           {parent && (
             <button type="button" onClick={goBack}
               className="df-press -ml-1 mb-3 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg">

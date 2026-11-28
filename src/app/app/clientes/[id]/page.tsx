@@ -88,17 +88,6 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
             <p className="wrap-anywhere whitespace-normal text-[13px] text-muted">{[client.segment, client.company_name, client.instagram].filter(Boolean).join(" · ") || "Cliente"}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(isGrid || tab === "visao" || tab === "aprovacoes") && (
-            <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
-              <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronLeft className="size-4" /></Link>
-              <span className="min-w-32 text-center text-[13px] font-semibold">{monthLabel(ym)}</span>
-              <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronRight className="size-4" /></Link>
-            </nav>
-          )}
-          {(isGrid || tab === "aprovacoes") && <DownloadMonth clientId={id} ym={ym} fileName={`${String(client.name).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "cliente"}-${ym}.zip`} />}
-          {isGrid && ctx.can("contents.manage") && <DuplicateMonth clientId={id} ym={ym} monthLabel={monthLabel(ym)} nextLabel={monthLabel(shiftMonth(ym, 1))} />}
-        </div>
       </header>
 
       <section aria-label="Próxima entrega" className="mb-4 rounded-lg border border-border bg-surface px-4 py-3 wrap-anywhere">
@@ -111,18 +100,29 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         ) : <p className="text-sm">Nenhum conteúdo em aberto com data definida.</p>}
       </section>
 
-      {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
-
-      <ToggleGroup active={tab} aria-label="Seções do cliente" className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-border px-3 sm:-mx-1 sm:px-1">
+      <ToggleGroup active={tab} aria-label="Seções do cliente" className="mb-4 flex flex-wrap items-start gap-x-1 gap-y-1 border-b border-border">
         {tabs.map((t, i) => (
           <span key={t.key} className="flex shrink-0 items-center">
             {i === 3 && <span className="mx-2 h-4 w-px bg-border" aria-hidden />}
-            <ToggleLink value={t.key} href={tabHref(t.key)} scroll={false}
-              className="relative -mb-px flex h-9 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg pointer-coarse:h-11"
-              activeClassName="border-accent-ink font-semibold text-fg">{t.label}</ToggleLink>
+            <ToggleLink animatePress={false} value={t.key} href={tabHref(t.key)} scroll={false}
+              className="relative flex min-h-9 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[13px] text-muted hover:text-fg pointer-coarse:h-11"
+              activeClassName="border-accent-ink text-fg">{t.label}</ToggleLink>
           </span>
         ))}
       </ToggleGroup>
+
+      {(isGrid || tab === "visao" || tab === "aprovacoes") && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <nav aria-label="Mês" className="flex items-center rounded-full border border-border bg-surface">
+            <Link href={tabHref(tab, { mes: shiftMonth(ym, -1) })} aria-label="Mês anterior" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronLeft className="size-4" /></Link>
+            <span className="min-w-32 text-center text-[13px] font-semibold">{monthLabel(ym)}</span>
+            <Link href={tabHref(tab, { mes: shiftMonth(ym, 1) })} aria-label="Próximo mês" className="flex size-8 items-center justify-center rounded-full text-muted hover:text-fg pointer-coarse:size-10"><ChevronRight className="size-4" /></Link>
+          </nav>
+          {(isGrid || tab === "aprovacoes") && <DownloadMonth clientId={id} ym={ym} fileName={`${String(client.name).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "cliente"}-${ym}.zip`} />}
+          {isGrid && ctx.can("contents.manage") && <DuplicateMonth clientId={id} ym={ym} monthLabel={monthLabel(ym)} nextLabel={monthLabel(shiftMonth(ym, 1))} />}
+        </div>
+      )}
+      {(isGrid || tab === "visao") && <OnboardingBar clientId={id} items={onboardingOf(client.onboarding)} canEdit={canManage} />}
 
       {isGrid && (
         <PostsTab ws={ctx.workspace.id} clientId={id} tab={tab as "posts" | "reels" | "stories"} ym={ym} postId={isUuid(sp.post) ? sp.post! : null}

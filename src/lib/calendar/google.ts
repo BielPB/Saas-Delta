@@ -43,7 +43,7 @@ export async function calendarToken(connectionId: string) {
 }
 
 export interface GEvent {
-  id: string; summary?: string; status?: string; visibility?: string; htmlLink?: string;
+  id: string; description?: string; location?: string; summary?: string; status?: string; visibility?: string; htmlLink?: string;
   start: { dateTime?: string; date?: string }; end: { dateTime?: string; date?: string };
 }
 
